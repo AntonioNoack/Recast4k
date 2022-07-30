@@ -45,18 +45,18 @@ public class RecastConstants {
     /// vertex will later be removed in order to match the segments and vertices
     /// at tile boundaries.
     /// (Used during the build process.)
-    /// @see rcCompactSpan::reg, #rcContour::verts, #rcContour::rverts
+    /// @see rcCompactSpan::reg, #rcContour::vertices, #rcContour::rvertices
     public static int RC_BORDER_VERTEX = 0x10000;
     /// Area border flag.
     /// If a region ID has this bit set, then the associated element lies on
     /// the border of an area.
     /// (Used during the region and contour build process.)
-    /// @see rcCompactSpan::reg, #rcContour::verts, #rcContour::rverts
+    /// @see rcCompactSpan::reg, #rcContour::vertices, #rcContour::rvertices
     public static int RC_AREA_BORDER = 0x20000;
     /// Applied to the region id field of contour vertices in order to extract the region id.
     /// The region id field of a vertex may have several flags applied to it. So the
     /// fields value can't be used directly.
-    /// @see rcContour::verts, rcContour::rverts
+    /// @see rcContour::vertices, rcContour::rvertices
     static int RC_CONTOUR_REG_MASK = 0xffff;
     /// A value which indicates an invalid index within a mesh.
     /// @note This does not necessarily indicate an error.

@@ -29,11 +29,13 @@ public class CompositeCollider implements Collider {
     private final List<Collider> colliders;
     private final float[] bounds;
 
+    @SuppressWarnings("unused")
     public CompositeCollider(List<Collider> colliders) {
         this.colliders = colliders;
         bounds = bounds(colliders);
     }
 
+    @SuppressWarnings("unused")
     public CompositeCollider(Collider... colliders) {
         this.colliders = Arrays.asList(colliders);
         bounds = bounds(this.colliders);

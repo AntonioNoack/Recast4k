@@ -492,7 +492,7 @@ public class RecastFilledVolumeRasterization {
         return null;
     }
 
-    private static float[] intersectConvex(float[] rectangle, int[] triangles, float[] verts, float[][] planes,
+    private static float[] intersectConvex(float[] rectangle, int[] triangles, float[] vertices, float[][] planes,
                                            float[][] triBounds) {
         float imin = Float.POSITIVE_INFINITY;
         float imax = Float.NEGATIVE_INFINITY;
@@ -507,18 +507,18 @@ public class RecastFilledVolumeRasterization {
             for (int i = 0; i < 3; i++) {
                 int vi = triangles[tri + i] * 3;
                 int vj = triangles[tri + (i + 1) % 3] * 3;
-                float x = verts[vi];
-                float z = verts[vi + 2];
+                float x = vertices[vi];
+                float z = vertices[vi + 2];
                 // triangle vertex
                 if (x >= rectangle[0] && x <= rectangle[2] && z >= rectangle[1] && z <= rectangle[3]) {
-                    imin = Math.min(imin, verts[vi + 1]);
-                    imax = Math.max(imax, verts[vi + 1]);
+                    imin = Math.min(imin, vertices[vi + 1]);
+                    imax = Math.max(imax, vertices[vi + 1]);
                 }
                 // triangle slab intersection
-                float y = verts[vi + 1];
-                float dx = verts[vj] - x;
-                float dy = verts[vj + 1] - y;
-                float dz = verts[vj + 2] - z;
+                float y = vertices[vi + 1];
+                float dx = vertices[vj] - x;
+                float dy = vertices[vj + 1] - y;
+                float dz = vertices[vj + 2] - z;
                 if (Math.abs(dx) > EPSILON) {
                     Float iy = xSlabSegmentIntersection(rectangle, x, y, z, dx, dy, dz, rectangle[0]);
                     if (iy != null) {

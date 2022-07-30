@@ -22,10 +22,6 @@ import java.nio.ByteOrder;
 
 class ByteUtils {
 
-    static int getInt(byte[] data, int position, ByteOrder order) {
-        return order == ByteOrder.BIG_ENDIAN ? getIntBE(data, position) : getIntLE(data, position);
-    }
-
     static int getIntBE(byte[] data, int position) {
         return ((data[position] & 0xff) << 24) | ((data[position + 1] & 0xff) << 16) | ((data[position + 2] & 0xff) << 8)
                 | (data[position + 3] & 0xff);
@@ -34,10 +30,6 @@ class ByteUtils {
     static int getIntLE(byte[] data, int position) {
         return ((data[position + 3] & 0xff) << 24) | ((data[position + 2] & 0xff) << 16) | ((data[position + 1] & 0xff) << 8)
                 | (data[position] & 0xff);
-    }
-
-    static int getShort(byte[] data, int position, ByteOrder order) {
-        return order == ByteOrder.BIG_ENDIAN ? getShortBE(data, position) : getShortLE(data, position);
     }
 
     static int getShortBE(byte[] data, int position) {

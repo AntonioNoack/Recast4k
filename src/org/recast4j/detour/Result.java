@@ -31,7 +31,7 @@ public class Result<T> {
     }
 
     public static <T> Result<T> success(T result) {
-        return new Result<>(result, Status.SUCCSESS, null);
+        return new Result<>(result, Status.SUCCESS, null);
     }
 
     public static <T> Result<T> failure() {
@@ -42,20 +42,12 @@ public class Result<T> {
         return new Result<>(null, Status.FAILURE_INVALID_PARAM, null);
     }
 
-    public static <T> Result<T> failure(String message) {
-        return new Result<>(null, Status.FAILURE, message);
-    }
-
     public static <T> Result<T> invalidParam(String message) {
         return new Result<>(null, Status.FAILURE_INVALID_PARAM, message);
     }
 
     public static <T> Result<T> failure(T result) {
         return new Result<>(result, Status.FAILURE, null);
-    }
-
-    public static <T> Result<T> partial(T result) {
-        return new Result<>(null, Status.PARTIAL_RESULT, null);
     }
 
     public static <T> Result<T> of(Status status, String message) {

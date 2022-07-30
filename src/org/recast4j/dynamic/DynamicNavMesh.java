@@ -46,7 +46,7 @@ import org.recast4j.recast.Telemetry;
 
 public class DynamicNavMesh {
 
-    static final int MAX_VERTS_PER_POLY = 6;
+    static final int MAX_VERTICES_PER_POLY = 6;
     public final DynamicNavMeshConfig config;
     private final RecastBuilder builder;
     private final Map<Long, DynamicTile> tiles = new HashMap<>();
@@ -67,7 +67,7 @@ public class DynamicNavMesh {
         config.maxEdgeLen = voxelFile.maxEdgeLen;
         config.minRegionArea = voxelFile.minRegionArea;
         config.regionMergeArea = voxelFile.regionMergeArea;
-        config.vertsPerPoly = voxelFile.vertsPerPoly;
+        config.verticesPerPoly = voxelFile.verticesPerPoly;
         config.buildDetailMesh = voxelFile.buildMeshDetail;
         config.detailSampleDistance = voxelFile.detailSampleDistance;
         config.detailSampleMaxError = voxelFile.detailSampleMaxError;
@@ -205,7 +205,7 @@ public class DynamicNavMesh {
 
     private boolean updateNavMesh() {
         if (dirty) {
-            NavMesh navMesh = new NavMesh(navMeshParams, MAX_VERTS_PER_POLY);
+            NavMesh navMesh = new NavMesh(navMeshParams, MAX_VERTICES_PER_POLY);
             tiles.values().forEach(t -> t.addTo(navMesh));
             this.navMesh = navMesh;
             dirty = false;

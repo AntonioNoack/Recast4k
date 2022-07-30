@@ -22,9 +22,10 @@ public class JumpLinkBuilder {
     private final List<Edge[]> edges;
     private final List<RecastBuilderResult> results;
 
+    @SuppressWarnings("unused")
     public JumpLinkBuilder(List<RecastBuilderResult> results) {
         this.results = results;
-        edges = results.stream().map(r -> edgeExtractor.extractEdges(r.getMesh())).collect(toList());
+        edges = results.stream().map(r -> edgeExtractor.extractEdges(r.mesh)).collect(toList());
     }
 
     public List<JumpLink> build(JumpLinkBuilderConfig acfg, JumpLinkType type) {
@@ -41,7 +42,7 @@ public class JumpLinkBuilder {
     private List<JumpLink> processEdge(JumpLinkBuilderConfig acfg, RecastBuilderResult result, JumpLinkType type, Edge edge) {
         EdgeSampler es = edgeSamplerFactory.get(acfg, type, edge);
         groundSampler.sample(acfg, result, es);
-        trajectorySampler.sample(acfg, result.getSolidHeightfield(), es);
+        trajectorySampler.sample(acfg, result.solidHeightField, es);
         JumpSegment[] jumpSegments = jumpSegmentBuilder.build(acfg, es);
         return buildJumpLinks(acfg, es, jumpSegments);
     }

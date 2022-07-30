@@ -26,8 +26,8 @@ public class Poly {
     public static final int DT_POLYTYPE_GROUND = 0;
     /** The polygon is an off-mesh connection consisting of two vertices. */
     public static final int DT_POLYTYPE_OFFMESH_CONNECTION = 1;
-    /** The indices of the polygon's vertices. The actual vertices are located in MeshTile::verts. */
-    public final int[] verts;
+    /** The indices of the polygon's vertices. The actual vertices are located in MeshTile::vertices. */
+    public final int[] vertices;
     /** Packed data representing neighbor polygons references and flags for each edge. */
     public final int[] neis;
     /** The user defined polygon flags. */
@@ -41,10 +41,10 @@ public class Poly {
      */
     public int areaAndtype;
 
-    public Poly(int index, int maxVertsPerPoly) {
+    public Poly(int index, int maxVerticesPerPoly) {
         this.index = index;
-        verts = new int[maxVertsPerPoly];
-        neis = new int[maxVertsPerPoly];
+        vertices = new int[maxVerticesPerPoly];
+        neis = new int[maxVerticesPerPoly];
     }
 
     /** Sets the user defined area id. [Limit: &lt; {@link org.recast4j.detour.NavMesh#DT_MAX_AREAS}] */

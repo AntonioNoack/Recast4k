@@ -70,11 +70,7 @@ public class NodePool {
         node.id = id;
         node.state = state;
         m_nodes.add(node);
-        List<Node> nodes = m_map.get(id);
-        if (nodes == null) {
-            nodes = new ArrayList<>();
-            m_map.put(id, nodes);
-        }
+        List<Node> nodes = m_map.computeIfAbsent(id, k -> new ArrayList<>());
         nodes.add(node);
         return node;
     }

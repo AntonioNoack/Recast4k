@@ -31,9 +31,9 @@ import static org.recast4j.recast.RecastConstants.*;
 
 public class RecastMeshDetail {
 
-    static int MAX_VERTS = 127;
-    static int MAX_TRIS = 255; // Max tris for delaunay is 2n-2-k (n=num verts, k=num hull verts).
-    static int MAX_VERTS_PER_EDGE = 32;
+    static int MAX_VERTICES = 127;
+    static int MAX_TRIS = 255; // Max tris for delaunay is 2n-2-k (n=num vertices, k=num hull vertices).
+    static int MAX_VERTICES_PER_EDGE = 32;
 
     static int RC_UNSET_HEIGHT = RecastConstants.SPAN_MAX_HEIGHT;
     static int EV_UNDEF = -1;
@@ -51,14 +51,14 @@ public class RecastMeshDetail {
         return a.x * b.x + a.z * b.z;
     }
 
-    private static float vdistSq2(float[] verts, int p, int q) {
-        float dx = verts[q] - verts[p];
-        float dy = verts[q + 2] - verts[p + 2];
+    private static float vdistSq2(float[] vertices, int p, int q) {
+        float dx = vertices[q] - vertices[p];
+        float dy = vertices[q + 2] - vertices[p + 2];
         return dx * dx + dy * dy;
     }
 
-    private static float vdist2(float[] verts, int p, int q) {
-        return (float) Math.sqrt(vdistSq2(verts, p, q));
+    private static float vdist2(float[] vertices, int p, int q) {
+        return (float) Math.sqrt(vdistSq2(vertices, p, q));
     }
 
     private static float vdistSq2(Vector3f p, Vector3f q) {
@@ -71,21 +71,21 @@ public class RecastMeshDetail {
         return (float) Math.sqrt(vdistSq2(p, q));
     }
 
-    private static float vdistSq2(Vector3f p, float[] verts, int q) {
-        float dx = verts[q] - p.x;
-        float dy = verts[q + 2] - p.z;
+    private static float vdistSq2(Vector3f p, float[] vertices, int q) {
+        float dx = vertices[q] - p.x;
+        float dy = vertices[q + 2] - p.z;
         return dx * dx + dy * dy;
     }
 
-    private static float vdist2(Vector3f p, float[] verts, int q) {
-        return (float) Math.sqrt(vdistSq2(p, verts, q));
+    private static float vdist2(Vector3f p, float[] vertices, int q) {
+        return (float) Math.sqrt(vdistSq2(p, vertices, q));
     }
 
-    private static float vcross2(float[] verts, int p1, int p2, int p3) {
-        float u1 = verts[p2] - verts[p1];
-        float v1 = verts[p2 + 2] - verts[p1 + 2];
-        float u2 = verts[p3] - verts[p1];
-        float v2 = verts[p3 + 2] - verts[p1 + 2];
+    private static float vcross2(float[] vertices, int p1, int p2, int p3) {
+        float u1 = vertices[p2] - vertices[p1];
+        float v1 = vertices[p2 + 2] - vertices[p1 + 2];
+        float u2 = vertices[p3] - vertices[p1];
+        float v2 = vertices[p3 + 2] - vertices[p1 + 2];
         return u1 * v2 - v1 * u2;
     }
 
@@ -97,14 +97,14 @@ public class RecastMeshDetail {
         return u1 * v2 - v1 * u2;
     }
 
-    private static void circumCircle(float[] verts, int p1, int p2, int p3, Vector3f c, AtomicReference<Float> r) {
+    private static void circumCircle(float[] vertices, int p1, int p2, int p3, Vector3f c, AtomicReference<Float> r) {
         float EPS = 1e-6f;
         // Calculate the circle relative to p1, to avoid some precision issues.
         Vector3f v1 = new Vector3f();
         Vector3f v2 = new Vector3f();
         Vector3f v3 = new Vector3f();
-        RecastVectors.sub(v2, verts, p2, p1);
-        RecastVectors.sub(v3, verts, p3, p1);
+        RecastVectors.sub(v2, vertices, p2, p1);
+        RecastVectors.sub(v3, vertices, p3, p1);
 
         float cp = vcross2(v1, v2, v3);
         if (Math.abs(cp) > EPS) {
@@ -115,20 +115,20 @@ public class RecastMeshDetail {
             c.y = 0;
             c.z = (v1Sq * (v3.x - v2.x) + v2Sq * (v1.x - v3.x) + v3Sq * (v2.x - v1.x)) / (2 * cp);
             r.set(vdist2(c, v1));
-            c.add(verts[p1], verts[p1 + 1], verts[p1 + 2]);
+            c.add(vertices[p1], vertices[p1 + 1], vertices[p1 + 2]);
             return;
         }
-        RecastVectors.copy(c, verts, p1);
+        RecastVectors.copy(c, vertices, p1);
         r.set(0f);
     }
 
-    private static float distPtTri(Vector3f p, float[] verts, int a, int b, int c) {
+    private static float distPtTri(Vector3f p, float[] vertices, int a, int b, int c) {
         Vector3f v0 = new Vector3f();
         Vector3f v1 = new Vector3f();
         Vector3f v2 = new Vector3f();
-        RecastVectors.sub(v0, verts, c, a);
-        RecastVectors.sub(v1, verts, b, a);
-        v2.set(p).sub(verts[a], verts[a + 1], verts[a + 2]);
+        RecastVectors.sub(v0, vertices, c, a);
+        RecastVectors.sub(v1, vertices, b, a);
+        v2.set(p).sub(vertices[a], vertices[a + 1], vertices[a + 2]);
 
         float dot00 = vdot2(v0, v0);
         float dot01 = vdot2(v0, v1);
@@ -144,19 +144,19 @@ public class RecastMeshDetail {
         // If point lies inside the triangle, return interpolated y-coord.
         float EPS = 1e-4f;
         if (u >= -EPS && v >= -EPS && (u + v) <= 1 + EPS) {
-            float y = verts[a + 1] + v0.y * u + v1.y * v;
+            float y = vertices[a + 1] + v0.y * u + v1.y * v;
             return Math.abs(y - p.y);
         }
         return Float.MAX_VALUE;
     }
 
-    private static float distancePtSeg(float[] verts, int pt, int p, int q) {
-        float pqx = verts[q] - verts[p];
-        float pqy = verts[q + 1] - verts[p + 1];
-        float pqz = verts[q + 2] - verts[p + 2];
-        float dx = verts[pt] - verts[p];
-        float dy = verts[pt + 1] - verts[p + 1];
-        float dz = verts[pt + 2] - verts[p + 2];
+    private static float distancePtSeg(float[] vertices, int pt, int p, int q) {
+        float pqx = vertices[q] - vertices[p];
+        float pqy = vertices[q + 1] - vertices[p + 1];
+        float pqz = vertices[q + 2] - vertices[p + 2];
+        float dx = vertices[pt] - vertices[p];
+        float dy = vertices[pt + 1] - vertices[p + 1];
+        float dz = vertices[pt + 2] - vertices[p + 2];
         float d = pqx * pqx + pqy * pqy + pqz * pqz;
         float t = pqx * dx + pqy * dy + pqz * dz;
         if (d > 0) {
@@ -168,9 +168,9 @@ public class RecastMeshDetail {
             t = 1;
         }
 
-        dx = verts[p] + t * pqx - verts[pt];
-        dy = verts[p + 1] + t * pqy - verts[pt + 1];
-        dz = verts[p + 2] + t * pqz - verts[pt + 2];
+        dx = vertices[p] + t * pqx - vertices[pt];
+        dy = vertices[p + 1] + t * pqy - vertices[pt + 1];
+        dz = vertices[p + 2] + t * pqz - vertices[pt + 2];
 
         return dx * dx + dy * dy + dz * dz;
     }
@@ -197,11 +197,11 @@ public class RecastMeshDetail {
         return dx * dx + dz * dz;
     }
 
-    private static float distancePtSeg2d(float[] verts, int pt, float[] poly, int p, int q) {
+    private static float distancePtSeg2d(float[] vertices, int pt, float[] poly, int p, int q) {
         float pqx = poly[q] - poly[p];
         float pqz = poly[q + 2] - poly[p + 2];
-        float dx = verts[pt] - poly[p];
-        float dz = verts[pt + 2] - poly[p + 2];
+        float dx = vertices[pt] - poly[p];
+        float dz = vertices[pt + 2] - poly[p + 2];
         float d = pqx * pqx + pqz * pqz;
         float t = pqx * dx + pqz * dz;
         if (d > 0) {
@@ -213,19 +213,19 @@ public class RecastMeshDetail {
             t = 1;
         }
 
-        dx = poly[p] + t * pqx - verts[pt];
-        dz = poly[p + 2] + t * pqz - verts[pt + 2];
+        dx = poly[p] + t * pqx - vertices[pt];
+        dz = poly[p + 2] + t * pqz - vertices[pt + 2];
 
         return dx * dx + dz * dz;
     }
 
-    private static float distToTriMesh(Vector3f p, float[] verts, List<Integer> tris, int ntris) {
+    private static float distToTriMesh(Vector3f p, float[] vertices, List<Integer> tris, int ntris) {
         float dmin = Float.MAX_VALUE;
         for (int i = 0; i < ntris; ++i) {
             int va = tris.get(i * 4) * 3;
             int vb = tris.get(i * 4 + 1) * 3;
             int vc = tris.get(i * 4 + 2) * 3;
-            float d = distPtTri(p, verts, va, vb, vc);
+            float d = distPtTri(p, vertices, va, vb, vc);
             if (d < dmin) {
                 dmin = d;
             }
@@ -236,7 +236,7 @@ public class RecastMeshDetail {
         return dmin;
     }
 
-    private static float distToPoly(int nvert, float[] verts, Vector3f p) {
+    private static float distToPoly(int nvert, float[] vertices, Vector3f p) {
 
         float dmin = Float.MAX_VALUE;
         int i, j;
@@ -244,10 +244,10 @@ public class RecastMeshDetail {
         for (i = 0, j = nvert - 1; i < nvert; j = i++) {
             int vi = i * 3;
             int vj = j * 3;
-            if (((verts[vi + 2] > p.z) != (verts[vj + 2] > p.z)) && (p.x < (verts[vj] - verts[vi]) * (p.z - verts[vi + 2]) / (verts[vj + 2] - verts[vi + 2]) + verts[vi])) {
+            if (((vertices[vi + 2] > p.z) != (vertices[vj + 2] > p.z)) && (p.x < (vertices[vj] - vertices[vi]) * (p.z - vertices[vi + 2]) / (vertices[vj + 2] - vertices[vi + 2]) + vertices[vi])) {
                 c = !c;
             }
-            dmin = Math.min(dmin, distancePtSeg2d(p, verts, vj, vi));
+            dmin = Math.min(dmin, distancePtSeg2d(p, vertices, vj, vi));
         }
         return c ? -dmin : dmin;
     }
@@ -356,11 +356,11 @@ public class RecastMeshDetail {
         }
     }
 
-    private static boolean overlapSegSeg2d(float[] verts, int a, int b, int c, int d) {
-        float a1 = vcross2(verts, a, b, d);
-        float a2 = vcross2(verts, a, b, c);
+    private static boolean overlapSegSeg2d(float[] vertices, int a, int b, int c, int d) {
+        float a1 = vcross2(vertices, a, b, d);
+        float a2 = vcross2(vertices, a, b, c);
         if (a1 * a2 < 0.0f) {
-            float a3 = vcross2(verts, c, d, a);
+            float a3 = vcross2(vertices, c, d, a);
             float a4 = a3 + a2 - a1;
             return a3 * a4 < 0.0f;
         }
@@ -534,18 +534,18 @@ public class RecastMeshDetail {
     }
 
     // Calculate minimum extend of the polygon.
-    private static float polyMinExtent(float[] verts, int nverts) {
+    private static float polyMinExtent(float[] vertices, int nvertices) {
         float minDist = Float.MAX_VALUE;
-        for (int i = 0; i < nverts; i++) {
-            int ni = (i + 1) % nverts;
+        for (int i = 0; i < nvertices; i++) {
+            int ni = (i + 1) % nvertices;
             int p1 = i * 3;
             int p2 = ni * 3;
             float maxEdgeDist = 0;
-            for (int j = 0; j < nverts; j++) {
+            for (int j = 0; j < nvertices; j++) {
                 if (j == i || j == ni) {
                     continue;
                 }
-                float d = distancePtSeg2d(verts, j * 3, verts, p1, p2);
+                float d = distancePtSeg2d(vertices, j * 3, vertices, p1, p2);
                 maxEdgeDist = Math.max(maxEdgeDist, d);
             }
             minDist = Math.min(minDist, maxEdgeDist);
@@ -553,7 +553,7 @@ public class RecastMeshDetail {
         return (float) Math.sqrt(minDist);
     }
 
-    private static void triangulateHull(float[] verts, int nhull, int[] hull, int nin, List<Integer> tris) {
+    private static void triangulateHull(float[] vertices, int nhull, int[] hull, int nin, List<Integer> tris) {
         int start = 0, left = 1, right = nhull - 1;
 
         // Start from an ear with shortest perimeter.
@@ -569,7 +569,7 @@ public class RecastMeshDetail {
             int pv = hull[pi] * 3;
             int cv = hull[i] * 3;
             int nv = hull[ni] * 3;
-            float d = vdist2(verts, pv, cv) + vdist2(verts, cv, nv) + vdist2(verts, nv, pv);
+            float d = vdist2(vertices, pv, cv) + vdist2(vertices, cv, nv) + vdist2(vertices, nv, pv);
             if (d < dmin) {
                 start = i;
                 left = ni;
@@ -597,8 +597,8 @@ public class RecastMeshDetail {
             int nvleft = hull[nleft] * 3;
             int cvright = hull[right] * 3;
             int nvright = hull[nright] * 3;
-            float dleft = vdist2(verts, cvleft, nvleft) + vdist2(verts, nvleft, cvright);
-            float dright = vdist2(verts, cvright, nvright) + vdist2(verts, cvleft, nvright);
+            float dleft = vdist2(vertices, cvleft, nvleft) + vdist2(vertices, nvleft, cvright);
+            float dright = vdist2(vertices, cvright, nvright) + vdist2(vertices, cvleft, nvright);
 
             if (dleft < dright) {
                 tris.add(hull[left]);
@@ -625,17 +625,17 @@ public class RecastMeshDetail {
     }
 
     static int buildPolyDetail(float[] in, int nin, float sampleDist, float sampleMaxError,
-                               int heightSearchRadius, CompactHeightfield chf, HeightPatch hp, float[] verts, List<Integer> tris) {
+                               int heightSearchRadius, CompactHeightfield chf, HeightPatch hp, float[] vertices, List<Integer> tris) {
 
         List<Integer> samples = new ArrayList<>(512);
 
-        float[] edge = new float[(MAX_VERTS_PER_EDGE + 1) * 3];
-        int[] hull = new int[MAX_VERTS];
+        float[] edge = new float[(MAX_VERTICES_PER_EDGE + 1) * 3];
+        int[] hull = new int[MAX_VERTICES];
         int nhull = 0;
-        int nverts = nin;
+        int nvertices = nin;
 
         for (int i = 0; i < nin; ++i) {
-            RecastVectors.copy(verts, i * 3, in, i * 3);
+            RecastVectors.copy(vertices, i * 3, in, i * 3);
         }
         tris.clear();
 
@@ -643,7 +643,7 @@ public class RecastMeshDetail {
         float ics = 1.0f / cs;
 
         // Calculate minimum extents of the polygon based on input data.
-        float minExtent = polyMinExtent(verts, nverts);
+        float minExtent = polyMinExtent(vertices, nvertices);
 
         // Tessellate outlines.
         // This is done in separate pass in order to ensure
@@ -676,11 +676,11 @@ public class RecastMeshDetail {
                 float dz = in[vi + 2] - in[vj + 2];
                 float d = (float) Math.sqrt(dx * dx + dz * dz);
                 int nn = 1 + (int) Math.floor(d / sampleDist);
-                if (nn >= MAX_VERTS_PER_EDGE) {
-                    nn = MAX_VERTS_PER_EDGE - 1;
+                if (nn >= MAX_VERTICES_PER_EDGE) {
+                    nn = MAX_VERTICES_PER_EDGE - 1;
                 }
-                if (nverts + nn >= MAX_VERTS) {
-                    nn = MAX_VERTS - 1 - nverts;
+                if (nvertices + nn >= MAX_VERTICES) {
+                    nn = MAX_VERTICES - 1 - nvertices;
                 }
 
                 for (int k = 0; k <= nn; ++k) {
@@ -693,7 +693,7 @@ public class RecastMeshDetail {
                             heightSearchRadius, hp) * chf.ch;
                 }
                 // Simplify samples.
-                int[] idx = new int[MAX_VERTS_PER_EDGE];
+                int[] idx = new int[MAX_VERTICES_PER_EDGE];
                 idx[0] = 0;
                 idx[1] = nn;
                 int nidx = 2;
@@ -727,15 +727,15 @@ public class RecastMeshDetail {
                 // Add new vertices.
                 if (swapped) {
                     for (int k = nidx - 2; k > 0; --k) {
-                        RecastVectors.copy(verts, nverts * 3, edge, idx[k] * 3);
-                        hull[nhull++] = nverts;
-                        nverts++;
+                        RecastVectors.copy(vertices, nvertices * 3, edge, idx[k] * 3);
+                        hull[nhull++] = nvertices;
+                        nvertices++;
                     }
                 } else {
                     for (int k = 1; k < nidx - 1; ++k) {
-                        RecastVectors.copy(verts, nverts * 3, edge, idx[k] * 3);
-                        hull[nhull++] = nverts;
-                        nverts++;
+                        RecastVectors.copy(vertices, nvertices * 3, edge, idx[k] * 3);
+                        hull[nhull++] = nvertices;
+                        nvertices++;
                     }
                 }
             }
@@ -743,19 +743,19 @@ public class RecastMeshDetail {
 
         // If the polygon minimum extent is small (sliver or small triangle), do not try to add internal points.
         if (minExtent < sampleDist * 2) {
-            triangulateHull(verts, nhull, hull, nin, tris);
-            return nverts;
+            triangulateHull(vertices, nhull, hull, nin, tris);
+            return nvertices;
         }
 
         // Tessellate the base mesh.
         // We're using the triangulateHull instead of delaunayHull as it tends to
         // create a bit better triangulation for long thin triangles when there
         // are no internal points.
-        triangulateHull(verts, nhull, hull, nin, tris);
+        triangulateHull(vertices, nhull, hull, nin, tris);
 
         if (tris.size() == 0) {
             // Could not triangulate the poly, make sure there is some valid data there.
-            throw new RuntimeException("buildPolyDetail: Could not triangulate polygon (" + nverts + ") verts).");
+            throw new RuntimeException("buildPolyDetail: Could not triangulate polygon (" + nvertices + ") vertices).");
         }
 
         if (sampleDist > 0) {
@@ -791,7 +791,7 @@ public class RecastMeshDetail {
             // or when the max error is within treshold.
             int nsamples = samples.size() / 4;
             for (int iter = 0; iter < nsamples; ++iter) {
-                if (nverts >= MAX_VERTS) {
+                if (nvertices >= MAX_VERTICES) {
                     break;
                 }
 
@@ -810,7 +810,7 @@ public class RecastMeshDetail {
                     pt.x = samples.get(s) * sampleDist + getJitterX(i) * cs * 0.1f;
                     pt.y = samples.get(s + 1) * chf.ch;
                     pt.z = samples.get(s + 2) * sampleDist + getJitterY(i) * cs * 0.1f;
-                    float d = distToTriMesh(pt, verts, tris, tris.size() / 4);
+                    float d = distToTriMesh(pt, vertices, tris, tris.size() / 4);
                     if (d < 0) {
                         continue; // did not hit the mesh.
                     }
@@ -827,12 +827,12 @@ public class RecastMeshDetail {
                 // Mark sample as added.
                 samples.set(besti * 4 + 3, 1);
                 // Add the new sample point.
-                copy(verts, nverts * 3, bestpt);
-                nverts++;
+                copy(vertices, nvertices * 3, bestpt);
+                nvertices++;
 
                 // Create new triangulation.
                 // TODO: Incremental add instead of full rebuild.
-                delaunayHull(nverts, verts, nhull, hull, tris);
+                delaunayHull(nvertices, vertices, nhull, hull, tris);
             }
         }
 
@@ -844,11 +844,11 @@ public class RecastMeshDetail {
             throw new RuntimeException(
                     "rcBuildPolyMeshDetail: Shrinking triangle count from " + ntris + " to max " + MAX_TRIS);
         }
-        return nverts;
+        return nvertices;
     }
 
     static void seedArrayWithPolyCenter(Telemetry ctx, CompactHeightfield chf, int[] meshpoly, int poly, int npoly,
-                                        int[] verts, int bs, HeightPatch hp, List<Integer> array) {
+                                        int[] vertices, int bs, HeightPatch hp, List<Integer> array) {
         // Note: Reads to the compact heightfield are offset by border size (bs)
         // since border size offset is already removed from the polymesh vertices.
 
@@ -859,9 +859,9 @@ public class RecastMeshDetail {
         int dmin = RC_UNSET_HEIGHT;
         for (int j = 0; j < npoly && dmin > 0; ++j) {
             for (int k = 0; k < 9 && dmin > 0; ++k) {
-                int ax = verts[meshpoly[poly + j] * 3] + offset[k * 2];
-                int ay = verts[meshpoly[poly + j] * 3 + 1];
-                int az = verts[meshpoly[poly + j] * 3 + 2] + offset[k * 2 + 1];
+                int ax = vertices[meshpoly[poly + j] * 3] + offset[k * 2];
+                int ay = vertices[meshpoly[poly + j] * 3 + 1];
+                int az = vertices[meshpoly[poly + j] * 3 + 2] + offset[k * 2 + 1];
                 if (ax < hp.xmin || ax >= hp.xmin + hp.width || az < hp.ymin || az >= hp.ymin + hp.height) {
                     continue;
                 }
@@ -883,8 +883,8 @@ public class RecastMeshDetail {
         // Find center of the polygon
         int pcx = 0, pcy = 0;
         for (int j = 0; j < npoly; ++j) {
-            pcx += verts[meshpoly[poly + j] * 3];
-            pcy += verts[meshpoly[poly + j] * 3 + 2];
+            pcx += vertices[meshpoly[poly + j] * 3];
+            pcy += vertices[meshpoly[poly + j] * 3 + 2];
         }
         pcx /= npoly;
         pcy /= npoly;
@@ -979,7 +979,7 @@ public class RecastMeshDetail {
         queue.add(v3);
     }
 
-    static void getHeightData(Telemetry ctx, CompactHeightfield chf, int[] meshpolys, int poly, int npoly, int[] verts,
+    static void getHeightData(Telemetry ctx, CompactHeightfield chf, int[] meshpolys, int poly, int npoly, int[] vertices,
                               int bs, HeightPatch hp, int region) {
         // Note: Reads to the compact heightfield are offset by border size (bs)
         // since border size offset is already removed from the polymesh vertices.
@@ -1035,7 +1035,7 @@ public class RecastMeshDetail {
         // or if it could potentially be overlapping polygons of the same region,
         // then use the center as the seed point.
         if (empty) {
-            seedArrayWithPolyCenter(ctx, chf, meshpolys, poly, npoly, verts, bs, hp, queue);
+            seedArrayWithPolyCenter(ctx, chf, meshpolys, poly, npoly, vertices, bs, hp, queue);
         }
 
         int head = 0;
@@ -1081,23 +1081,23 @@ public class RecastMeshDetail {
         }
     }
 
-    static int getEdgeFlags(float[] verts, int va, int vb, float[] vpoly, int npoly) {
+    static int getEdgeFlags(float[] vertices, int va, int vb, float[] vpoly, int npoly) {
         // The flag returned by this function matches getDetailTriEdgeFlags in Detour.
         // Figure out if edge (va,vb) is part of the polygon boundary.
         float thrSqr = 0.001f * 0.001f;
         for (int i = 0, j = npoly - 1; i < npoly; j = i++) {
-            if (distancePtSeg2d(verts, va, vpoly, j * 3, i * 3) < thrSqr
-                    && distancePtSeg2d(verts, vb, vpoly, j * 3, i * 3) < thrSqr) {
+            if (distancePtSeg2d(vertices, va, vpoly, j * 3, i * 3) < thrSqr
+                    && distancePtSeg2d(vertices, vb, vpoly, j * 3, i * 3) < thrSqr) {
                 return 1;
             }
         }
         return 0;
     }
 
-    static int getTriFlags(float[] verts, int va, int vb, int vc, float[] vpoly, int npoly) {
-        return (getEdgeFlags(verts, va, vb, vpoly, npoly)) |
-                (getEdgeFlags(verts, vb, vc, vpoly, npoly) << 2) |
-                (getEdgeFlags(verts, vc, va, vpoly, npoly) << 4);
+    static int getTriFlags(float[] vertices, int va, int vb, int vc, float[] vpoly, int npoly) {
+        return (getEdgeFlags(vertices, va, vb, vpoly, npoly)) |
+                (getEdgeFlags(vertices, vb, vc, vpoly, npoly) << 2) |
+                (getEdgeFlags(vertices, vc, va, vpoly, npoly) << 4);
     }
 
     /// @par
@@ -1109,7 +1109,7 @@ public class RecastMeshDetail {
                                                      float sampleDist, float sampleMaxError) {
 
         ctx.startTimer("POLYMESHDETAIL");
-        if (mesh.nverts == 0 || mesh.npolys == 0) {
+        if (mesh.nvertices == 0 || mesh.npolys == 0) {
             return null;
         }
 
@@ -1122,9 +1122,9 @@ public class RecastMeshDetail {
         int heightSearchRadius = (int) Math.max(1, Math.ceil(mesh.maxEdgeError));
 
         List<Integer> tris = new ArrayList<>(512);
-        float[] verts = new float[256 * 3];
+        float[] vertices = new float[256 * 3];
         HeightPatch hp = new HeightPatch();
-        int nPolyVerts = 0;
+        int nPolyVertices = 0;
         int maxhw = 0, maxhh = 0;
 
         int[] bounds = new int[mesh.npolys * 4];
@@ -1142,11 +1142,11 @@ public class RecastMeshDetail {
                     break;
                 }
                 int v = mesh.polys[p + j] * 3;
-                bounds[i * 4] = Math.min(bounds[i * 4], mesh.verts[v]);
-                bounds[i * 4 + 1] = Math.max(bounds[i * 4 + 1], mesh.verts[v]);
-                bounds[i * 4 + 2] = Math.min(bounds[i * 4 + 2], mesh.verts[v + 2]);
-                bounds[i * 4 + 3] = Math.max(bounds[i * 4 + 3], mesh.verts[v + 2]);
-                nPolyVerts++;
+                bounds[i * 4] = Math.min(bounds[i * 4], mesh.vertices[v]);
+                bounds[i * 4 + 1] = Math.max(bounds[i * 4 + 1], mesh.vertices[v]);
+                bounds[i * 4 + 2] = Math.min(bounds[i * 4 + 2], mesh.vertices[v + 2]);
+                bounds[i * 4 + 3] = Math.max(bounds[i * 4 + 3], mesh.vertices[v + 2]);
+                nPolyVertices++;
             }
             bounds[i * 4] = Math.max(0, bounds[i * 4] - 1);
             bounds[i * 4 + 1] = Math.min(chf.width, bounds[i * 4 + 1] + 1);
@@ -1163,11 +1163,11 @@ public class RecastMeshDetail {
         dmesh.nmeshes = mesh.npolys;
         dmesh.meshes = new int[dmesh.nmeshes * 4];
 
-        int vcap = nPolyVerts + nPolyVerts / 2;
+        int vcap = nPolyVertices + nPolyVertices / 2;
         int tcap = vcap * 2;
 
-        dmesh.nverts = 0;
-        dmesh.verts = new float[vcap * 3];
+        dmesh.nvertices = 0;
+        dmesh.vertices = new float[vcap * 3];
         dmesh.ntris = 0;
         dmesh.tris = new int[tcap * 4];
 
@@ -1181,9 +1181,9 @@ public class RecastMeshDetail {
                     break;
                 }
                 int v = mesh.polys[p + j] * 3;
-                poly[j * 3] = mesh.verts[v] * cs;
-                poly[j * 3 + 1] = mesh.verts[v + 1] * ch;
-                poly[j * 3 + 2] = mesh.verts[v + 2] * cs;
+                poly[j * 3] = mesh.vertices[v] * cs;
+                poly[j * 3 + 1] = mesh.vertices[v + 1] * ch;
+                poly[j * 3 + 2] = mesh.vertices[v + 2] * cs;
                 npoly++;
             }
 
@@ -1192,17 +1192,17 @@ public class RecastMeshDetail {
             hp.ymin = bounds[i * 4 + 2];
             hp.width = bounds[i * 4 + 1] - bounds[i * 4];
             hp.height = bounds[i * 4 + 3] - bounds[i * 4 + 2];
-            getHeightData(ctx, chf, mesh.polys, p, npoly, mesh.verts, borderSize, hp, mesh.regs[i]);
+            getHeightData(ctx, chf, mesh.polys, p, npoly, mesh.vertices, borderSize, hp, mesh.regs[i]);
 
             // Build detail mesh.
-            int nverts = buildPolyDetail(poly, npoly, sampleDist, sampleMaxError, heightSearchRadius, chf, hp,
-                    verts, tris);
+            int nvertices = buildPolyDetail(poly, npoly, sampleDist, sampleMaxError, heightSearchRadius, chf, hp,
+                    vertices, tris);
 
-            // Move detail verts to world space.
-            for (int j = 0; j < nverts; ++j) {
-                verts[j * 3] += orig.x;
-                verts[j * 3 + 1] += orig.y + chf.ch;
-                verts[j * 3 + 2] += orig.z;
+            // Move detail vertices to world space.
+            for (int j = 0; j < nvertices; ++j) {
+                vertices[j * 3] += orig.x;
+                vertices[j * 3 + 1] += orig.y + chf.ch;
+                vertices[j * 3 + 2] += orig.z;
             }
             // Offset poly too, will be used to flag checking.
             for (int j = 0; j < npoly; ++j) {
@@ -1214,28 +1214,28 @@ public class RecastMeshDetail {
             // Store detail submesh.
             int ntris = tris.size() / 4;
 
-            dmesh.meshes[i * 4] = dmesh.nverts;
-            dmesh.meshes[i * 4 + 1] = nverts;
+            dmesh.meshes[i * 4] = dmesh.nvertices;
+            dmesh.meshes[i * 4 + 1] = nvertices;
             dmesh.meshes[i * 4 + 2] = dmesh.ntris;
             dmesh.meshes[i * 4 + 3] = ntris;
 
             // Store vertices, allocate more memory if necessary.
-            if (dmesh.nverts + nverts > vcap) {
-                while (dmesh.nverts + nverts > vcap) {
+            if (dmesh.nvertices + nvertices > vcap) {
+                while (dmesh.nvertices + nvertices > vcap) {
                     vcap += 256;
                 }
 
                 float[] newv = new float[vcap * 3];
-                if (dmesh.nverts != 0) {
-                    System.arraycopy(dmesh.verts, 0, newv, 0, 3 * dmesh.nverts);
+                if (dmesh.nvertices != 0) {
+                    System.arraycopy(dmesh.vertices, 0, newv, 0, 3 * dmesh.nvertices);
                 }
-                dmesh.verts = newv;
+                dmesh.vertices = newv;
             }
-            for (int j = 0; j < nverts; ++j) {
-                dmesh.verts[dmesh.nverts * 3] = verts[j * 3];
-                dmesh.verts[dmesh.nverts * 3 + 1] = verts[j * 3 + 1];
-                dmesh.verts[dmesh.nverts * 3 + 2] = verts[j * 3 + 2];
-                dmesh.nverts++;
+            for (int j = 0; j < nvertices; ++j) {
+                dmesh.vertices[dmesh.nvertices * 3] = vertices[j * 3];
+                dmesh.vertices[dmesh.nvertices * 3 + 1] = vertices[j * 3 + 1];
+                dmesh.vertices[dmesh.nvertices * 3 + 2] = vertices[j * 3 + 2];
+                dmesh.nvertices++;
             }
 
             // Store triangles, allocate more memory if necessary.
@@ -1254,7 +1254,7 @@ public class RecastMeshDetail {
                 dmesh.tris[dmesh.ntris * 4] = tris.get(t);
                 dmesh.tris[dmesh.ntris * 4 + 1] = tris.get(t + 1);
                 dmesh.tris[dmesh.ntris * 4 + 2] = tris.get(t + 2);
-                dmesh.tris[dmesh.ntris * 4 + 3] = getTriFlags(verts, tris.get(t) * 3, tris.get(t + 1) * 3,
+                dmesh.tris[dmesh.ntris * 4 + 3] = getTriFlags(vertices, tris.get(t) * 3, tris.get(t + 1) * 3,
                         tris.get(t + 2) * 3, poly, npoly);
                 dmesh.ntris++;
             }

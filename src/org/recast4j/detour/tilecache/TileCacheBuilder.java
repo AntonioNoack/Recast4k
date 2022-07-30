@@ -57,13 +57,13 @@ public class TileCacheBuilder {
     ;
 
     private static class TempContour {
-        List<Integer> verts;
-        int nverts;
+        List<Integer> vertices;
+        int nvertices;
         List<Integer> poly;
 
         TempContour() {
-            verts = new ArrayList<>();
-            nverts = 0;
+            vertices = new ArrayList<>();
+            nvertices = 0;
             poly = new ArrayList<>();
         }
 
@@ -72,8 +72,8 @@ public class TileCacheBuilder {
         }
 
         public void clear() {
-            nverts = 0;
-            verts.clear();
+            nvertices = 0;
+            vertices.clear();
         }
     }
 
@@ -296,29 +296,29 @@ public class TileCacheBuilder {
 
     private void appendVertex(TempContour cont, int x, int y, int z, int r) {
         // Try to merge with existing segments.
-        if (cont.nverts > 1) {
-            int pa = (cont.nverts - 2) * 4;
-            int pb = (cont.nverts - 1) * 4;
-            if (cont.verts.get(pb + 3) == r) {
-                if (cont.verts.get(pa).intValue() == cont.verts.get(pb).intValue() && cont.verts.get(pb) == x) {
-                    // The verts are aligned aling x-axis, update z.
-                    cont.verts.set(pb + 1, y);
-                    cont.verts.set(pb + 2, z);
+        if (cont.nvertices > 1) {
+            int pa = (cont.nvertices - 2) * 4;
+            int pb = (cont.nvertices - 1) * 4;
+            if (cont.vertices.get(pb + 3) == r) {
+                if (cont.vertices.get(pa).intValue() == cont.vertices.get(pb).intValue() && cont.vertices.get(pb) == x) {
+                    // The vertices are aligned aling x-axis, update z.
+                    cont.vertices.set(pb + 1, y);
+                    cont.vertices.set(pb + 2, z);
                     return;
-                } else if (cont.verts.get(pa + 2).intValue() == cont.verts.get(pb + 2).intValue()
-                        && cont.verts.get(pb + 2) == z) {
-                    // The verts are aligned aling z-axis, update x.
-                    cont.verts.set(pb, x);
-                    cont.verts.set(pb + 1, y);
+                } else if (cont.vertices.get(pa + 2).intValue() == cont.vertices.get(pb + 2).intValue()
+                        && cont.vertices.get(pb + 2) == z) {
+                    // The vertices are aligned aling z-axis, update x.
+                    cont.vertices.set(pb, x);
+                    cont.vertices.set(pb + 1, y);
                     return;
                 }
             }
         }
-        cont.verts.add(x);
-        cont.verts.add(y);
-        cont.verts.add(z);
-        cont.verts.add(r);
-        cont.nverts++;
+        cont.vertices.add(x);
+        cont.vertices.add(y);
+        cont.vertices.add(z);
+        cont.vertices.add(r);
+        cont.nvertices++;
     }
 
     private int getNeighbourReg(TileCacheLayer layer, int ax, int ay, int dir) {
@@ -421,11 +421,11 @@ public class TileCacheBuilder {
         }
 
         // Remove last vertex if it is duplicate of the first one.
-        int pa = (cont.nverts - 1) * 4;
+        int pa = (cont.nvertices - 1) * 4;
         int pb = 0;
-        if (cont.verts.get(pa).intValue() == cont.verts.get(pb).intValue()
-                && cont.verts.get(pa + 2).intValue() == cont.verts.get(pb + 2).intValue())
-            cont.nverts--;
+        if (cont.vertices.get(pa).intValue() == cont.vertices.get(pb).intValue()
+                && cont.vertices.get(pa + 2).intValue() == cont.vertices.get(pb + 2).intValue())
+            cont.nvertices--;
 
     }
 
@@ -452,27 +452,27 @@ public class TileCacheBuilder {
     private void simplifyContour(TempContour cont, float maxError) {
         cont.poly.clear();
 
-        for (int i = 0; i < cont.nverts; ++i) {
-            int j = (i + 1) % cont.nverts;
+        for (int i = 0; i < cont.nvertices; ++i) {
+            int j = (i + 1) % cont.nvertices;
             // Check for start of a wall segment.
             int ra = j * 4 + 3;
             int rb = i * 4 + 3;
-            if (cont.verts.get(ra).intValue() != cont.verts.get(rb).intValue())
+            if (cont.vertices.get(ra).intValue() != cont.vertices.get(rb).intValue())
                 cont.poly.add(i);
         }
         if (cont.npoly() < 2) {
             // If there is no transitions at all,
             // create some initial points for the simplification process.
             // Find lower-left and upper-right vertices of the contour.
-            int llx = cont.verts.get(0);
-            int llz = cont.verts.get(2);
+            int llx = cont.vertices.get(0);
+            int llz = cont.vertices.get(2);
             int lli = 0;
-            int urx = cont.verts.get(0);
-            int urz = cont.verts.get(2);
+            int urx = cont.vertices.get(0);
+            int urz = cont.vertices.get(2);
             int uri = 0;
-            for (int i = 1; i < cont.nverts; ++i) {
-                int x = cont.verts.get(i * 4);
-                int z = cont.verts.get(i * 4 + 2);
+            for (int i = 1; i < cont.nvertices; ++i) {
+                int x = cont.vertices.get(i * 4);
+                int z = cont.vertices.get(i * 4 + 2);
                 if (x < llx || (x == llx && z < llz)) {
                     llx = x;
                     llz = z;
@@ -495,12 +495,12 @@ public class TileCacheBuilder {
             int ii = (i + 1) % cont.npoly();
 
             int ai = cont.poly.get(i);
-            int ax = cont.verts.get(ai * 4);
-            int az = cont.verts.get(ai * 4 + 2);
+            int ax = cont.vertices.get(ai * 4);
+            int az = cont.vertices.get(ai * 4 + 2);
 
             int bi = cont.poly.get(ii);
-            int bx = cont.verts.get(bi * 4);
-            int bz = cont.verts.get(bi * 4 + 2);
+            int bx = cont.vertices.get(bi * 4);
+            int bz = cont.vertices.get(bi * 4 + 2);
 
             // Find maximum deviation from the segment.
             float maxd = 0;
@@ -512,22 +512,22 @@ public class TileCacheBuilder {
             // opposite segments.
             if (bx > ax || (bx == ax && bz > az)) {
                 cinc = 1;
-                ci = (ai + cinc) % cont.nverts;
+                ci = (ai + cinc) % cont.nvertices;
                 endi = bi;
             } else {
-                cinc = cont.nverts - 1;
-                ci = (bi + cinc) % cont.nverts;
+                cinc = cont.nvertices - 1;
+                ci = (bi + cinc) % cont.nvertices;
                 endi = ai;
             }
 
             // Tessellate only outer edges or edges between areas.
             while (ci != endi) {
-                float d = distancePtSeg(cont.verts.get(ci * 4), cont.verts.get(ci * 4 + 2), ax, az, bx, bz);
+                float d = distancePtSeg(cont.vertices.get(ci * 4), cont.vertices.get(ci * 4 + 2), ax, az, bx, bz);
                 if (d > maxd) {
                     maxd = d;
                     maxi = ci;
                 }
-                ci = (ci + cinc) % cont.nverts;
+                ci = (ci + cinc) % cont.nvertices;
             }
 
             // If the max deviation is larger than accepted error,
@@ -545,16 +545,16 @@ public class TileCacheBuilder {
             if (cont.poly.get(i) < cont.poly.get(start))
                 start = i;
 
-        cont.nverts = 0;
+        cont.nvertices = 0;
         for (int i = 0; i < cont.npoly(); ++i) {
             int j = (start + i) % cont.npoly();
             int src = cont.poly.get(j) * 4;
-            int dst = cont.nverts * 4;
-            cont.verts.set(dst, cont.verts.get(src));
-            cont.verts.set(dst + 1, cont.verts.get(src + 1));
-            cont.verts.set(dst + 2, cont.verts.get(src + 2));
-            cont.verts.set(dst + 3, cont.verts.get(src + 3));
-            cont.nverts++;
+            int dst = cont.nvertices * 4;
+            cont.vertices.set(dst, cont.vertices.get(src));
+            cont.vertices.set(dst + 1, cont.vertices.get(src + 1));
+            cont.vertices.set(dst + 2, cont.vertices.get(src + 2));
+            cont.vertices.set(dst + 3, cont.vertices.get(src + 3));
+            cont.nvertices++;
         }
     }
 
@@ -626,7 +626,7 @@ public class TileCacheBuilder {
 
                 TileCacheContour cont = lcset.conts[ri];
 
-                if (cont.nverts > 0)
+                if (cont.nvertices > 0)
                     continue;
 
                 cont.reg = ri;
@@ -637,34 +637,34 @@ public class TileCacheBuilder {
                 simplifyContour(temp, maxError);
 
                 // Store contour.
-                cont.nverts = temp.nverts;
-                if (cont.nverts > 0) {
-                    cont.verts = new int[4 * temp.nverts];
+                cont.nvertices = temp.nvertices;
+                if (cont.nvertices > 0) {
+                    cont.vertices = new int[4 * temp.nvertices];
 
-                    for (int i = 0, j = temp.nverts - 1; i < temp.nverts; j = i++) {
+                    for (int i = 0, j = temp.nvertices - 1; i < temp.nvertices; j = i++) {
                         int dst = j * 4;
                         int v = j * 4;
                         int vn = i * 4;
-                        int nei = temp.verts.get(vn + 3); // The neighbour reg
+                        int nei = temp.vertices.get(vn + 3); // The neighbour reg
                         // is
                         // stored at segment
                         // vertex of a
                         // segment.
-                        Pair<Integer, Boolean> res = getCornerHeight(layer, temp.verts.get(v), temp.verts.get(v + 1),
-                                temp.verts.get(v + 2), walkableClimb);
+                        Pair<Integer, Boolean> res = getCornerHeight(layer, temp.vertices.get(v), temp.vertices.get(v + 1),
+                                temp.vertices.get(v + 2), walkableClimb);
                         int lh = res.first;
                         boolean shouldRemove = res.second;
-                        cont.verts[dst] = temp.verts.get(v);
-                        cont.verts[dst + 1] = lh;
-                        cont.verts[dst + 2] = temp.verts.get(v + 2);
+                        cont.vertices[dst] = temp.vertices.get(v);
+                        cont.vertices[dst + 1] = lh;
+                        cont.vertices[dst + 2] = temp.vertices.get(v + 2);
 
                         // Store portal direction and remove status to the
                         // fourth component.
-                        cont.verts[dst + 3] = 0x0f;
+                        cont.vertices[dst + 3] = 0x0f;
                         if (nei != 0xff && nei >= 0xf8)
-                            cont.verts[dst + 3] = nei - 0xf8;
+                            cont.vertices[dst + 3] = nei - 0xf8;
                         if (shouldRemove)
-                            cont.verts[dst + 3] |= 0x80;
+                            cont.vertices[dst + 3] |= 0x80;
                     }
                 }
             }
@@ -683,12 +683,12 @@ public class TileCacheBuilder {
         return n & (VERTEX_BUCKET_COUNT2 - 1);
     }
 
-    private int addVertex(int x, int y, int z, int[] verts, int[] firstVert, int[] nextVert, int nv) {
+    private int addVertex(int x, int y, int z, int[] vertices, int[] firstVert, int[] nextVert, int nv) {
         int bucket = computeVertexHash2(x, 0, z);
         int i = firstVert[bucket];
         while (i != DT_TILECACHE_NULL_IDX) {
             int v = i * 3;
-            if (verts[v] == x && verts[v + 2] == z && (Math.abs(verts[v + 1] - y) <= 2))
+            if (vertices[v] == x && vertices[v + 2] == z && (Math.abs(vertices[v + 1] - y) <= 2))
                 return i;
             i = nextVert[i]; // next
         }
@@ -696,39 +696,39 @@ public class TileCacheBuilder {
         // Could not find, create new.
         i = nv;
         int v = i * 3;
-        verts[v] = x;
-        verts[v + 1] = y;
-        verts[v + 2] = z;
+        vertices[v] = x;
+        vertices[v + 1] = y;
+        vertices[v + 2] = z;
         nextVert[i] = firstVert[bucket];
         firstVert[bucket] = i;
         return i;
     }
 
-    private void buildMeshAdjacency(int[] polys, int npolys, int[] verts, int nverts, TileCacheContourSet lcset,
-                                    int maxVertsPerPoly) {
+    private void buildMeshAdjacency(int[] polys, int npolys, int[] vertices, int nvertices, TileCacheContourSet lcset,
+                                    int maxVerticesPerPoly) {
         // Based on code by Eric Lengyel from:
         // http://www.terathon.com/code/edges.php
 
-        int maxEdgeCount = npolys * maxVertsPerPoly;
+        int maxEdgeCount = npolys * maxVerticesPerPoly;
 
-        int[] firstEdge = new int[nverts + maxEdgeCount];
-        int nextEdge = nverts;
+        int[] firstEdge = new int[nvertices + maxEdgeCount];
+        int nextEdge = nvertices;
         int edgeCount = 0;
 
         Edge[] edges = new Edge[maxEdgeCount];
         for (int i = 0; i < maxEdgeCount; i++) {
             edges[i] = new Edge();
         }
-        for (int i = 0; i < nverts; i++)
+        for (int i = 0; i < nvertices; i++)
             firstEdge[i] = DT_TILECACHE_NULL_IDX;
 
         for (int i = 0; i < npolys; ++i) {
-            int t = i * maxVertsPerPoly * 2;
-            for (int j = 0; j < maxVertsPerPoly; ++j) {
+            int t = i * maxVerticesPerPoly * 2;
+            for (int j = 0; j < maxVerticesPerPoly; ++j) {
                 if (polys[t + j] == DT_TILECACHE_NULL_IDX)
                     break;
                 int v0 = polys[t + j];
-                int v1 = (j + 1 >= maxVertsPerPoly || polys[t + j + 1] == DT_TILECACHE_NULL_IDX) ? polys[t]
+                int v1 = (j + 1 >= maxVerticesPerPoly || polys[t + j + 1] == DT_TILECACHE_NULL_IDX) ? polys[t]
                         : polys[t + j + 1];
                 if (v0 < v1) {
                     Edge edge = edges[edgeCount];
@@ -747,12 +747,12 @@ public class TileCacheBuilder {
         }
 
         for (int i = 0; i < npolys; ++i) {
-            int t = i * maxVertsPerPoly * 2;
-            for (int j = 0; j < maxVertsPerPoly; ++j) {
+            int t = i * maxVerticesPerPoly * 2;
+            for (int j = 0; j < maxVerticesPerPoly; ++j) {
                 if (polys[t + j] == DT_TILECACHE_NULL_IDX)
                     break;
                 int v0 = polys[t + j];
-                int v1 = (j + 1 >= maxVertsPerPoly || polys[t + j + 1] == DT_TILECACHE_NULL_IDX) ? polys[t]
+                int v1 = (j + 1 >= maxVerticesPerPoly || polys[t + j + 1] == DT_TILECACHE_NULL_IDX) ? polys[t]
                         : polys[t + j + 1];
                 if (v0 > v1) {
                     boolean found = false;
@@ -786,21 +786,21 @@ public class TileCacheBuilder {
         // Mark portal edges.
         for (int i = 0; i < lcset.nconts; ++i) {
             TileCacheContour cont = lcset.conts[i];
-            if (cont.nverts < 3)
+            if (cont.nvertices < 3)
                 continue;
 
-            for (int j = 0, k = cont.nverts - 1; j < cont.nverts; k = j++) {
+            for (int j = 0, k = cont.nvertices - 1; j < cont.nvertices; k = j++) {
                 int va = k * 4;
                 int vb = j * 4;
-                int dir = cont.verts[va + 3] & 0xf;
+                int dir = cont.vertices[va + 3] & 0xf;
                 if (dir == 0xf)
                     continue;
 
                 if (dir == 0 || dir == 2) {
                     // Find matching vertical edge
-                    int x = cont.verts[va];
-                    int zmin = cont.verts[va + 2];
-                    int zmax = cont.verts[vb + 2];
+                    int x = cont.vertices[va];
+                    int zmin = cont.vertices[va + 2];
+                    int zmax = cont.vertices[vb + 2];
                     if (zmin > zmax) {
                         int tmp = zmin;
                         zmin = zmax;
@@ -814,9 +814,9 @@ public class TileCacheBuilder {
                             continue;
                         int eva = e.vert[0] * 3;
                         int evb = e.vert[1] * 3;
-                        if (verts[eva] == x && verts[evb] == x) {
-                            int ezmin = verts[eva + 2];
-                            int ezmax = verts[evb + 2];
+                        if (vertices[eva] == x && vertices[evb] == x) {
+                            int ezmin = vertices[eva + 2];
+                            int ezmax = vertices[evb + 2];
                             if (ezmin > ezmax) {
                                 int tmp = ezmin;
                                 ezmin = ezmax;
@@ -830,9 +830,9 @@ public class TileCacheBuilder {
                     }
                 } else {
                     // Find matching vertical edge
-                    int z = cont.verts[va + 2];
-                    int xmin = cont.verts[va];
-                    int xmax = cont.verts[vb];
+                    int z = cont.vertices[va + 2];
+                    int xmin = cont.vertices[va];
+                    int xmax = cont.vertices[vb];
                     if (xmin > xmax) {
                         int tmp = xmin;
                         xmin = xmax;
@@ -845,9 +845,9 @@ public class TileCacheBuilder {
                             continue;
                         int eva = e.vert[0] * 3;
                         int evb = e.vert[1] * 3;
-                        if (verts[eva + 2] == z && verts[evb + 2] == z) {
-                            int exmin = verts[eva];
-                            int exmax = verts[evb];
+                        if (vertices[eva + 2] == z && vertices[evb + 2] == z) {
+                            int exmin = vertices[eva];
+                            int exmax = vertices[evb];
                             if (exmin > exmax) {
                                 int tmp = exmin;
                                 exmin = exmax;
@@ -867,13 +867,13 @@ public class TileCacheBuilder {
         for (int i = 0; i < edgeCount; ++i) {
             Edge e = edges[i];
             if (e.poly[0] != e.poly[1]) {
-                int p0 = e.poly[0] * maxVertsPerPoly * 2;
-                int p1 = e.poly[1] * maxVertsPerPoly * 2;
-                polys[p0 + maxVertsPerPoly + e.polyEdge[0]] = e.poly[1];
-                polys[p1 + maxVertsPerPoly + e.polyEdge[1]] = e.poly[0];
+                int p0 = e.poly[0] * maxVerticesPerPoly * 2;
+                int p1 = e.poly[1] * maxVerticesPerPoly * 2;
+                polys[p0 + maxVerticesPerPoly + e.polyEdge[0]] = e.poly[1];
+                polys[p1 + maxVerticesPerPoly + e.polyEdge[1]] = e.poly[0];
             } else if (e.polyEdge[1] != 0xff) {
-                int p0 = e.poly[0] * maxVertsPerPoly * 2;
-                polys[p0 + maxVertsPerPoly + e.polyEdge[0]] = 0x8000 | (short) e.polyEdge[1];
+                int p0 = e.poly[0] * maxVerticesPerPoly * 2;
+                polys[p0 + maxVerticesPerPoly + e.polyEdge[0]] = 0x8000 | (short) e.polyEdge[1];
             }
 
         }
@@ -891,69 +891,69 @@ public class TileCacheBuilder {
         return i + 1 < n ? i + 1 : 0;
     }
 
-    private int area2(int[] verts, int a, int b, int c) {
-        return (verts[b] - verts[a]) * (verts[c + 2] - verts[a + 2])
-                - (verts[c] - verts[a]) * (verts[b + 2] - verts[a + 2]);
+    private int area2(int[] vertices, int a, int b, int c) {
+        return (vertices[b] - vertices[a]) * (vertices[c + 2] - vertices[a + 2])
+                - (vertices[c] - vertices[a]) * (vertices[b + 2] - vertices[a + 2]);
     }
 
     // Returns true iff c is strictly to the left of the directed
     // line through a to b.
-    private boolean left(int[] verts, int a, int b, int c) {
-        return area2(verts, a, b, c) < 0;
+    private boolean left(int[] vertices, int a, int b, int c) {
+        return area2(vertices, a, b, c) < 0;
     }
 
-    private boolean leftOn(int[] verts, int a, int b, int c) {
-        return area2(verts, a, b, c) <= 0;
+    private boolean leftOn(int[] vertices, int a, int b, int c) {
+        return area2(vertices, a, b, c) <= 0;
     }
 
-    private boolean collinear(int[] verts, int a, int b, int c) {
-        return area2(verts, a, b, c) == 0;
+    private boolean collinear(int[] vertices, int a, int b, int c) {
+        return area2(vertices, a, b, c) == 0;
     }
 
     // Returns true iff ab properly intersects cd: they share
     // a point interior to both segments. The properness of the
     // intersection is ensured by using strict leftness.
-    private boolean intersectProp(int[] verts, int a, int b, int c, int d) {
+    private boolean intersectProp(int[] vertices, int a, int b, int c, int d) {
         // Eliminate improper cases.
-        if (collinear(verts, a, b, c) || collinear(verts, a, b, d) || collinear(verts, c, d, a)
-                || collinear(verts, c, d, b))
+        if (collinear(vertices, a, b, c) || collinear(vertices, a, b, d) || collinear(vertices, c, d, a)
+                || collinear(vertices, c, d, b))
             return false;
 
-        return (left(verts, a, b, c) ^ left(verts, a, b, d)) && (left(verts, c, d, a) ^ left(verts, c, d, b));
+        return (left(vertices, a, b, c) ^ left(vertices, a, b, d)) && (left(vertices, c, d, a) ^ left(vertices, c, d, b));
     }
 
     // Returns T iff (a,b,c) are collinear and point c lies
     // on the closed segement ab.
-    private boolean between(int[] verts, int a, int b, int c) {
-        if (!collinear(verts, a, b, c))
+    private boolean between(int[] vertices, int a, int b, int c) {
+        if (!collinear(vertices, a, b, c))
             return false;
         // If ab not vertical, check betweenness on x; else on y.
-        if (verts[a] != verts[b])
-            return ((verts[a] <= verts[c]) && (verts[c] <= verts[b]))
-                    || ((verts[a] >= verts[c]) && (verts[c] >= verts[b]));
+        if (vertices[a] != vertices[b])
+            return ((vertices[a] <= vertices[c]) && (vertices[c] <= vertices[b]))
+                    || ((vertices[a] >= vertices[c]) && (vertices[c] >= vertices[b]));
         else
-            return ((verts[a + 2] <= verts[c + 2]) && (verts[c + 2] <= verts[b + 2]))
-                    || ((verts[a + 2] >= verts[c + 2]) && (verts[c + 2] >= verts[b + 2]));
+            return ((vertices[a + 2] <= vertices[c + 2]) && (vertices[c + 2] <= vertices[b + 2]))
+                    || ((vertices[a + 2] >= vertices[c + 2]) && (vertices[c + 2] >= vertices[b + 2]));
     }
 
     // Returns true iff segments ab and cd intersect, properly or improperly.
-    private boolean intersect(int[] verts, int a, int b, int c, int d) {
-        if (intersectProp(verts, a, b, c, d))
+    private boolean intersect(int[] vertices, int a, int b, int c, int d) {
+        if (intersectProp(vertices, a, b, c, d))
             return true;
-        else if (between(verts, a, b, c) || between(verts, a, b, d) || between(verts, c, d, a)
-                || between(verts, c, d, b))
+        else if (between(vertices, a, b, c) || between(vertices, a, b, d) || between(vertices, c, d, a)
+                || between(vertices, c, d, b))
             return true;
         else
             return false;
     }
 
-    private boolean vequal(int[] verts, int a, int b) {
-        return verts[a] == verts[b] && verts[a + 2] == verts[b + 2];
+    private boolean vequal(int[] vertices, int a, int b) {
+        return vertices[a] == vertices[b] && vertices[a + 2] == vertices[b + 2];
     }
 
     // Returns T iff (v_i, v_j) is a proper internal *or* external
     // diagonal of P, *ignoring edges incident to v_i and v_j*.
-    private boolean diagonalie(int i, int j, int n, int[] verts, int[] indices) {
+    private boolean diagonalie(int i, int j, int n, int[] vertices, int[] indices) {
         int d0 = (indices[i] & 0x7fff) * 4;
         int d1 = (indices[j] & 0x7fff) * 4;
 
@@ -965,10 +965,10 @@ public class TileCacheBuilder {
                 int p0 = (indices[k] & 0x7fff) * 4;
                 int p1 = (indices[k1] & 0x7fff) * 4;
 
-                if (vequal(verts, d0, p0) || vequal(verts, d1, p0) || vequal(verts, d0, p1) || vequal(verts, d1, p1))
+                if (vequal(vertices, d0, p0) || vequal(vertices, d1, p0) || vequal(vertices, d0, p1) || vequal(vertices, d1, p1))
                     continue;
 
-                if (intersect(verts, d0, d1, p0, p1))
+                if (intersect(vertices, d0, d1, p0, p1))
                     return false;
             }
         }
@@ -977,27 +977,27 @@ public class TileCacheBuilder {
 
     // Returns true iff the diagonal (i,j) is strictly internal to the
     // polygon P in the neighborhood of the i endpoint.
-    private boolean inCone(int i, int j, int n, int[] verts, int[] indices) {
+    private boolean inCone(int i, int j, int n, int[] vertices, int[] indices) {
         int pi = (indices[i] & 0x7fff) * 4;
         int pj = (indices[j] & 0x7fff) * 4;
         int pi1 = (indices[next(i, n)] & 0x7fff) * 4;
         int pin1 = (indices[prev(i, n)] & 0x7fff) * 4;
 
         // If P[i] is a convex vertex [ i+1 left or on (i-1,i) ].
-        if (leftOn(verts, pin1, pi, pi1))
-            return left(verts, pi, pj, pin1) && left(verts, pj, pi, pi1);
+        if (leftOn(vertices, pin1, pi, pi1))
+            return left(vertices, pi, pj, pin1) && left(vertices, pj, pi, pi1);
         // Assume (i-1,i,i+1) not collinear.
         // else P[i] is reflex.
-        return !(leftOn(verts, pi, pj, pi1) && leftOn(verts, pj, pi, pin1));
+        return !(leftOn(vertices, pi, pj, pi1) && leftOn(vertices, pj, pi, pin1));
     }
 
     // Returns T iff (v_i, v_j) is a proper internal
     // diagonal of P.
-    private boolean diagonal(int i, int j, int n, int[] verts, int[] indices) {
-        return inCone(i, j, n, verts, indices) && diagonalie(i, j, n, verts, indices);
+    private boolean diagonal(int i, int j, int n, int[] vertices, int[] indices) {
+        return inCone(i, j, n, vertices, indices) && diagonalie(i, j, n, vertices, indices);
     }
 
-    private int triangulate(int n, int[] verts, int[] indices, int[] tris) {
+    private int triangulate(int n, int[] vertices, int[] indices, int[] tris) {
         int ntris = 0;
         int dst = 0;// tris;
         // The last bit of the index is used to indicate if the vertex can be
@@ -1005,7 +1005,7 @@ public class TileCacheBuilder {
         for (int i = 0; i < n; i++) {
             int i1 = next(i, n);
             int i2 = next(i1, n);
-            if (diagonal(i, i2, n, verts, indices))
+            if (diagonal(i, i2, n, vertices, indices))
                 indices[i1] |= 0x8000;
         }
 
@@ -1018,8 +1018,8 @@ public class TileCacheBuilder {
                     int p0 = (indices[i] & 0x7fff) * 4;
                     int p2 = (indices[next(i1, n)] & 0x7fff) * 4;
 
-                    int dx = verts[p2] - verts[p0];
-                    int dz = verts[p2 + 2] - verts[p0 + 2];
+                    int dx = vertices[p2] - vertices[p0];
+                    int dz = vertices[p2 + 2] - vertices[p0 + 2];
                     int len = dx * dx + dz * dz;
                     if (minLen < 0 || len < minLen) {
                         minLen = len;
@@ -1055,12 +1055,12 @@ public class TileCacheBuilder {
                 i1 = 0;
             i = prev(i1, n);
             // Update diagonal flags.
-            if (diagonal(prev(i, n), i1, n, verts, indices))
+            if (diagonal(prev(i, n), i1, n, vertices, indices))
                 indices[i] |= 0x8000;
             else
                 indices[i] &= 0x7fff;
 
-            if (diagonal(i, next(i1, n), n, verts, indices))
+            if (diagonal(i, next(i1, n), n, vertices, indices))
                 indices[i1] |= 0x8000;
             else
                 indices[i1] &= 0x7fff;
@@ -1075,24 +1075,24 @@ public class TileCacheBuilder {
         return ntris;
     }
 
-    private int countPolyVerts(int[] polys, int p, int maxVertsPerPoly) {
-        for (int i = 0; i < maxVertsPerPoly; ++i)
+    private int countPolyVertices(int[] polys, int p, int maxVerticesPerPoly) {
+        for (int i = 0; i < maxVerticesPerPoly; ++i)
             if (polys[p + i] == DT_TILECACHE_NULL_IDX)
                 return i;
-        return maxVertsPerPoly;
+        return maxVerticesPerPoly;
     }
 
-    private boolean uleft(int[] verts, int a, int b, int c) {
-        return (verts[b] - verts[a]) * (verts[c + 2] - verts[a + 2])
-                - (verts[c] - verts[a]) * (verts[b + 2] - verts[a + 2]) < 0;
+    private boolean uleft(int[] vertices, int a, int b, int c) {
+        return (vertices[b] - vertices[a]) * (vertices[c + 2] - vertices[a + 2])
+                - (vertices[c] - vertices[a]) * (vertices[b + 2] - vertices[a + 2]) < 0;
     }
 
-    private int[] getPolyMergeValue(int[] polys, int pa, int pb, int[] verts, int maxVertsPerPoly) {
-        int na = countPolyVerts(polys, pa, maxVertsPerPoly);
-        int nb = countPolyVerts(polys, pb, maxVertsPerPoly);
+    private int[] getPolyMergeValue(int[] polys, int pa, int pb, int[] vertices, int maxVerticesPerPoly) {
+        int na = countPolyVertices(polys, pa, maxVerticesPerPoly);
+        int nb = countPolyVertices(polys, pb, maxVerticesPerPoly);
 
         // If the merged polygon would be too big, do not merge.
-        if (na + nb - 2 > maxVertsPerPoly)
+        if (na + nb - 2 > maxVerticesPerPoly)
             return new int[]{-1, 0, 0};
 
         // Check if the polygons share an edge.
@@ -1133,29 +1133,29 @@ public class TileCacheBuilder {
         va = polys[pa + (ea + na - 1) % na];
         vb = polys[pa + ea];
         vc = polys[pb + (eb + 2) % nb];
-        if (!uleft(verts, va * 3, vb * 3, vc * 3))
+        if (!uleft(vertices, va * 3, vb * 3, vc * 3))
             return new int[]{-1, ea, eb};
 
         va = polys[pb + (eb + nb - 1) % nb];
         vb = polys[pb + eb];
         vc = polys[pa + (ea + 2) % na];
-        if (!uleft(verts, va * 3, vb * 3, vc * 3))
+        if (!uleft(vertices, va * 3, vb * 3, vc * 3))
             return new int[]{-1, ea, eb};
 
         va = polys[pa + ea];
         vb = polys[pa + (ea + 1) % na];
 
-        int dx = verts[va * 3] - verts[vb * 3];
-        int dy = verts[va * 3 + 2] - verts[vb * 3 + 2];
+        int dx = vertices[va * 3] - vertices[vb * 3];
+        int dy = vertices[va * 3 + 2] - vertices[vb * 3 + 2];
 
         return new int[]{dx * dx + dy * dy, ea, eb};
     }
 
-    private void mergePolys(int[] polys, int pa, int pb, int ea, int eb, int maxVertsPerPoly) {
-        int[] tmp = new int[maxVertsPerPoly * 2];
+    private void mergePolys(int[] polys, int pa, int pb, int ea, int eb, int maxVerticesPerPoly) {
+        int[] tmp = new int[maxVerticesPerPoly * 2];
 
-        int na = countPolyVerts(polys, pa, maxVertsPerPoly);
-        int nb = countPolyVerts(polys, pb, maxVertsPerPoly);
+        int na = countPolyVertices(polys, pa, maxVerticesPerPoly);
+        int nb = countPolyVertices(polys, pb, maxVerticesPerPoly);
 
         // Merge polygons.
         Arrays.fill(tmp, DT_TILECACHE_NULL_IDX);
@@ -1166,7 +1166,7 @@ public class TileCacheBuilder {
         // Add pb
         for (int i = 0; i < nb - 1; ++i)
             tmp[n++] = polys[pb + (eb + 1 + i) % nb];
-        System.arraycopy(tmp, 0, polys, pa, maxVertsPerPoly);
+        System.arraycopy(tmp, 0, polys, pa, maxVerticesPerPoly);
     }
 
     private int pushFront(int v, List<Integer> arr) {
@@ -1181,21 +1181,21 @@ public class TileCacheBuilder {
 
     private boolean canRemoveVertex(TileCachePolyMesh mesh, int rem) {
         // Count number of polygons to remove.
-        int maxVertsPerPoly = mesh.nvp;
+        int maxVerticesPerPoly = mesh.nvp;
         int numRemainingEdges = 0;
         for (int i = 0; i < mesh.npolys; ++i) {
             int p = i * mesh.nvp * 2;
-            int nv = countPolyVerts(mesh.polys, p, maxVertsPerPoly);
+            int nv = countPolyVertices(mesh.polys, p, maxVerticesPerPoly);
             int numRemoved = 0;
-            int numVerts = 0;
+            int numVertices = 0;
             for (int j = 0; j < nv; ++j) {
                 if (mesh.polys[p + j] == rem) {
                     numRemoved++;
                 }
-                numVerts++;
+                numVertices++;
             }
             if (numRemoved != 0) {
-                numRemainingEdges += numVerts - (numRemoved + 1);
+                numRemainingEdges += numVertices - (numRemoved + 1);
             }
         }
 
@@ -1212,7 +1212,7 @@ public class TileCacheBuilder {
 
         for (int i = 0; i < mesh.npolys; ++i) {
             int p = i * mesh.nvp * 2;
-            int nv = countPolyVerts(mesh.polys, p, maxVertsPerPoly);
+            int nv = countPolyVertices(mesh.polys, p, maxVerticesPerPoly);
 
             // Collect edges which touches the removed vertex.
             for (int j = 0, k = nv - 1; j < nv; k = j++) {
@@ -1259,7 +1259,7 @@ public class TileCacheBuilder {
 
     private void removeVertex(TileCachePolyMesh mesh, int rem, int maxTris) {
         // Count number of polygons to remove.
-        int maxVertsPerPoly = mesh.nvp;
+        int maxVerticesPerPoly = mesh.nvp;
 
         int nedges = 0;
         List<Integer> edges = new ArrayList<>();
@@ -1268,8 +1268,8 @@ public class TileCacheBuilder {
         List<Integer> harea = new ArrayList<>();
 
         for (int i = 0; i < mesh.npolys; ++i) {
-            int p = i * maxVertsPerPoly * 2;
-            int nv = countPolyVerts(mesh.polys, p, maxVertsPerPoly);
+            int p = i * maxVerticesPerPoly * 2;
+            int nv = countPolyVertices(mesh.polys, p, maxVerticesPerPoly);
             boolean hasRem = false;
             for (int j = 0; j < nv; ++j)
                 if (mesh.polys[p + j] == rem) {
@@ -1287,9 +1287,9 @@ public class TileCacheBuilder {
                     }
                 }
                 // Remove the polygon.
-                int p2 = (mesh.npolys - 1) * maxVertsPerPoly * 2;
-                System.arraycopy(mesh.polys, p2, mesh.polys, p, maxVertsPerPoly);
-                Arrays.fill(mesh.polys, p + maxVertsPerPoly, p + 2 * maxVertsPerPoly, DT_TILECACHE_NULL_IDX);
+                int p2 = (mesh.npolys - 1) * maxVerticesPerPoly * 2;
+                System.arraycopy(mesh.polys, p2, mesh.polys, p, maxVerticesPerPoly);
+                Arrays.fill(mesh.polys, p + maxVerticesPerPoly, p + 2 * maxVerticesPerPoly, DT_TILECACHE_NULL_IDX);
                 mesh.areas[i] = mesh.areas[mesh.npolys - 1];
                 mesh.npolys--;
                 --i;
@@ -1297,17 +1297,17 @@ public class TileCacheBuilder {
         }
 
         // Remove vertex.
-        for (int i = rem; i < mesh.nverts; ++i) {
-            mesh.verts[i * 3] = mesh.verts[(i + 1) * 3];
-            mesh.verts[i * 3 + 1] = mesh.verts[(i + 1) * 3 + 1];
-            mesh.verts[i * 3 + 2] = mesh.verts[(i + 1) * 3 + 2];
+        for (int i = rem; i < mesh.nvertices; ++i) {
+            mesh.vertices[i * 3] = mesh.vertices[(i + 1) * 3];
+            mesh.vertices[i * 3 + 1] = mesh.vertices[(i + 1) * 3 + 1];
+            mesh.vertices[i * 3 + 2] = mesh.vertices[(i + 1) * 3 + 2];
         }
-        mesh.nverts--;
+        mesh.nvertices--;
 
         // Adjust indices to match the removed vertex layout.
         for (int i = 0; i < mesh.npolys; ++i) {
-            int p = i * maxVertsPerPoly * 2;
-            int nv = countPolyVerts(mesh.polys, p, maxVertsPerPoly);
+            int p = i * maxVerticesPerPoly * 2;
+            int nv = countPolyVertices(mesh.polys, p, maxVerticesPerPoly);
             for (int j = 0; j < nv; ++j)
                 if (mesh.polys[p + j] > rem)
                     mesh.polys[p + j]--;
@@ -1362,38 +1362,38 @@ public class TileCacheBuilder {
         }
 
         int[] tris = new int[nhole * 3];
-        int[] tverts = new int[nhole * 4];
+        int[] tvertices = new int[nhole * 4];
         int[] tpoly = new int[nhole];
 
         // Generate temp vertex array for triangulation.
         for (int i = 0; i < nhole; ++i) {
             int pi = hole.get(i);
-            tverts[i * 4] = mesh.verts[pi * 3];
-            tverts[i * 4 + 1] = mesh.verts[pi * 3 + 1];
-            tverts[i * 4 + 2] = mesh.verts[pi * 3 + 2];
-            tverts[i * 4 + 3] = 0;
+            tvertices[i * 4] = mesh.vertices[pi * 3];
+            tvertices[i * 4 + 1] = mesh.vertices[pi * 3 + 1];
+            tvertices[i * 4 + 2] = mesh.vertices[pi * 3 + 2];
+            tvertices[i * 4 + 3] = 0;
             tpoly[i] = i;
         }
 
         // Triangulate the hole.
-        int ntris = triangulate(nhole, tverts, tpoly, tris);
+        int ntris = triangulate(nhole, tvertices, tpoly, tris);
         if (ntris < 0) {
             // TODO: issue warning!
             ntris = -ntris;
         }
 
-        int[] polys = new int[ntris * maxVertsPerPoly];
+        int[] polys = new int[ntris * maxVerticesPerPoly];
         int[] pareas = new int[ntris];
 
         // Build initial polygons.
         int npolys = 0;
-        Arrays.fill(polys, 0, ntris * maxVertsPerPoly, DT_TILECACHE_NULL_IDX);
+        Arrays.fill(polys, 0, ntris * maxVerticesPerPoly, DT_TILECACHE_NULL_IDX);
         for (int j = 0; j < ntris; ++j) {
             int t = j * 3;
             if (tris[t] != tris[t + 1] && tris[t] != tris[t + 2] && tris[t + 1] != tris[t + 2]) {
-                polys[npolys * maxVertsPerPoly] = hole.get(tris[t]);
-                polys[npolys * maxVertsPerPoly + 1] = hole.get(tris[t + 1]);
-                polys[npolys * maxVertsPerPoly + 2] = hole.get(tris[t + 2]);
+                polys[npolys * maxVerticesPerPoly] = hole.get(tris[t]);
+                polys[npolys * maxVerticesPerPoly + 1] = hole.get(tris[t + 1]);
+                polys[npolys * maxVerticesPerPoly + 2] = hole.get(tris[t + 2]);
                 pareas[npolys] = harea.get(tris[t]);
                 npolys++;
             }
@@ -1402,17 +1402,17 @@ public class TileCacheBuilder {
             return;
 
         // Merge polygons.
-        if (maxVertsPerPoly > 3) {
+        if (maxVerticesPerPoly > 3) {
             for (; ; ) {
                 // Find best polygons to merge.
                 int bestMergeVal = 0;
                 int bestPa = 0, bestPb = 0, bestEa = 0, bestEb = 0;
 
                 for (int j = 0; j < npolys - 1; ++j) {
-                    int pj = j * maxVertsPerPoly;
+                    int pj = j * maxVerticesPerPoly;
                     for (int k = j + 1; k < npolys; ++k) {
-                        int pk = k * maxVertsPerPoly;
-                        int[] pm = getPolyMergeValue(polys, pj, pk, mesh.verts, maxVertsPerPoly);
+                        int pk = k * maxVerticesPerPoly;
+                        int[] pm = getPolyMergeValue(polys, pj, pk, mesh.vertices, maxVerticesPerPoly);
                         int v = pm[0];
                         int ea = pm[1];
                         int eb = pm[2];
@@ -1428,10 +1428,10 @@ public class TileCacheBuilder {
 
                 if (bestMergeVal > 0) {
                     // Found best, merge.
-                    int pa = bestPa * maxVertsPerPoly;
-                    int pb = bestPb * maxVertsPerPoly;
-                    mergePolys(polys, pa, pb, bestEa, bestEb, maxVertsPerPoly);
-                    System.arraycopy(polys, (npolys - 1) * maxVertsPerPoly, polys, pb, maxVertsPerPoly);
+                    int pa = bestPa * maxVerticesPerPoly;
+                    int pb = bestPb * maxVerticesPerPoly;
+                    mergePolys(polys, pa, pb, bestEa, bestEb, maxVerticesPerPoly);
+                    System.arraycopy(polys, (npolys - 1) * maxVerticesPerPoly, polys, pb, maxVerticesPerPoly);
                     pareas[bestPb] = pareas[npolys - 1];
                     npolys--;
                 } else {
@@ -1445,10 +1445,10 @@ public class TileCacheBuilder {
         for (int i = 0; i < npolys; ++i) {
             if (mesh.npolys >= maxTris)
                 break;
-            int p = mesh.npolys * maxVertsPerPoly * 2;
-            Arrays.fill(mesh.polys, p, p + maxVertsPerPoly * 2, DT_TILECACHE_NULL_IDX);
-            for (int j = 0; j < maxVertsPerPoly; ++j)
-                mesh.polys[p + j] = polys[i * maxVertsPerPoly + j];
+            int p = mesh.npolys * maxVerticesPerPoly * 2;
+            Arrays.fill(mesh.polys, p, p + maxVerticesPerPoly * 2, DT_TILECACHE_NULL_IDX);
+            for (int j = 0; j < maxVerticesPerPoly; ++j)
+                mesh.polys[p + j] = polys[i * maxVerticesPerPoly + j];
             mesh.areas[mesh.npolys] = pareas[i];
             mesh.npolys++;
             if (mesh.npolys > maxTris) {
@@ -1458,34 +1458,34 @@ public class TileCacheBuilder {
 
     }
 
-    TileCachePolyMesh buildTileCachePolyMesh(TileCacheContourSet lcset, int maxVertsPerPoly) {
+    TileCachePolyMesh buildTileCachePolyMesh(TileCacheContourSet lcset, int maxVerticesPerPoly) {
 
         int maxVertices = 0;
         int maxTris = 0;
-        int maxVertsPerCont = 0;
+        int maxVerticesPerCont = 0;
         for (int i = 0; i < lcset.nconts; ++i) {
             // Skip null contours.
-            if (lcset.conts[i].nverts < 3)
+            if (lcset.conts[i].nvertices < 3)
                 continue;
-            maxVertices += lcset.conts[i].nverts;
-            maxTris += lcset.conts[i].nverts - 2;
-            maxVertsPerCont = Math.max(maxVertsPerCont, lcset.conts[i].nverts);
+            maxVertices += lcset.conts[i].nvertices;
+            maxTris += lcset.conts[i].nvertices - 2;
+            maxVerticesPerCont = Math.max(maxVerticesPerCont, lcset.conts[i].nvertices);
         }
 
         // TODO: warn about too many vertices?
 
-        TileCachePolyMesh mesh = new TileCachePolyMesh(maxVertsPerPoly);
+        TileCachePolyMesh mesh = new TileCachePolyMesh(maxVerticesPerPoly);
 
         int[] vflags = new int[maxVertices];
 
-        mesh.verts = new int[maxVertices * 3];
-        mesh.polys = new int[maxTris * maxVertsPerPoly * 2];
+        mesh.vertices = new int[maxVertices * 3];
+        mesh.polys = new int[maxTris * maxVerticesPerPoly * 2];
         mesh.areas = new int[maxTris];
         // Just allocate and clean the mesh flags array. The user is resposible
         // for filling it.
         mesh.flags = new int[maxTris];
 
-        mesh.nverts = 0;
+        mesh.nvertices = 0;
         mesh.npolys = 0;
 
         Arrays.fill(mesh.polys, DT_TILECACHE_NULL_IDX);
@@ -1495,34 +1495,34 @@ public class TileCacheBuilder {
             firstVert[i] = DT_TILECACHE_NULL_IDX;
 
         int[] nextVert = new int[maxVertices];
-        int[] indices = new int[maxVertsPerCont];
-        int[] tris = new int[maxVertsPerCont * 3];
-        int[] polys = new int[maxVertsPerCont * maxVertsPerPoly];
+        int[] indices = new int[maxVerticesPerCont];
+        int[] tris = new int[maxVerticesPerCont * 3];
+        int[] polys = new int[maxVerticesPerCont * maxVerticesPerPoly];
 
         for (int i = 0; i < lcset.nconts; ++i) {
             TileCacheContour cont = lcset.conts[i];
 
             // Skip null contours.
-            if (cont.nverts < 3)
+            if (cont.nvertices < 3)
                 continue;
 
             // Triangulate contour
-            for (int j = 0; j < cont.nverts; ++j)
+            for (int j = 0; j < cont.nvertices; ++j)
                 indices[j] = j;
 
-            int ntris = triangulate(cont.nverts, cont.verts, indices, tris);
+            int ntris = triangulate(cont.nvertices, cont.vertices, indices, tris);
             if (ntris <= 0) {
                 // TODO: issue warning!
                 ntris = -ntris;
             }
 
             // Add and merge vertices.
-            for (int j = 0; j < cont.nverts; ++j) {
+            for (int j = 0; j < cont.nvertices; ++j) {
                 int v = j * 4;
-                indices[j] = addVertex(cont.verts[v], cont.verts[v + 1], cont.verts[v + 2], mesh.verts, firstVert,
-                        nextVert, mesh.nverts);
-                mesh.nverts = Math.max(mesh.nverts, indices[j] + 1);
-                if ((cont.verts[v + 3] & 0x80) != 0) {
+                indices[j] = addVertex(cont.vertices[v], cont.vertices[v + 1], cont.vertices[v + 2], mesh.vertices, firstVert,
+                        nextVert, mesh.nvertices);
+                mesh.nvertices = Math.max(mesh.nvertices, indices[j] + 1);
+                if ((cont.vertices[v + 3] & 0x80) != 0) {
                     // This vertex should be removed.
                     vflags[indices[j]] = 1;
                 }
@@ -1534,9 +1534,9 @@ public class TileCacheBuilder {
             for (int j = 0; j < ntris; ++j) {
                 int t = j * 3;
                 if (tris[t] != tris[t + 1] && tris[t] != tris[t + 2] && tris[t + 1] != tris[t + 2]) {
-                    polys[npolys * maxVertsPerPoly] = indices[tris[t]];
-                    polys[npolys * maxVertsPerPoly + 1] = indices[tris[t + 1]];
-                    polys[npolys * maxVertsPerPoly + 2] = indices[tris[t + 2]];
+                    polys[npolys * maxVerticesPerPoly] = indices[tris[t]];
+                    polys[npolys * maxVerticesPerPoly + 1] = indices[tris[t + 1]];
+                    polys[npolys * maxVerticesPerPoly + 2] = indices[tris[t + 2]];
                     npolys++;
                 }
             }
@@ -1544,17 +1544,17 @@ public class TileCacheBuilder {
                 continue;
 
             // Merge polygons.
-            if (maxVertsPerPoly > 3) {
+            if (maxVerticesPerPoly > 3) {
                 for (; ; ) {
                     // Find best polygons to merge.
                     int bestMergeVal = 0;
                     int bestPa = 0, bestPb = 0, bestEa = 0, bestEb = 0;
 
                     for (int j = 0; j < npolys - 1; ++j) {
-                        int pj = j * maxVertsPerPoly;
+                        int pj = j * maxVerticesPerPoly;
                         for (int k = j + 1; k < npolys; ++k) {
-                            int pk = k * maxVertsPerPoly;
-                            int[] pm = getPolyMergeValue(polys, pj, pk, mesh.verts, maxVertsPerPoly);
+                            int pk = k * maxVerticesPerPoly;
+                            int[] pm = getPolyMergeValue(polys, pj, pk, mesh.vertices, maxVerticesPerPoly);
                             int v = pm[0];
                             int ea = pm[1];
                             int eb = pm[2];
@@ -1570,10 +1570,10 @@ public class TileCacheBuilder {
 
                     if (bestMergeVal > 0) {
                         // Found best, merge.
-                        int pa = bestPa * maxVertsPerPoly;
-                        int pb = bestPb * maxVertsPerPoly;
-                        mergePolys(polys, pa, pb, bestEa, bestEb, maxVertsPerPoly);
-                        System.arraycopy(polys, (npolys - 1) * maxVertsPerPoly, polys, pb, maxVertsPerPoly);
+                        int pa = bestPa * maxVerticesPerPoly;
+                        int pb = bestPb * maxVerticesPerPoly;
+                        mergePolys(polys, pa, pb, bestEa, bestEb, maxVerticesPerPoly);
+                        System.arraycopy(polys, (npolys - 1) * maxVerticesPerPoly, polys, pb, maxVerticesPerPoly);
                         npolys--;
                     } else {
                         // Could not merge any polygons, stop.
@@ -1584,9 +1584,9 @@ public class TileCacheBuilder {
 
             // Store polygons.
             for (int j = 0; j < npolys; ++j) {
-                int p = mesh.npolys * maxVertsPerPoly * 2;
-                int q = j * maxVertsPerPoly;
-                if (maxVertsPerPoly >= 0) System.arraycopy(polys, q, mesh.polys, p, maxVertsPerPoly);
+                int p = mesh.npolys * maxVerticesPerPoly * 2;
+                int q = j * maxVerticesPerPoly;
+                if (maxVerticesPerPoly >= 0) System.arraycopy(polys, q, mesh.polys, p, maxVerticesPerPoly);
                 mesh.areas[mesh.npolys] = cont.area;
                 mesh.npolys++;
                 if (mesh.npolys > maxTris)
@@ -1595,22 +1595,22 @@ public class TileCacheBuilder {
         }
 
         // Remove edge vertices.
-        for (int i = 0; i < mesh.nverts; ++i) {
+        for (int i = 0; i < mesh.nvertices; ++i) {
             if (vflags[i] != 0) {
                 if (!canRemoveVertex(mesh, i))
                     continue;
                 removeVertex(mesh, i, maxTris);
                 // Remove vertex
-                // Note: mesh.nverts is already decremented inside
+                // Note: mesh.nvertices is already decremented inside
                 // removeVertex()!
-                if (mesh.nverts - i >= 0)
-                    System.arraycopy(vflags, i + 1, vflags, i, mesh.nverts - i);
+                if (mesh.nvertices - i >= 0)
+                    System.arraycopy(vflags, i + 1, vflags, i, mesh.nvertices - i);
                 --i;
             }
         }
 
         // Calculate adjacency.
-        buildMeshAdjacency(mesh.polys, mesh.npolys, mesh.verts, mesh.nverts, lcset, maxVertsPerPoly);
+        buildMeshAdjacency(mesh.polys, mesh.npolys, mesh.vertices, mesh.nvertices, lcset, maxVerticesPerPoly);
 
         return mesh;
     }

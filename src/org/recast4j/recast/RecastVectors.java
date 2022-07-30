@@ -52,22 +52,22 @@ public class RecastVectors {
         out[n + 2] = in[m + 2];
     }
 
-    public static void add(float[] dst, float[] a, float[] verts, int i) {
-        dst[0] = a[0] + verts[i];
-        dst[1] = a[1] + verts[i + 1];
-        dst[2] = a[2] + verts[i + 2];
+    public static void add(float[] dst, float[] a, float[] vertices, int i) {
+        dst[0] = a[0] + vertices[i];
+        dst[1] = a[1] + vertices[i + 1];
+        dst[2] = a[2] + vertices[i + 2];
     }
 
-    public static void sub(Vector3f dst, float[] verts, int i, int j) {
-        dst.x = verts[i] - verts[j];
-        dst.y = verts[i + 1] - verts[j + 1];
-        dst.z = verts[i + 2] - verts[j + 2];
+    public static void sub(Vector3f dst, float[] vertices, int i, int j) {
+        dst.x = vertices[i] - vertices[j];
+        dst.y = vertices[i + 1] - vertices[j + 1];
+        dst.z = vertices[i + 2] - vertices[j + 2];
     }
 
-    public static void sub(float[] dst, float[] i, float[] verts, int j) {
-        dst[0] = i[0] - verts[j];
-        dst[1] = i[1] - verts[j + 1];
-        dst[2] = i[2] - verts[j + 2];
+    public static void sub(float[] dst, float[] i, float[] vertices, int j) {
+        dst[0] = i[0] - vertices[j];
+        dst[1] = i[1] - vertices[j + 1];
+        dst[2] = i[2] - vertices[j + 2];
     }
 
     public static void cross(Vector3f dest, Vector3f v1, Vector3f v2) {

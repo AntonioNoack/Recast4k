@@ -23,13 +23,13 @@ public class MeshData {
     /** The tile header. */
     public MeshHeader header;
     /** The tile vertices. [Size: MeshHeader::vertCount] */
-    public float[] verts;
+    public float[] vertices;
     /** The tile polygons. [Size: MeshHeader::polyCount] */
     public Poly[] polys;
     /** The tile's detail sub-meshes. [Size: MeshHeader::detailMeshCount] */
     public PolyDetail[] detailMeshes;
     /** The detail mesh's unique vertices. [(x, y, z) * MeshHeader::detailVertCount] */
-    public float[] detailVerts;
+    public float[] detailVertices;
     /**
      * The detail mesh's triangles. [(vertA, vertB, vertC) * MeshHeader::detailTriCount] See DetailTriEdgeFlags and
      * NavMesh::getDetailTriEdgeFlags.
@@ -41,5 +41,14 @@ public class MeshData {
     public BVNode[] bvTree;
     /** The tile off-mesh connections. [Size: MeshHeader::offMeshConCount] */
     public OffMeshConnection[] offMeshCons;
+
+    public static MeshData build(NavMeshDataCreateParams params, int tileX, int tileY) {
+        MeshData data = NavMeshBuilder.createNavMeshData(params);
+        if (data != null) {
+            data.header.x = tileX;
+            data.header.y = tileY;
+        }
+        return data;
+    }
 
 }

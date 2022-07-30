@@ -60,16 +60,16 @@ public class MeshSetReader {
 
     NavMesh read(ByteBuffer bb, int maxVertPerPoly, boolean is32Bit) throws IOException {
         NavMeshSetHeader header = readHeader(bb, maxVertPerPoly);
-        if (header.maxVertsPerPoly <= 0) {
-            throw new IOException("Invalid number of verts per poly " + header.maxVertsPerPoly);
+        if (header.maxVerticesPerPoly <= 0) {
+            throw new IOException("Invalid number of vertices per poly " + header.maxVerticesPerPoly);
         }
         boolean cCompatibility = header.version == NavMeshSetHeader.NAVMESHSET_VERSION;
-        NavMesh mesh = new NavMesh(header.params, header.maxVertsPerPoly);
+        NavMesh mesh = new NavMesh(header.params, header.maxVerticesPerPoly);
         readTiles(bb, is32Bit, header, cCompatibility, mesh);
         return mesh;
     }
 
-    private NavMeshSetHeader readHeader(ByteBuffer bb, int maxVertsPerPoly) throws IOException {
+    private NavMeshSetHeader readHeader(ByteBuffer bb, int maxVerticesPerPoly) throws IOException {
         NavMeshSetHeader header = new NavMeshSetHeader();
         header.magic = bb.getInt();
         if (header.magic != NavMeshSetHeader.NAVMESHSET_MAGIC) {
@@ -86,9 +86,9 @@ public class MeshSetReader {
         }
         header.numTiles = bb.getInt();
         header.params = paramReader.read(bb);
-        header.maxVertsPerPoly = maxVertsPerPoly;
+        header.maxVerticesPerPoly = maxVerticesPerPoly;
         if (header.version == NavMeshSetHeader.NAVMESHSET_VERSION_RECAST4J) {
-            header.maxVertsPerPoly = bb.getInt();
+            header.maxVerticesPerPoly = bb.getInt();
         }
         return header;
     }
@@ -110,7 +110,7 @@ public class MeshSetReader {
             if (cCompatibility && !is32Bit) {
                 bb.getInt(); // C struct padding
             }
-            MeshData data = meshReader.read(bb, mesh.getMaxVertsPerPoly(), is32Bit);
+            MeshData data = meshReader.read(bb, mesh.getMaxVerticesPerPoly(), is32Bit);
             mesh.addTile(data, i, tileHeader.tileRef);
         }
     }

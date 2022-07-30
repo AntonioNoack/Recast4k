@@ -43,11 +43,11 @@ public class DetourCommon {
     /// @param[in] v1 The starting vector.
     /// @param[in] v2 The destination vector.
     /// @param[in] t The interpolation factor. [Limits: 0 <= value <= 1.0]
-    public static Vector3f vLerp(float[] verts, int v1, int v2, float t) {
+    public static Vector3f vLerp(float[] vertices, int v1, int v2, float t) {
         Vector3f dest = new Vector3f();
-        dest.x = verts[v1] + (verts[v2] - verts[v1]) * t;
-        dest.y = verts[v1 + 1] + (verts[v2 + 1] - verts[v1 + 1]) * t;
-        dest.z = verts[v1 + 2] + (verts[v2 + 2] - verts[v1 + 2]) * t;
+        dest.x = vertices[v1] + (vertices[v2] - vertices[v1]) * t;
+        dest.y = vertices[v1 + 1] + (vertices[v2 + 1] - vertices[v1 + 1]) * t;
+        dest.z = vertices[v1 + 2] + (vertices[v2 + 2] - vertices[v1 + 2]) * t;
         return dest;
     }
 
@@ -146,10 +146,10 @@ public class DetourCommon {
         return (float) Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
     }
 
-    static float vDist(float[] v1, float[] verts, int i) {
-        float dx = verts[i] - v1[0];
-        float dy = verts[i + 1] - v1[1];
-        float dz = verts[i + 2] - v1[2];
+    static float vDist(float[] v1, float[] vertices, int i) {
+        float dx = vertices[i] - v1[0];
+        float dy = vertices[i + 1] - v1[1];
+        float dz = vertices[i + 2] - v1[2];
         return (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
@@ -180,9 +180,9 @@ public class DetourCommon {
         return dx * dx + dz * dz;
     }
 
-    public static float vDist2DSqr(Vector3f p, float[] verts, int i) {
-        float dx = verts[i] - p.x;
-        float dz = verts[i + 2] - p.z;
+    public static float vDist2DSqr(Vector3f p, float[] vertices, int i) {
+        float dx = vertices[i] - p.x;
+        float dz = vertices[i + 2] - p.z;
         return dx * dx + dz * dz;
     }
 
@@ -246,11 +246,11 @@ public class DetourCommon {
     /// @param[in] b Vertex B. [(x, y, z)]
     /// @param[in] c Vertex C. [(x, y, z)]
     /// @return The signed xz-plane area of the triangle.
-    public static float triArea2D(float[] verts, int a, int b, int c) {
-        float abx = verts[b] - verts[a];
-        float abz = verts[b + 2] - verts[a + 2];
-        float acx = verts[c] - verts[a];
-        float acz = verts[c + 2] - verts[a + 2];
+    public static float triArea2D(float[] vertices, int a, int b, int c) {
+        float abx = vertices[b] - vertices[a];
+        float abz = vertices[b + 2] - vertices[a + 2];
+        float acx = vertices[c] - vertices[a];
+        float acz = vertices[c + 2] - vertices[a + 2];
         return acx * abz - abx * acz;
     }
 
@@ -340,31 +340,31 @@ public class DetourCommon {
     /// @par
     ///
     /// All points are projected onto the xz-plane, so the y-values are ignored.
-    static boolean pointInPolygon(Vector3f pt, float[] verts, int nverts) {
+    static boolean pointInPolygon(Vector3f pt, float[] vertices, int nvertices) {
         int i, j;
         boolean c = false;
-        for (i = 0, j = nverts - 1; i < nverts; j = i++) {
+        for (i = 0, j = nvertices - 1; i < nvertices; j = i++) {
             int vi = i * 3;
             int vj = j * 3;
-            if (((verts[vi + 2] > pt.z) != (verts[vj + 2] > pt.z)) && (pt.x < (verts[vj] - verts[vi])
-                    * (pt.z - verts[vi + 2]) / (verts[vj + 2] - verts[vi + 2]) + verts[vi])) {
+            if (((vertices[vi + 2] > pt.z) != (vertices[vj + 2] > pt.z)) && (pt.x < (vertices[vj] - vertices[vi])
+                    * (pt.z - vertices[vi + 2]) / (vertices[vj + 2] - vertices[vi + 2]) + vertices[vi])) {
                 c = !c;
             }
         }
         return c;
     }
 
-    static boolean distancePtPolyEdgesSqr(Vector3f pt, float[] verts, int nverts, float[] ed, float[] et) {
+    static boolean distancePtPolyEdgesSqr(Vector3f pt, float[] vertices, int nvertices, float[] ed, float[] et) {
         int i, j;
         boolean c = false;
-        for (i = 0, j = nverts - 1; i < nverts; j = i++) {
+        for (i = 0, j = nvertices - 1; i < nvertices; j = i++) {
             int vi = i * 3;
             int vj = j * 3;
-            if (((verts[vi + 2] > pt.z) != (verts[vj + 2] > pt.z)) && (pt.x < (verts[vj] - verts[vi])
-                    * (pt.z - verts[vi + 2]) / (verts[vj + 2] - verts[vi + 2]) + verts[vi])) {
+            if (((vertices[vi + 2] > pt.z) != (vertices[vj + 2] > pt.z)) && (pt.x < (vertices[vj] - vertices[vi])
+                    * (pt.z - vertices[vi + 2]) / (vertices[vj + 2] - vertices[vi + 2]) + vertices[vi])) {
                 c = !c;
             }
-            Pair<Float, Float> edet = distancePtSegSqr2D(pt, verts, vj, vi);
+            Pair<Float, Float> edet = distancePtSegSqr2D(pt, vertices, vj, vi);
             ed[j] = edet.first;
             et[j] = edet.second;
         }
@@ -505,15 +505,15 @@ public class DetourCommon {
         int segMax = -1;
     }
 
-    static IntersectResult intersectSegmentPoly2D(Vector3f p0, Vector3f p1, float[] verts, int nverts) {
+    static IntersectResult intersectSegmentPoly2D(Vector3f p0, Vector3f p1, float[] vertices, int nvertices) {
 
         IntersectResult result = new IntersectResult();
         float EPS = 0.00000001f;
         Vector3f dir = vSub(p1, p0);
 
-        for (int i = 0, j = nverts - 1; i < nverts; j = i++) {
-            VectorPtr vpj = new VectorPtr(verts, j * 3);
-            Vector3f edge = vSub(new VectorPtr(verts, i * 3), vpj);
+        for (int i = 0, j = nvertices - 1; i < nvertices; j = i++) {
+            VectorPtr vpj = new VectorPtr(vertices, j * 3);
+            Vector3f edge = vSub(new VectorPtr(vertices, i * 3), vpj);
             Vector3f diff = vSub(p0, vpj);
             float n = vPerp2D(edge, diff);
             float d = vPerp2D(dir, edge);
@@ -552,11 +552,11 @@ public class DetourCommon {
         return result;
     }
 
-    public static Pair<Float, Float> distancePtSegSqr2D(Vector3f pt, float[] verts, int p, int q) {
-        float pqx = verts[q] - verts[p];
-        float pqz = verts[q + 2] - verts[p + 2];
-        float dx = pt.x - verts[p];
-        float dz = pt.z - verts[p + 2];
+    public static Pair<Float, Float> distancePtSegSqr2D(Vector3f pt, float[] vertices, int p, int q) {
+        float pqx = vertices[q] - vertices[p];
+        float pqz = vertices[q + 2] - vertices[p + 2];
+        float dx = pt.x - vertices[p];
+        float dz = pt.z - vertices[p + 2];
         float d = pqx * pqx + pqz * pqz;
         float t = pqx * dx + pqz * dz;
         if (d > 0) {
@@ -567,8 +567,8 @@ public class DetourCommon {
         } else if (t > 1) {
             t = 1;
         }
-        dx = verts[p] + t * pqx - pt.x;
-        dz = verts[p + 2] + t * pqz - pt.z;
+        dx = vertices[p] + t * pqx - pt.x;
+        dz = vertices[p + 2] + t * pqz - pt.z;
         return new Pair<>(dx * dx + dz * dz, t);
     }
 

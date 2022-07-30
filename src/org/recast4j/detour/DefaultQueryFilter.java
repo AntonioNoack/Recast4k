@@ -49,54 +49,37 @@ import static org.recast4j.detour.DetourCommon.vDist;
  */
 public class DefaultQueryFilter implements QueryFilter {
 
-    private int m_excludeFlags;
-    private int m_includeFlags;
-    private final float[] m_areaCost = new float[NavMesh.DT_MAX_AREAS];
+    public int excludeFlags;
+    public int includeFlags;
+    private final float[] areaCosts = new float[NavMesh.DT_MAX_AREAS];
 
     public DefaultQueryFilter() {
-        m_includeFlags = 0xffff;
-        m_excludeFlags = 0;
+        includeFlags = 0xffff;
+        excludeFlags = 0;
         for (int i = 0; i < NavMesh.DT_MAX_AREAS; ++i) {
-            m_areaCost[i] = 1.0f;
+            areaCosts[i] = 1.0f;
         }
     }
 
+    @SuppressWarnings("unused")
     public DefaultQueryFilter(int includeFlags, int excludeFlags, float[] areaCost) {
-        m_includeFlags = includeFlags;
-        m_excludeFlags = excludeFlags;
-        for (int i = 0; i < Math.min(NavMesh.DT_MAX_AREAS, areaCost.length); ++i) {
-            m_areaCost[i] = areaCost[i];
-        }
+        this.includeFlags = includeFlags;
+        this.excludeFlags = excludeFlags;
+        System.arraycopy(areaCost, 0, areaCosts, 0, Math.min(NavMesh.DT_MAX_AREAS, areaCost.length));
         for (int i = areaCost.length; i < NavMesh.DT_MAX_AREAS; ++i) {
-            m_areaCost[i] = 1.0f;
+            areaCosts[i] = 1.0f;
         }
     }
 
     @Override
     public boolean passFilter(long ref, MeshTile tile, Poly poly) {
-        return (poly.flags & m_includeFlags) != 0 && (poly.flags & m_excludeFlags) == 0;
+        return (poly.flags & includeFlags) != 0 && (poly.flags & excludeFlags) == 0;
     }
 
     @Override
     public float getCost(Vector3f pa, Vector3f pb, long prevRef, MeshTile prevTile, Poly prevPoly, long curRef,
                          MeshTile curTile, Poly curPoly, long nextRef, MeshTile nextTile, Poly nextPoly) {
-        return pa.distance(pb) * m_areaCost[curPoly.getArea()];
-    }
-
-    public int getIncludeFlags() {
-        return m_includeFlags;
-    }
-
-    public void setIncludeFlags(int flags) {
-        m_includeFlags = flags;
-    }
-
-    public int getExcludeFlags() {
-        return m_excludeFlags;
-    }
-
-    public void setExcludeFlags(int flags) {
-        m_excludeFlags = flags;
+        return pa.distance(pb) * areaCosts[curPoly.getArea()];
     }
 
 }

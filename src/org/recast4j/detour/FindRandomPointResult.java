@@ -21,22 +21,12 @@ package org.recast4j.detour;
 import org.joml.Vector3f;
 
 public class FindRandomPointResult {
-    private final long randomRef;
-    private final Vector3f randomPt;
+    public final long randomRef;
+    public final Vector3f randomPt;
 
     public FindRandomPointResult(long randomRef, Vector3f randomPt) {
         this.randomRef = randomRef;
         this.randomPt = randomPt;
-    }
-
-    /// @param[out] randomRef The reference id of the random location.
-    public long getRandomRef() {
-        return randomRef;
-    }
-
-    /// @param[out] randomPt The random location.
-    public Vector3f getRandomPt() {
-        return randomPt;
     }
 
 }

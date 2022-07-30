@@ -85,7 +85,7 @@ class DynamicTile {
                 config.partitionType, vt.cellSize, vt.cellHeight, config.walkableSlopeAngle, true, true, true,
                 config.walkableHeight, config.walkableRadius, config.walkableClimb, config.minRegionArea, config.regionMergeArea,
                 config.maxEdgeLen, config.maxSimplificationError,
-                Math.min(DynamicNavMesh.MAX_VERTS_PER_POLY, config.vertsPerPoly), true, config.detailSampleDistance,
+                Math.min(DynamicNavMesh.MAX_VERTICES_PER_POLY, config.verticesPerPoly), true, config.detailSampleDistance,
                 config.detailSampleMaxError, null);
         RecastBuilderResult r = builder.build(vt.tileX, vt.tileZ, null, rcConfig, heightfield, telemetry);
         if (config.keepIntermediateResults) {
@@ -112,39 +112,39 @@ class DynamicTile {
 
     private NavMeshDataCreateParams navMeshCreateParams(int tilex, int tileZ, float cellSize, float cellHeight,
             DynamicNavMeshConfig config, RecastBuilderResult rcResult) {
-        PolyMesh m_pmesh = rcResult.getMesh();
-        PolyMeshDetail m_dmesh = rcResult.getMeshDetail();
+        PolyMesh mesh = rcResult.mesh;
+        PolyMeshDetail meshDetail = rcResult.meshDetail;
         NavMeshDataCreateParams params = new NavMeshDataCreateParams();
-        for (int i = 0; i < m_pmesh.npolys; ++i) {
-            m_pmesh.flags[i] = 1;
+        for (int i = 0; i < mesh.npolys; ++i) {
+            mesh.flags[i] = 1;
         }
         params.tileX = tilex;
         params.tileZ = tileZ;
-        params.verts = m_pmesh.verts;
-        params.vertCount = m_pmesh.nverts;
-        params.polys = m_pmesh.polys;
-        params.polyAreas = m_pmesh.areas;
-        params.polyFlags = m_pmesh.flags;
-        params.polyCount = m_pmesh.npolys;
-        params.nvp = m_pmesh.nvp;
-        if (m_dmesh != null) {
-            params.detailMeshes = m_dmesh.meshes;
-            params.detailVerts = m_dmesh.verts;
-            params.detailVertsCount = m_dmesh.nverts;
-            params.detailTris = m_dmesh.tris;
-            params.detailTriCount = m_dmesh.ntris;
+        params.vertices = mesh.vertices;
+        params.vertCount = mesh.nvertices;
+        params.polys = mesh.polys;
+        params.polyAreas = mesh.areas;
+        params.polyFlags = mesh.flags;
+        params.polyCount = mesh.npolys;
+        params.nvp = mesh.nvp;
+        if (meshDetail != null) {
+            params.detailMeshes = meshDetail.meshes;
+            params.detailVertices = meshDetail.vertices;
+            params.detailVerticesCount = meshDetail.nvertices;
+            params.detailTris = meshDetail.tris;
+            params.detailTriCount = meshDetail.ntris;
         }
         params.walkableHeight = config.walkableHeight;
         params.walkableRadius = config.walkableRadius;
         params.walkableClimb = config.walkableClimb;
-        params.bmin = m_pmesh.bmin;
-        params.bmax = m_pmesh.bmax;
+        params.bmin = mesh.bmin;
+        params.bmax = mesh.bmax;
         params.cs = cellSize;
         params.ch = cellHeight;
         params.buildBvTree = true;
 
         params.offMeshConCount = 0;
-        params.offMeshConVerts = new float[0];
+        params.offMeshConVertices = new float[0];
         params.offMeshConRad = new float[0];
         params.offMeshConDir = new int[0];
         params.offMeshConAreas = new int[0];

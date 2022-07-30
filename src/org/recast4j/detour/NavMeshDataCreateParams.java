@@ -28,7 +28,7 @@ public class NavMeshDataCreateParams {
     /// See #rcPolyMesh for details related to these attributes.
     /// @{
 
-    public int[] verts; /// < The polygon mesh vertices. [(x, y, z) * #vertCount] [Unit: vx]
+    public int[] vertices; /// < The polygon mesh vertices. [(x, y, z) * #vertCount] [Unit: vx]
     public int vertCount; /// < The number vertices in the polygon mesh. [Limit: >= 3]
     public int[] polys; /// < The polygon data. [Size: #polyCount * 2 * #nvp]
     public int[] polyFlags; /// < The user defined flags assigned to each polygon. [Size: #polyCount]
@@ -42,8 +42,8 @@ public class NavMeshDataCreateParams {
     /// @{
 
     public int[] detailMeshes; /// < The height detail sub-mesh data. [Size: 4 * #polyCount]
-    public float[] detailVerts; /// < The detail mesh vertices. [Size: 3 * #detailVertsCount] [Unit: wu]
-    public int detailVertsCount; /// < The number of vertices in the detail mesh.
+    public float[] detailVertices; /// < The detail mesh vertices. [Size: 3 * #detailVerticesCount] [Unit: wu]
+    public int detailVerticesCount; /// < The number of vertices in the detail mesh.
     public int[] detailTris; /// < The detail mesh triangles. [Size: 4 * #detailTriCount]
     public int detailTriCount; /// < The number of triangles in the detail mesh.
 
@@ -55,7 +55,7 @@ public class NavMeshDataCreateParams {
     /// @{
 
     /// Off-mesh connection vertices. [(ax, ay, az, bx, by, bz) * #offMeshConCount] [Unit: wu]
-    public float[] offMeshConVerts;
+    public float[] offMeshConVertices;
     /// Off-mesh connection radii. [Size: #offMeshConCount] [Unit: wu]
     public float[] offMeshConRad;
     /// User defined flags assigned to the off-mesh connections. [Size: #offMeshConCount]

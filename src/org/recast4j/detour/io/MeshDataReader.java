@@ -83,13 +83,13 @@ public class MeshDataReader {
         header.bmin.set(buf.getFloat(), buf.getFloat(), buf.getFloat());
         header.bmax.set(buf.getFloat(), buf.getFloat(), buf.getFloat());
         header.bvQuantFactor = buf.getFloat();
-        data.verts = readVerts(buf, header.vertCount);
+        data.vertices = readVertices(buf, header.vertCount);
         data.polys = readPolys(buf, header, maxVertPerPoly);
         if (cCompatibility) {
             buf.position(buf.position() + header.maxLinkCount * getSizeofLink(is32Bit));
         }
         data.detailMeshes = readPolyDetails(buf, header, cCompatibility);
-        data.detailVerts = readVerts(buf, header.detailVertCount);
+        data.detailVertices = readVertices(buf, header.detailVertCount);
         data.detailTris = readDTris(buf, header);
         data.bvTree = readBVTree(buf, header);
         data.offMeshCons = readOffMeshCons(buf, header);
@@ -103,12 +103,12 @@ public class MeshDataReader {
         return is32Bit ? LINK_SIZEOF32BIT : LINK_SIZEOF;
     }
 
-    private float[] readVerts(ByteBuffer buf, int count) {
-        float[] verts = new float[count * 3];
-        for (int i = 0; i < verts.length; i++) {
-            verts[i] = buf.getFloat();
+    private float[] readVertices(ByteBuffer buf, int count) {
+        float[] vertices = new float[count * 3];
+        for (int i = 0; i < vertices.length; i++) {
+            vertices[i] = buf.getFloat();
         }
-        return verts;
+        return vertices;
     }
 
     private Poly[] readPolys(ByteBuffer buf, MeshHeader header, int maxVertPerPoly) {
@@ -118,8 +118,8 @@ public class MeshDataReader {
             if (header.version < MeshHeader.DT_NAVMESH_VERSION_RECAST4J_NO_POLY_FIRSTLINK) {
                 buf.getInt(); // polys[i].firstLink
             }
-            for (int j = 0; j < polys[i].verts.length; j++) {
-                polys[i].verts[j] = buf.getShort() & 0xFFFF;
+            for (int j = 0; j < polys[i].vertices.length; j++) {
+                polys[i].vertices[j] = buf.getShort() & 0xFFFF;
             }
             for (int j = 0; j < polys[i].neis.length; j++) {
                 polys[i].neis[j] = buf.getShort() & 0xFFFF;

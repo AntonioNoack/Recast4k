@@ -42,7 +42,7 @@ public class VoxelFileWriter extends DetourWriter {
         write(stream, f.maxEdgeLen, byteOrder);
         write(stream, f.minRegionArea, byteOrder);
         write(stream, f.regionMergeArea, byteOrder);
-        write(stream, f.vertsPerPoly, byteOrder);
+        write(stream, f.verticesPerPoly, byteOrder);
         write(stream, f.buildMeshDetail);
         write(stream, f.detailSampleDistance, byteOrder);
         write(stream, f.detailSampleMaxError, byteOrder);

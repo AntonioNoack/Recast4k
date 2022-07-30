@@ -22,7 +22,7 @@ public class FindNearestPolyQuery implements PolyQuery {
 
     @Override
     public void process(MeshTile tile, Poly poly, long ref) {
-        // Find nearest polygon amongst the nearby polygons.
+        // Find the nearest polygon amongst the nearby polygons.
         Result<ClosestPointOnPolyResult> closest = query.closestPointOnPoly(ref, center);
         boolean posOverPoly = closest.result.isPosOverPoly();
         Vector3f closestPtPoly = closest.result.getClosest();

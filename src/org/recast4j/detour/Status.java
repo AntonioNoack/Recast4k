@@ -20,7 +20,7 @@ package org.recast4j.detour;
 
 public enum Status {
 
-    FAILURE, SUCCSESS, IN_PROGRESS, PARTIAL_RESULT, FAILURE_INVALID_PARAM;
+    FAILURE, SUCCESS, IN_PROGRESS, PARTIAL_RESULT, FAILURE_INVALID_PARAM;
 
     public boolean isFailed() {
         return this == FAILURE || this == FAILURE_INVALID_PARAM;
@@ -31,7 +31,7 @@ public enum Status {
     }
 
     public boolean isSuccess() {
-        return this == Status.SUCCSESS || this == Status.PARTIAL_RESULT;
+        return this == Status.SUCCESS || this == Status.PARTIAL_RESULT;
     }
 
     public boolean isPartial() {

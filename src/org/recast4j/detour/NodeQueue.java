@@ -28,6 +28,7 @@ public class NodeQueue {
         m_heap.clear();
     }
 
+    @SuppressWarnings("unused")
     public Node top() {
         return m_heap.peek();
     }

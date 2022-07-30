@@ -36,9 +36,9 @@ class EdgeExtractor {
                                 nj = 0;
                             }
                             Edge e = new Edge();
-                            copy(e.sp, mesh.verts, mesh.polys[p + nj] * 3);
+                            copy(e.sp, mesh.vertices, mesh.polys[p + nj] * 3);
                             e.sp.mul(cs, ch, cs).add(orig);
-                            copy(e.sq, mesh.verts, mesh.polys[p + j] * 3);
+                            copy(e.sq, mesh.vertices, mesh.polys[p + j] * 3);
                             e.sq.mul(cs, ch, cs).add(orig);
                             edges.add(e);
                         }

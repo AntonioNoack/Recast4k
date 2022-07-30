@@ -48,7 +48,7 @@ public class MeshSetWriter extends DetourWriter {
         }
         write(stream, numTiles, order);
         paramWriter.write(stream, mesh.getParams(), order);
-        write(stream, mesh.getMaxVertsPerPoly(), order);
+        write(stream, mesh.getMaxVerticesPerPoly(), order);
     }
 
     private void writeTiles(OutputStream stream, NavMesh mesh, ByteOrder order) throws IOException {

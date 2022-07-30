@@ -508,20 +508,20 @@ public class TileCache {
         builder.buildTileCacheRegions(layer, walkableClimbVx);
         TileCacheContourSet lcset = builder.buildTileCacheContours(layer, walkableClimbVx,
                 m_params.maxSimplificationError);
-        TileCachePolyMesh polyMesh = builder.buildTileCachePolyMesh(lcset, m_navmesh.getMaxVertsPerPoly());
+        TileCachePolyMesh polyMesh = builder.buildTileCachePolyMesh(lcset, m_navmesh.getMaxVerticesPerPoly());
         // Early out if the mesh tile is empty.
         if (polyMesh.npolys == 0) {
             m_navmesh.removeTile(m_navmesh.getTileRefAt(tile.header.tx, tile.header.ty, tile.header.tlayer));
             return;
         }
         NavMeshDataCreateParams params = new NavMeshDataCreateParams();
-        params.verts = polyMesh.verts;
-        params.vertCount = polyMesh.nverts;
+        params.vertices = polyMesh.vertices;
+        params.vertCount = polyMesh.nvertices;
         params.polys = polyMesh.polys;
         params.polyAreas = polyMesh.areas;
         params.polyFlags = polyMesh.flags;
         params.polyCount = polyMesh.npolys;
-        params.nvp = m_navmesh.getMaxVertsPerPoly();
+        params.nvp = m_navmesh.getMaxVerticesPerPoly();
         params.walkableHeight = m_params.walkableHeight;
         params.walkableRadius = m_params.walkableRadius;
         params.walkableClimb = m_params.walkableClimb;

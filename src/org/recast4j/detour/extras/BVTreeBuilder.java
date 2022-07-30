@@ -27,7 +27,7 @@ import org.joml.Vector3f;
 import org.recast4j.detour.BVNode;
 import org.recast4j.detour.MeshData;
 import org.recast4j.detour.NavMeshBuilder;
-import org.recast4j.detour.NavMeshBuilder.BVItem;
+import org.recast4j.detour.NavMeshBuilder.Node;
 
 public class BVTreeBuilder {
 
@@ -38,25 +38,25 @@ public class BVTreeBuilder {
     }
 
     private static int createBVTree(MeshData data, BVNode[] nodes, float quantFactor) {
-        BVItem[] items = new BVItem[data.header.polyCount];
+        Node[] items = new Node[data.header.polyCount];
         for (int i = 0; i < data.header.polyCount; i++) {
-            BVItem it = new BVItem();
+            Node it = new Node();
             items[i] = it;
             it.i = i;
             Vector3f bmin = new Vector3f();
             Vector3f bmax = new Vector3f();
-            copy(bmin, data.verts, data.polys[i].verts[0] * 3);
-            copy(bmax, data.verts, data.polys[i].verts[0] * 3);
+            copy(bmin, data.vertices, data.polys[i].vertices[0] * 3);
+            copy(bmax, data.vertices, data.polys[i].vertices[0] * 3);
             for (int j = 1; j < data.polys[i].vertCount; j++) {
-                min(bmin, data.verts, data.polys[i].verts[j] * 3);
-                max(bmax, data.verts, data.polys[i].verts[j] * 3);
+                min(bmin, data.vertices, data.polys[i].vertices[j] * 3);
+                max(bmax, data.vertices, data.polys[i].vertices[j] * 3);
             }
-            it.bmin[0] = clamp((int) ((bmin.x - data.header.bmin.x) * quantFactor), 0, 0x7fffffff);
-            it.bmin[1] = clamp((int) ((bmin.y - data.header.bmin.y) * quantFactor), 0, 0x7fffffff);
-            it.bmin[2] = clamp((int) ((bmin.z - data.header.bmin.z) * quantFactor), 0, 0x7fffffff);
-            it.bmax[0] = clamp((int) ((bmax.x - data.header.bmin.x) * quantFactor), 0, 0x7fffffff);
-            it.bmax[1] = clamp((int) ((bmax.y - data.header.bmin.y) * quantFactor), 0, 0x7fffffff);
-            it.bmax[2] = clamp((int) ((bmax.z - data.header.bmin.z) * quantFactor), 0, 0x7fffffff);
+            it.minX = clamp((int) ((bmin.x - data.header.bmin.x) * quantFactor), 0, 0x7fffffff);
+            it.minY = clamp((int) ((bmin.y - data.header.bmin.y) * quantFactor), 0, 0x7fffffff);
+            it.minZ= clamp((int) ((bmin.z - data.header.bmin.z) * quantFactor), 0, 0x7fffffff);
+            it.maxX = clamp((int) ((bmax.x - data.header.bmin.x) * quantFactor), 0, 0x7fffffff);
+            it.maxY = clamp((int) ((bmax.y - data.header.bmin.y) * quantFactor), 0, 0x7fffffff);
+            it.maxZ = clamp((int) ((bmax.z - data.header.bmin.z) * quantFactor), 0, 0x7fffffff);
         }
         return NavMeshBuilder.subdivide(items, 0, data.header.polyCount, 0, nodes);
     }

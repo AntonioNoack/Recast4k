@@ -24,7 +24,7 @@ import static org.recast4j.recast.RecastConstants.*;
 
 public class RecastMesh {
 
-    private static final int MAX_MESH_VERTS_POLY = 0xffff;
+    private static final int MAX_MESH_VERTICES_POLY = 0xffff;
     static int VERTEX_BUCKET_COUNT = (1 << 12);
 
     private static class Edge {
@@ -34,26 +34,26 @@ public class RecastMesh {
 
     }
 
-    private static void buildMeshAdjacency(int[] polys, int npolys, int nverts, int vertsPerPoly) {
+    private static void buildMeshAdjacency(int[] polys, int npolys, int nvertices, int verticesPerPoly) {
         // Based on code by Eric Lengyel from:
         // http://www.terathon.com/code/edges.php
 
-        int maxEdgeCount = npolys * vertsPerPoly;
-        int[] firstEdge = new int[nverts + maxEdgeCount];
+        int maxEdgeCount = npolys * verticesPerPoly;
+        int[] firstEdge = new int[nvertices + maxEdgeCount];
         int edgeCount = 0;
 
         Edge[] edges = new Edge[maxEdgeCount];
 
-        for (int i = 0; i < nverts; i++)
+        for (int i = 0; i < nvertices; i++)
             firstEdge[i] = RC_MESH_NULL_IDX;
 
         for (int i = 0; i < npolys; ++i) {
-            int t = i * vertsPerPoly * 2;
-            for (int j = 0; j < vertsPerPoly; ++j) {
+            int t = i * verticesPerPoly * 2;
+            for (int j = 0; j < verticesPerPoly; ++j) {
                 if (polys[t + j] == RC_MESH_NULL_IDX)
                     break;
                 int v0 = polys[t + j];
-                int v1 = (j + 1 >= vertsPerPoly || polys[t + j + 1] == RC_MESH_NULL_IDX) ? polys[t]
+                int v1 = (j + 1 >= verticesPerPoly || polys[t + j + 1] == RC_MESH_NULL_IDX) ? polys[t]
                         : polys[t + j + 1];
                 if (v0 < v1) {
                     Edge edge = new Edge();
@@ -65,7 +65,7 @@ public class RecastMesh {
                     edge.poly[1] = i;
                     edge.polyEdge[1] = 0;
                     // Insert edge
-                    firstEdge[nverts + edgeCount] = firstEdge[v0];
+                    firstEdge[nvertices + edgeCount] = firstEdge[v0];
                     firstEdge[v0] = edgeCount;
                     edgeCount++;
                 }
@@ -73,15 +73,15 @@ public class RecastMesh {
         }
 
         for (int i = 0; i < npolys; ++i) {
-            int t = i * vertsPerPoly * 2;
-            for (int j = 0; j < vertsPerPoly; ++j) {
+            int t = i * verticesPerPoly * 2;
+            for (int j = 0; j < verticesPerPoly; ++j) {
                 if (polys[t + j] == RC_MESH_NULL_IDX)
                     break;
                 int v0 = polys[t + j];
-                int v1 = (j + 1 >= vertsPerPoly || polys[t + j + 1] == RC_MESH_NULL_IDX) ? polys[t]
+                int v1 = (j + 1 >= verticesPerPoly || polys[t + j + 1] == RC_MESH_NULL_IDX) ? polys[t]
                         : polys[t + j + 1];
                 if (v0 > v1) {
-                    for (int e = firstEdge[v1]; e != RC_MESH_NULL_IDX; e = firstEdge[nverts + e]) {
+                    for (int e = firstEdge[v1]; e != RC_MESH_NULL_IDX; e = firstEdge[nvertices + e]) {
                         Edge edge = edges[e];
                         if (edge.vert[1] == v0 && edge.poly[0] == edge.poly[1]) {
                             edge.poly[1] = i;
@@ -97,10 +97,10 @@ public class RecastMesh {
         for (int i = 0; i < edgeCount; ++i) {
             Edge e = edges[i];
             if (e.poly[0] != e.poly[1]) {
-                int p0 = e.poly[0] * vertsPerPoly * 2;
-                int p1 = e.poly[1] * vertsPerPoly * 2;
-                polys[p0 + vertsPerPoly + e.polyEdge[0]] = e.poly[1];
-                polys[p1 + vertsPerPoly + e.polyEdge[1]] = e.poly[0];
+                int p0 = e.poly[0] * verticesPerPoly * 2;
+                int p1 = e.poly[1] * verticesPerPoly * 2;
+                polys[p0 + verticesPerPoly + e.polyEdge[0]] = e.poly[1];
+                polys[p1 + verticesPerPoly + e.polyEdge[1]] = e.poly[0];
             }
         }
 
@@ -114,13 +114,13 @@ public class RecastMesh {
         return n & (VERTEX_BUCKET_COUNT - 1);
     }
 
-    private static int[] addVertex(int x, int y, int z, int[] verts, int[] firstVert, int[] nextVert, int nv) {
+    private static int[] addVertex(int x, int y, int z, int[] vertices, int[] firstVert, int[] nextVert, int nv) {
         int bucket = computeVertexHash(x, 0, z);// todo why is y skipped?
         int i = firstVert[bucket];
 
         while (i != -1) {
             int v = i * 3;
-            if (verts[v] == x && (Math.abs(verts[v + 1] - y) <= 2) && verts[v + 2] == z)
+            if (vertices[v] == x && (Math.abs(vertices[v + 1] - y) <= 2) && vertices[v + 2] == z)
                 return new int[]{i, nv};
             i = nextVert[i]; // next
         }
@@ -129,9 +129,9 @@ public class RecastMesh {
         i = nv;
         nv++;
         int v = i * 3;
-        verts[v] = x;
-        verts[v + 1] = y;
-        verts[v + 2] = z;
+        vertices[v] = x;
+        vertices[v + 1] = y;
+        vertices[v + 2] = z;
         nextVert[i] = firstVert[bucket];
         firstVert[bucket] = i;
 
@@ -146,66 +146,66 @@ public class RecastMesh {
         return i + 1 < n ? i + 1 : 0;
     }
 
-    private static int area2(int[] verts, int a, int b, int c) {
-        return (verts[b] - verts[a]) * (verts[c + 2] - verts[a + 2])
-                - (verts[c] - verts[a]) * (verts[b + 2] - verts[a + 2]);
+    private static int area2(int[] vertices, int a, int b, int c) {
+        return (vertices[b] - vertices[a]) * (vertices[c + 2] - vertices[a + 2])
+                - (vertices[c] - vertices[a]) * (vertices[b + 2] - vertices[a + 2]);
     }
 
     // Returns true iff c is strictly to the left of the directed
     // line through a to b.
-    static boolean left(int[] verts, int a, int b, int c) {
-        return area2(verts, a, b, c) < 0;
+    static boolean left(int[] vertices, int a, int b, int c) {
+        return area2(vertices, a, b, c) < 0;
     }
 
-    static boolean leftOn(int[] verts, int a, int b, int c) {
-        return area2(verts, a, b, c) <= 0;
+    static boolean leftOn(int[] vertices, int a, int b, int c) {
+        return area2(vertices, a, b, c) <= 0;
     }
 
-    private static boolean collinear(int[] verts, int a, int b, int c) {
-        return area2(verts, a, b, c) == 0;
+    private static boolean collinear(int[] vertices, int a, int b, int c) {
+        return area2(vertices, a, b, c) == 0;
     }
 
     // Returns true iff ab properly intersects cd: they share
     // a point interior to both segments. The properness of the
     // intersection is ensured by using strict leftness.
-    private static boolean intersectProp(int[] verts, int a, int b, int c, int d) {
+    private static boolean intersectProp(int[] vertices, int a, int b, int c, int d) {
         // Eliminate improper cases.
-        if (collinear(verts, a, b, c) || collinear(verts, a, b, d) || collinear(verts, c, d, a)
-                || collinear(verts, c, d, b))
+        if (collinear(vertices, a, b, c) || collinear(vertices, a, b, d) || collinear(vertices, c, d, a)
+                || collinear(vertices, c, d, b))
             return false;
 
-        return (left(verts, a, b, c) ^ left(verts, a, b, d)) && (left(verts, c, d, a) ^ left(verts, c, d, b));
+        return (left(vertices, a, b, c) ^ left(vertices, a, b, d)) && (left(vertices, c, d, a) ^ left(vertices, c, d, b));
     }
 
     // Returns T iff (a,b,c) are collinear and point c lies
     // on the closed segement ab.
-    private static boolean between(int[] verts, int a, int b, int c) {
-        if (!collinear(verts, a, b, c))
+    private static boolean between(int[] vertices, int a, int b, int c) {
+        if (!collinear(vertices, a, b, c))
             return false;
         // If ab not vertical, check betweenness on x; else on y.
-        if (verts[a] != verts[b])
-            return ((verts[a] <= verts[c]) && (verts[c] <= verts[b]))
-                    || ((verts[a] >= verts[c]) && (verts[c] >= verts[b]));
+        if (vertices[a] != vertices[b])
+            return ((vertices[a] <= vertices[c]) && (vertices[c] <= vertices[b]))
+                    || ((vertices[a] >= vertices[c]) && (vertices[c] >= vertices[b]));
         else
-            return ((verts[a + 2] <= verts[c + 2]) && (verts[c + 2] <= verts[b + 2]))
-                    || ((verts[a + 2] >= verts[c + 2]) && (verts[c + 2] >= verts[b + 2]));
+            return ((vertices[a + 2] <= vertices[c + 2]) && (vertices[c + 2] <= vertices[b + 2]))
+                    || ((vertices[a + 2] >= vertices[c + 2]) && (vertices[c + 2] >= vertices[b + 2]));
     }
 
     // Returns true iff segments ab and cd intersect, properly or improperly.
-    static boolean intersect(int[] verts, int a, int b, int c, int d) {
-        if (intersectProp(verts, a, b, c, d))
+    static boolean intersect(int[] vertices, int a, int b, int c, int d) {
+        if (intersectProp(vertices, a, b, c, d))
             return true;
-        else return between(verts, a, b, c) || between(verts, a, b, d) || between(verts, c, d, a)
-                || between(verts, c, d, b);
+        else return between(vertices, a, b, c) || between(vertices, a, b, d) || between(vertices, c, d, a)
+                || between(vertices, c, d, b);
     }
 
-    static boolean vequal(int[] verts, int a, int b) {
-        return verts[a] == verts[b] && verts[a + 2] == verts[b + 2];
+    static boolean vequal(int[] vertices, int a, int b) {
+        return vertices[a] == vertices[b] && vertices[a + 2] == vertices[b + 2];
     }
 
     // Returns T iff (v_i, v_j) is a proper internal *or* external
     // diagonal of P, *ignoring edges incident to v_i and v_j*.
-    private static boolean diagonalie(int i, int j, int n, int[] verts, int[] indices) {
+    private static boolean diagonalie(int i, int j, int n, int[] vertices, int[] indices) {
         int d0 = (indices[i] & 0x0fffffff) * 4;
         int d1 = (indices[j] & 0x0fffffff) * 4;
 
@@ -217,10 +217,10 @@ public class RecastMesh {
                 int p0 = (indices[k] & 0x0fffffff) * 4;
                 int p1 = (indices[k1] & 0x0fffffff) * 4;
 
-                if (vequal(verts, d0, p0) || vequal(verts, d1, p0) || vequal(verts, d0, p1) || vequal(verts, d1, p1))
+                if (vequal(vertices, d0, p0) || vequal(vertices, d1, p0) || vequal(vertices, d0, p1) || vequal(vertices, d1, p1))
                     continue;
 
-                if (intersect(verts, d0, d1, p0, p1))
+                if (intersect(vertices, d0, d1, p0, p1))
                     return false;
             }
         }
@@ -229,27 +229,27 @@ public class RecastMesh {
 
     // Returns true iff the diagonal (i,j) is strictly internal to the
     // polygon P in the neighborhood of the i endpoint.
-    private static boolean inCone(int i, int j, int n, int[] verts, int[] indices) {
+    private static boolean inCone(int i, int j, int n, int[] vertices, int[] indices) {
         int pi = (indices[i] & 0x0fffffff) * 4;
         int pj = (indices[j] & 0x0fffffff) * 4;
         int pi1 = (indices[next(i, n)] & 0x0fffffff) * 4;
         int pin1 = (indices[prev(i, n)] & 0x0fffffff) * 4;
         // If P[i] is a convex vertex [ i+1 left or on (i-1,i) ].
-        if (leftOn(verts, pin1, pi, pi1)) {
-            return left(verts, pi, pj, pin1) && left(verts, pj, pi, pi1);
+        if (leftOn(vertices, pin1, pi, pi1)) {
+            return left(vertices, pi, pj, pin1) && left(vertices, pj, pi, pi1);
         }
         // Assume (i-1,i,i+1) not collinear.
         // else P[i] is reflex.
-        return !(leftOn(verts, pi, pj, pi1) && leftOn(verts, pj, pi, pin1));
+        return !(leftOn(vertices, pi, pj, pi1) && leftOn(vertices, pj, pi, pin1));
     }
 
     // Returns T iff (v_i, v_j) is a proper internal
     // diagonal of P.
-    private static boolean diagonal(int i, int j, int n, int[] verts, int[] indices) {
-        return inCone(i, j, n, verts, indices) && diagonalie(i, j, n, verts, indices);
+    private static boolean diagonal(int i, int j, int n, int[] vertices, int[] indices) {
+        return inCone(i, j, n, vertices, indices) && diagonalie(i, j, n, vertices, indices);
     }
 
-    private static boolean diagonalieLoose(int i, int j, int n, int[] verts, int[] indices) {
+    private static boolean diagonalieLoose(int i, int j, int n, int[] vertices, int[] indices) {
         int d0 = (indices[i] & 0x0fffffff) * 4;
         int d1 = (indices[j] & 0x0fffffff) * 4;
 
@@ -261,42 +261,42 @@ public class RecastMesh {
                 int p0 = (indices[k] & 0x0fffffff) * 4;
                 int p1 = (indices[k1] & 0x0fffffff) * 4;
 
-                if (vequal(verts, d0, p0) || vequal(verts, d1, p0) || vequal(verts, d0, p1) || vequal(verts, d1, p1))
+                if (vequal(vertices, d0, p0) || vequal(vertices, d1, p0) || vequal(vertices, d0, p1) || vequal(vertices, d1, p1))
                     continue;
 
-                if (intersectProp(verts, d0, d1, p0, p1))
+                if (intersectProp(vertices, d0, d1, p0, p1))
                     return false;
             }
         }
         return true;
     }
 
-    private static boolean inConeLoose(int i, int j, int n, int[] verts, int[] indices) {
+    private static boolean inConeLoose(int i, int j, int n, int[] vertices, int[] indices) {
         int pi = (indices[i] & 0x0fffffff) * 4;
         int pj = (indices[j] & 0x0fffffff) * 4;
         int pi1 = (indices[next(i, n)] & 0x0fffffff) * 4;
         int pin1 = (indices[prev(i, n)] & 0x0fffffff) * 4;
 
         // If P[i] is a convex vertex [ i+1 left or on (i-1,i) ].
-        if (leftOn(verts, pin1, pi, pi1))
-            return leftOn(verts, pi, pj, pin1) && leftOn(verts, pj, pi, pi1);
+        if (leftOn(vertices, pin1, pi, pi1))
+            return leftOn(vertices, pi, pj, pin1) && leftOn(vertices, pj, pi, pi1);
         // Assume (i-1,i,i+1) not collinear.
         // else P[i] is reflex.
-        return !(leftOn(verts, pi, pj, pi1) && leftOn(verts, pj, pi, pin1));
+        return !(leftOn(vertices, pi, pj, pi1) && leftOn(vertices, pj, pi, pin1));
     }
 
-    private static boolean diagonalLoose(int i, int j, int n, int[] verts, int[] indices) {
-        return inConeLoose(i, j, n, verts, indices) && diagonalieLoose(i, j, n, verts, indices);
+    private static boolean diagonalLoose(int i, int j, int n, int[] vertices, int[] indices) {
+        return inConeLoose(i, j, n, vertices, indices) && diagonalieLoose(i, j, n, vertices, indices);
     }
 
-    private static int triangulate(int n, int[] verts, int[] indices, int[] tris) {
+    private static int triangulate(int n, int[] vertices, int[] indices, int[] tris) {
         int ntris = 0;
 
         // The last bit of the index is used to indicate if the vertex can be removed.
         for (int i = 0; i < n; i++) {
             int i1 = next(i, n);
             int i2 = next(i1, n);
-            if (diagonal(i, i2, n, verts, indices)) {
+            if (diagonal(i, i2, n, vertices, indices)) {
                 indices[i1] |= 0x80000000;
             }
         }
@@ -310,8 +310,8 @@ public class RecastMesh {
                     int p0 = (indices[i] & 0x0fffffff) * 4;
                     int p2 = (indices[next(i1, n)] & 0x0fffffff) * 4;
 
-                    int dx = verts[p2] - verts[p0];
-                    int dy = verts[p2 + 2] - verts[p0 + 2];
+                    int dx = vertices[p2] - vertices[p0];
+                    int dy = vertices[p2 + 2] - vertices[p0 + 2];
                     int len = dx * dx + dy * dy;
 
                     if (minLen < 0 || len < minLen) {
@@ -333,11 +333,11 @@ public class RecastMesh {
                 for (int i = 0; i < n; i++) {
                     int i1 = next(i, n);
                     int i2 = next(i1, n);
-                    if (diagonalLoose(i, i2, n, verts, indices)) {
+                    if (diagonalLoose(i, i2, n, vertices, indices)) {
                         int p0 = (indices[i] & 0x0fffffff) * 4;
                         int p2 = (indices[next(i2, n)] & 0x0fffffff) * 4;
-                        int dx = verts[p2] - verts[p0];
-                        int dy = verts[p2 + 2] - verts[p0 + 2];
+                        int dx = vertices[p2] - vertices[p0];
+                        int dy = vertices[p2 + 2] - vertices[p0 + 2];
                         int len = dx * dx + dy * dy;
 
                         if (minLen < 0 || len < minLen) {
@@ -371,12 +371,12 @@ public class RecastMesh {
                 i1 = 0;
             i = prev(i1, n);
             // Update diagonal flags.
-            if (diagonal(prev(i, n), i1, n, verts, indices))
+            if (diagonal(prev(i, n), i1, n, vertices, indices))
                 indices[i] |= 0x80000000;
             else
                 indices[i] &= 0x0fffffff;
 
-            if (diagonal(i, next(i1, n), n, verts, indices))
+            if (diagonal(i, next(i1, n), n, vertices, indices))
                 indices[i1] |= 0x80000000;
             else
                 indices[i1] &= 0x0fffffff;
@@ -391,23 +391,23 @@ public class RecastMesh {
         return ntris;
     }
 
-    private static int countPolyVerts(int[] p, int j, int nvp) {
+    private static int countPolyVertices(int[] p, int j, int nvp) {
         for (int i = 0; i < nvp; ++i)
             if (p[i + j] == RC_MESH_NULL_IDX)
                 return i;
         return nvp;
     }
 
-    private static boolean uleft(int[] verts, int a, int b, int c) {
-        return (verts[b] - verts[a]) * (verts[c + 2] - verts[a + 2])
-                - (verts[c] - verts[a]) * (verts[b + 2] - verts[a + 2]) < 0;
+    private static boolean uleft(int[] vertices, int a, int b, int c) {
+        return (vertices[b] - vertices[a]) * (vertices[c + 2] - vertices[a + 2])
+                - (vertices[c] - vertices[a]) * (vertices[b + 2] - vertices[a + 2]) < 0;
     }
 
-    private static int[] getPolyMergeValue(int[] polys, int pa, int pb, int[] verts, int nvp) {
+    private static int[] getPolyMergeValue(int[] polys, int pa, int pb, int[] vertices, int nvp) {
         int ea = -1;
         int eb = -1;
-        int na = countPolyVerts(polys, pa, nvp);
-        int nb = countPolyVerts(polys, pb, nvp);
+        int na = countPolyVertices(polys, pa, nvp);
+        int nb = countPolyVertices(polys, pb, nvp);
 
         // If the merged polygon would be too big, do not merge.
         if (na + nb - 2 > nvp)
@@ -449,27 +449,27 @@ public class RecastMesh {
         va = polys[pa + (ea + na - 1) % na];
         vb = polys[pa + ea];
         vc = polys[pb + (eb + 2) % nb];
-        if (!uleft(verts, va * 3, vb * 3, vc * 3))
+        if (!uleft(vertices, va * 3, vb * 3, vc * 3))
             return new int[]{-1, ea, eb};
 
         va = polys[pb + (eb + nb - 1) % nb];
         vb = polys[pb + eb];
         vc = polys[pa + (ea + 2) % na];
-        if (!uleft(verts, va * 3, vb * 3, vc * 3))
+        if (!uleft(vertices, va * 3, vb * 3, vc * 3))
             return new int[]{-1, ea, eb};
 
         va = polys[pa + ea];
         vb = polys[pa + (ea + 1) % na];
 
-        int dx = verts[va * 3] - verts[vb * 3];
-        int dy = verts[va * 3 + 2] - verts[vb * 3 + 2];
+        int dx = vertices[va * 3] - vertices[vb * 3];
+        int dy = vertices[va * 3 + 2] - vertices[vb * 3 + 2];
 
         return new int[]{dx * dx + dy * dy, ea, eb};
     }
 
-    private static void mergePolyVerts(int[] polys, int pa, int pb, int ea, int eb, int tmp, int nvp) {
-        int na = countPolyVerts(polys, pa, nvp);
-        int nb = countPolyVerts(polys, pb, nvp);
+    private static void mergePolyVertices(int[] polys, int pa, int pb, int ea, int eb, int tmp, int nvp) {
+        int na = countPolyVertices(polys, pa, nvp);
+        int nb = countPolyVertices(polys, pb, nvp);
 
         // Merge polygons.
         Arrays.fill(polys, tmp, tmp + nvp, RC_MESH_NULL_IDX);
@@ -500,22 +500,22 @@ public class RecastMesh {
         int nvp = mesh.nvp;
 
         // Count number of polygons to remove.
-        int numTouchedVerts = 0;
+        int numTouchedVertices = 0;
         int numRemainingEdges = 0;
         for (int i = 0; i < mesh.npolys; ++i) {
             int p = i * nvp * 2;
-            int nv = countPolyVerts(mesh.polys, p, nvp);
+            int nv = countPolyVertices(mesh.polys, p, nvp);
             int numRemoved = 0;
-            int numVerts = 0;
+            int numVertices = 0;
             for (int j = 0; j < nv; ++j) {
                 if (mesh.polys[p + j] == rem) {
-                    numTouchedVerts++;
+                    numTouchedVertices++;
                     numRemoved++;
                 }
-                numVerts++;
+                numVertices++;
             }
             if (numRemoved != 0) {
-                numRemainingEdges += numVerts - (numRemoved + 1);
+                numRemainingEdges += numVertices - (numRemoved + 1);
             }
         }
         // There would be too few edges remaining to create a polygon.
@@ -526,13 +526,13 @@ public class RecastMesh {
             return false;
 
         // Find edges which share the removed vertex.
-        int maxEdges = numTouchedVerts * 2;
+        int maxEdges = numTouchedVertices * 2;
         int nedges = 0;
         int[] edges = new int[maxEdges * 3];
 
         for (int i = 0; i < mesh.npolys; ++i) {
             int p = i * nvp * 2;
-            int nv = countPolyVerts(mesh.polys, p, nvp);
+            int nv = countPolyVertices(mesh.polys, p, nvp);
 
             // Collect edges which touches the removed vertex.
             for (int j = 0, k = nv - 1; j < nv; k = j++) {
@@ -581,31 +581,31 @@ public class RecastMesh {
         int nvp = mesh.nvp;
 
         // Count number of polygons to remove.
-        int numRemovedVerts = 0;
+        int numRemovedVertices = 0;
         for (int i = 0; i < mesh.npolys; ++i) {
             int p = i * nvp * 2;
-            int nv = countPolyVerts(mesh.polys, p, nvp);
+            int nv = countPolyVertices(mesh.polys, p, nvp);
             for (int j = 0; j < nv; ++j) {
                 if (mesh.polys[p + j] == rem)
-                    numRemovedVerts++;
+                    numRemovedVertices++;
             }
         }
 
         int nedges = 0;
-        int[] edges = new int[numRemovedVerts * nvp * 4];
+        int[] edges = new int[numRemovedVertices * nvp * 4];
 
         int nhole = 0;
-        int[] hole = new int[numRemovedVerts * nvp];
+        int[] hole = new int[numRemovedVertices * nvp];
 
         int nhreg = 0;
-        int[] hreg = new int[numRemovedVerts * nvp];
+        int[] hreg = new int[numRemovedVertices * nvp];
 
         int nharea = 0;
-        int[] harea = new int[numRemovedVerts * nvp];
+        int[] harea = new int[numRemovedVertices * nvp];
 
         for (int i = 0; i < mesh.npolys; ++i) {
             int p = i * nvp * 2;
-            int nv = countPolyVerts(mesh.polys, p, nvp);
+            int nv = countPolyVertices(mesh.polys, p, nvp);
             boolean hasRem = false;
             for (int j = 0; j < nv; ++j)
                 if (mesh.polys[p + j] == rem) {
@@ -638,17 +638,17 @@ public class RecastMesh {
         }
 
         // Remove vertex.
-        for (int i = rem; i < mesh.nverts - 1; ++i) {
-            mesh.verts[i * 3] = mesh.verts[(i + 1) * 3];
-            mesh.verts[i * 3 + 1] = mesh.verts[(i + 1) * 3 + 1];
-            mesh.verts[i * 3 + 2] = mesh.verts[(i + 1) * 3 + 2];
+        for (int i = rem; i < mesh.nvertices - 1; ++i) {
+            mesh.vertices[i * 3] = mesh.vertices[(i + 1) * 3];
+            mesh.vertices[i * 3 + 1] = mesh.vertices[(i + 1) * 3 + 1];
+            mesh.vertices[i * 3 + 2] = mesh.vertices[(i + 1) * 3 + 2];
         }
-        mesh.nverts--;
+        mesh.nvertices--;
 
         // Adjust indices to match the removed vertex layout.
         for (int i = 0; i < mesh.npolys; ++i) {
             int p = i * nvp * 2;
-            int nv = countPolyVerts(mesh.polys, p, nvp);
+            int nv = countPolyVertices(mesh.polys, p, nvp);
             for (int j = 0; j < nv; ++j)
                 if (mesh.polys[p + j] > rem)
                     mesh.polys[p + j]--;
@@ -708,21 +708,21 @@ public class RecastMesh {
         }
 
         int[] tris = new int[nhole * 3];
-        int[] tverts = new int[nhole * 4];
+        int[] tvertices = new int[nhole * 4];
         int[] thole = new int[nhole];
 
         // Generate temp vertex array for triangulation.
         for (int i = 0; i < nhole; ++i) {
             int pi = hole[i];
-            tverts[i * 4] = mesh.verts[pi * 3];
-            tverts[i * 4 + 1] = mesh.verts[pi * 3 + 1];
-            tverts[i * 4 + 2] = mesh.verts[pi * 3 + 2];
-            tverts[i * 4 + 3] = 0;
+            tvertices[i * 4] = mesh.vertices[pi * 3];
+            tvertices[i * 4 + 1] = mesh.vertices[pi * 3 + 1];
+            tvertices[i * 4 + 2] = mesh.vertices[pi * 3 + 2];
+            tvertices[i * 4 + 3] = 0;
             thole[i] = i;
         }
 
         // Triangulate the hole.
-        int ntris = triangulate(nhole, tverts, thole, tris);
+        int ntris = triangulate(nhole, tvertices, thole, tris);
         if (ntris < 0) {
             ntris = -ntris;
             ctx.warn("removeVertex: triangulate() returned bad results.");
@@ -770,7 +770,7 @@ public class RecastMesh {
                     int pj = j * nvp;
                     for (int k = j + 1; k < npolys; ++k) {
                         int pk = k * nvp;
-                        int[] veaeb = getPolyMergeValue(polys, pj, pk, mesh.verts, nvp);
+                        int[] veaeb = getPolyMergeValue(polys, pj, pk, mesh.vertices, nvp);
                         int v = veaeb[0];
                         int ea = veaeb[1];
                         int eb = veaeb[2];
@@ -788,7 +788,7 @@ public class RecastMesh {
                     // Found best, merge.
                     int pa = bestPa * nvp;
                     int pb = bestPb * nvp;
-                    mergePolyVerts(polys, pa, pb, bestEa, bestEb, tmpPoly, nvp);
+                    mergePolyVertices(polys, pa, pb, bestEa, bestEb, tmpPoly, nvp);
                     if (pregs[bestPa] != pregs[bestPb])
                         pregs[bestPa] = RC_MULTIPLE_REGS;
                     int last = (npolys - 1) * nvp;
@@ -825,7 +825,7 @@ public class RecastMesh {
     /// @par
     ///
     /// @note If the mesh data is to be used to construct a Detour navigation mesh, then the upper
-    /// limit must be retricted to <= #DT_VERTS_PER_POLYGON.
+    /// limit must be retricted to <= #DT_VERTICES_PER_POLYGON.
     ///
     /// @see rcAllocPolyMesh, rcContourSet, rcPolyMesh, rcConfig
     public static PolyMesh buildPolyMesh(Telemetry ctx, ContourSet cset, int nvp) {
@@ -840,27 +840,27 @@ public class RecastMesh {
 
         int maxVertices = 0;
         int maxTris = 0;
-        int maxVertsPerCont = 0;
+        int maxVerticesPerCont = 0;
         for (int i = 0; i < cset.conts.size(); ++i) {
             // Skip null contours.
-            if (cset.conts.get(i).nverts < 3)
+            if (cset.conts.get(i).nvertices < 3)
                 continue;
-            maxVertices += cset.conts.get(i).nverts;
-            maxTris += cset.conts.get(i).nverts - 2;
-            maxVertsPerCont = Math.max(maxVertsPerCont, cset.conts.get(i).nverts);
+            maxVertices += cset.conts.get(i).nvertices;
+            maxTris += cset.conts.get(i).nvertices - 2;
+            maxVerticesPerCont = Math.max(maxVerticesPerCont, cset.conts.get(i).nvertices);
         }
         if (maxVertices >= 0xfffe) {
             throw new RuntimeException("rcBuildPolyMesh: Too many vertices " + maxVertices);
         }
         int[] vflags = new int[maxVertices];
 
-        mesh.verts = new int[maxVertices * 3];
+        mesh.vertices = new int[maxVertices * 3];
         mesh.polys = new int[maxTris * nvp * 2];
         Arrays.fill(mesh.polys, RC_MESH_NULL_IDX);
         mesh.regs = new int[maxTris];
         mesh.areas = new int[maxTris];
 
-        mesh.nverts = 0;
+        mesh.nvertices = 0;
         mesh.npolys = 0;
         mesh.nvp = nvp;
         mesh.maxpolys = maxTris;
@@ -871,23 +871,23 @@ public class RecastMesh {
         for (int i = 0; i < VERTEX_BUCKET_COUNT; ++i)
             firstVert[i] = -1;
 
-        int[] indices = new int[maxVertsPerCont];
-        int[] tris = new int[maxVertsPerCont * 3];
-        int[] polys = new int[(maxVertsPerCont + 1) * nvp];
+        int[] indices = new int[maxVerticesPerCont];
+        int[] tris = new int[maxVerticesPerCont * 3];
+        int[] polys = new int[(maxVerticesPerCont + 1) * nvp];
 
-        int tmpPoly = maxVertsPerCont * nvp;
+        int tmpPoly = maxVerticesPerCont * nvp;
 
         for (int i = 0; i < cset.conts.size(); ++i) {
             Contour cont = cset.conts.get(i);
 
             // Skip null contours.
-            if (cont.nverts < 3)
+            if (cont.nvertices < 3)
                 continue;
 
             // Triangulate contour
-            for (int j = 0; j < cont.nverts; ++j)
+            for (int j = 0; j < cont.nvertices; ++j)
                 indices[j] = j;
-            int ntris = triangulate(cont.nverts, cont.verts, indices, tris);
+            int ntris = triangulate(cont.nvertices, cont.vertices, indices, tris);
             if (ntris <= 0) {
                 // Bad triangulation, should not happen.
                 ctx.warn("buildPolyMesh: Bad triangulation Contour " + i + ".");
@@ -895,13 +895,13 @@ public class RecastMesh {
             }
 
             // Add and merge vertices.
-            for (int j = 0; j < cont.nverts; ++j) {
+            for (int j = 0; j < cont.nvertices; ++j) {
                 int v = j * 4;
-                int[] inv = addVertex(cont.verts[v], cont.verts[v + 1], cont.verts[v + 2], mesh.verts, firstVert,
-                        nextVert, mesh.nverts);
+                int[] inv = addVertex(cont.vertices[v], cont.vertices[v + 1], cont.vertices[v + 2], mesh.vertices, firstVert,
+                        nextVert, mesh.nvertices);
                 indices[j] = inv[0];
-                mesh.nverts = inv[1];
-                if ((cont.verts[v + 3] & RC_BORDER_VERTEX) != 0) {
+                mesh.nvertices = inv[1];
+                if ((cont.vertices[v + 3] & RC_BORDER_VERTEX) != 0) {
                     // This vertex should be removed.
                     vflags[indices[j]] = 1;
                 }
@@ -933,7 +933,7 @@ public class RecastMesh {
                         int pj = j * nvp;
                         for (int k = j + 1; k < npolys; ++k) {
                             int pk = k * nvp;
-                            int[] veaeb = getPolyMergeValue(polys, pj, pk, mesh.verts, nvp);
+                            int[] veaeb = getPolyMergeValue(polys, pj, pk, mesh.vertices, nvp);
                             int v = veaeb[0];
                             int ea = veaeb[1];
                             int eb = veaeb[2];
@@ -951,7 +951,7 @@ public class RecastMesh {
                         // Found best, merge.
                         int pa = bestPa * nvp;
                         int pb = bestPb * nvp;
-                        mergePolyVerts(polys, pa, pb, bestEa, bestEb, tmpPoly, nvp);
+                        mergePolyVertices(polys, pa, pb, bestEa, bestEb, tmpPoly, nvp);
                         int lastPoly = (npolys - 1) * nvp;
                         if (pb != lastPoly) {
                             System.arraycopy(polys, lastPoly, polys, pb, nvp);
@@ -980,21 +980,21 @@ public class RecastMesh {
         }
 
         // Remove edge vertices.
-        for (int i = 0; i < mesh.nverts; ++i) {
+        for (int i = 0; i < mesh.nvertices; ++i) {
             if (vflags[i] != 0) {
                 if (!canRemoveVertex(mesh, i))
                     continue;
                 removeVertex(ctx, mesh, i, maxTris);
                 // Remove vertex
-                // Note: mesh.nverts is already decremented inside removeVertex()!
+                // Note: mesh.nvertices is already decremented inside removeVertex()!
                 // Fixup vertex flags
-                if (mesh.nverts - i >= 0) System.arraycopy(vflags, i + 1, vflags, i, mesh.nverts - i);
+                if (mesh.nvertices - i >= 0) System.arraycopy(vflags, i + 1, vflags, i, mesh.nvertices - i);
                 --i;
             }
         }
 
         // Calculate adjacency.
-        buildMeshAdjacency(mesh.polys, mesh.npolys, mesh.nverts, nvp);
+        buildMeshAdjacency(mesh.polys, mesh.npolys, mesh.nvertices, nvp);
 
         // Find portal edges
         if (mesh.borderSize > 0) {
@@ -1014,13 +1014,13 @@ public class RecastMesh {
                     int va = mesh.polys[p + j] * 3;
                     int vb = mesh.polys[p + nj] * 3;
 
-                    if (mesh.verts[va] == 0 && mesh.verts[vb] == 0)
+                    if (mesh.vertices[va] == 0 && mesh.vertices[vb] == 0)
                         mesh.polys[p + nvp + j] = 0x8000;
-                    else if (mesh.verts[va + 2] == h && mesh.verts[vb + 2] == h)
+                    else if (mesh.vertices[va + 2] == h && mesh.vertices[vb + 2] == h)
                         mesh.polys[p + nvp + j] = 0x8001;
-                    else if (mesh.verts[va] == w && mesh.verts[vb] == w)
+                    else if (mesh.vertices[va] == w && mesh.vertices[vb] == w)
                         mesh.polys[p + nvp + j] = 0x8002;
-                    else if (mesh.verts[va + 2] == 0 && mesh.verts[vb + 2] == 0)
+                    else if (mesh.vertices[va + 2] == 0 && mesh.vertices[vb + 2] == 0)
                         mesh.polys[p + nvp + j] = 0x8003;
                 }
             }
@@ -1029,13 +1029,13 @@ public class RecastMesh {
         // Just allocate the mesh flags array. The user is resposible to fill it.
         mesh.flags = new int[mesh.npolys];
 
-        if (mesh.nverts > MAX_MESH_VERTS_POLY) {
-            throw new RuntimeException("rcBuildPolyMesh: The resulting mesh has too many vertices " + mesh.nverts
-                    + " (max " + MAX_MESH_VERTS_POLY + "). Data can be corrupted.");
+        if (mesh.nvertices > MAX_MESH_VERTICES_POLY) {
+            throw new RuntimeException("rcBuildPolyMesh: The resulting mesh has too many vertices " + mesh.nvertices
+                    + " (max " + MAX_MESH_VERTICES_POLY + "). Data can be corrupted.");
         }
-        if (mesh.npolys > MAX_MESH_VERTS_POLY) {
+        if (mesh.npolys > MAX_MESH_VERTICES_POLY) {
             throw new RuntimeException("rcBuildPolyMesh: The resulting mesh has too many polygons " + mesh.npolys
-                    + " (max " + MAX_MESH_VERTS_POLY + "). Data can be corrupted.");
+                    + " (max " + MAX_MESH_VERTICES_POLY + "). Data can be corrupted.");
         }
 
         ctx.stopTimer("POLYMESH");
@@ -1058,19 +1058,19 @@ public class RecastMesh {
         mesh.bmin.set(meshes[0].bmin);
         mesh.bmax.set(meshes[0].bmax);
 
-        int maxVerts = 0;
+        int maxVertices = 0;
         int maxPolys = 0;
-        int maxVertsPerMesh = 0;
+        int maxVerticesPerMesh = 0;
         for (int i = 0; i < nmeshes; ++i) {
             mesh.bmin.min(meshes[i].bmin);
             mesh.bmax.max(meshes[i].bmax);
-            maxVertsPerMesh = Math.max(maxVertsPerMesh, meshes[i].nverts);
-            maxVerts += meshes[i].nverts;
+            maxVerticesPerMesh = Math.max(maxVerticesPerMesh, meshes[i].nvertices);
+            maxVertices += meshes[i].nvertices;
             maxPolys += meshes[i].npolys;
         }
 
-        mesh.nverts = 0;
-        mesh.verts = new int[maxVerts * 3];
+        mesh.nvertices = 0;
+        mesh.vertices = new int[maxVertices * 3];
 
         mesh.npolys = 0;
         mesh.polys = new int[maxPolys * 2 * mesh.nvp];
@@ -1079,13 +1079,13 @@ public class RecastMesh {
         mesh.areas = new int[maxPolys];
         mesh.flags = new int[maxPolys];
 
-        int[] nextVert = new int[maxVerts];
+        int[] nextVert = new int[maxVertices];
 
         int[] firstVert = new int[VERTEX_BUCKET_COUNT];
         for (int i = 0; i < VERTEX_BUCKET_COUNT; ++i)
             firstVert[i] = -1;
 
-        int[] vremap = new int[maxVertsPerMesh];
+        int[] vremap = new int[maxVerticesPerMesh];
 
         for (int i = 0; i < nmeshes; ++i) {
             PolyMesh pmesh = meshes[i];
@@ -1099,13 +1099,13 @@ public class RecastMesh {
             boolean isMaxZ = (Math.floor((mesh.bmax.z - pmesh.bmax.z) / mesh.cs + 0.5f)) == 0;
             boolean isOnBorder = (isMinX || isMinZ || isMaxX || isMaxZ);
 
-            for (int j = 0; j < pmesh.nverts; ++j) {
+            for (int j = 0; j < pmesh.nvertices; ++j) {
                 int v = j * 3;
-                int[] inv = addVertex(pmesh.verts[v] + ox, pmesh.verts[v + 1], pmesh.verts[v + 2] + oz, mesh.verts,
-                        firstVert, nextVert, mesh.nverts);
+                int[] inv = addVertex(pmesh.vertices[v] + ox, pmesh.vertices[v + 1], pmesh.vertices[v + 2] + oz, mesh.vertices,
+                        firstVert, nextVert, mesh.nvertices);
 
                 vremap[j] = inv[0];
-                mesh.nverts = inv[1];
+                mesh.nvertices = inv[1];
             }
 
             for (int j = 0; j < pmesh.npolys; ++j) {
@@ -1150,14 +1150,14 @@ public class RecastMesh {
         }
 
         // Calculate adjacency.
-        buildMeshAdjacency(mesh.polys, mesh.npolys, mesh.nverts, mesh.nvp);
-        if (mesh.nverts > MAX_MESH_VERTS_POLY) {
-            throw new RuntimeException("rcBuildPolyMesh: The resulting mesh has too many vertices " + mesh.nverts
-                    + " (max " + MAX_MESH_VERTS_POLY + "). Data can be corrupted.");
+        buildMeshAdjacency(mesh.polys, mesh.npolys, mesh.nvertices, mesh.nvp);
+        if (mesh.nvertices > MAX_MESH_VERTICES_POLY) {
+            throw new RuntimeException("rcBuildPolyMesh: The resulting mesh has too many vertices " + mesh.nvertices
+                    + " (max " + MAX_MESH_VERTICES_POLY + "). Data can be corrupted.");
         }
-        if (mesh.npolys > MAX_MESH_VERTS_POLY) {
+        if (mesh.npolys > MAX_MESH_VERTICES_POLY) {
             throw new RuntimeException("rcBuildPolyMesh: The resulting mesh has too many polygons " + mesh.npolys
-                    + " (max " + MAX_MESH_VERTS_POLY + "). Data can be corrupted.");
+                    + " (max " + MAX_MESH_VERTICES_POLY + "). Data can be corrupted.");
         }
 
         ctx.stopTimer("MERGE_POLYMESH");
@@ -1169,7 +1169,7 @@ public class RecastMesh {
     public static PolyMesh copyPolyMesh(PolyMesh src) {
         PolyMesh dst = new PolyMesh();
 
-        dst.nverts = src.nverts;
+        dst.nvertices = src.nvertices;
         dst.npolys = src.npolys;
         dst.maxpolys = src.npolys;
         dst.nvp = src.nvp;
@@ -1180,8 +1180,8 @@ public class RecastMesh {
         dst.borderSize = src.borderSize;
         dst.maxEdgeError = src.maxEdgeError;
 
-        dst.verts = new int[src.nverts * 3];
-        System.arraycopy(src.verts, 0, dst.verts, 0, dst.verts.length);
+        dst.vertices = new int[src.nvertices * 3];
+        System.arraycopy(src.vertices, 0, dst.vertices, 0, dst.vertices.length);
         dst.polys = new int[src.npolys * 2 * src.nvp];
         System.arraycopy(src.polys, 0, dst.polys, 0, dst.polys.length);
         dst.regs = new int[src.npolys];

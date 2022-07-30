@@ -18,8 +18,6 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour;
 
-import org.joml.Vector3i;
-
 /**
  * Bounding volume node.
  *
@@ -27,14 +25,7 @@ import org.joml.Vector3i;
  * @see MeshTile
  */
 public class BVNode {
-    /**
-     * Minimum bounds of the node's AABB. [(x, y, z)]
-     */
-    public Vector3i bmin = new Vector3i();
-    /**
-     * Maximum bounds of the node's AABB. [(x, y, z)]
-     */
-    public Vector3i bmax = new Vector3i();
+    public int minX, minY, minZ, maxX, maxY, maxZ;
     /**
      * The node's index. (Negative for escape sequence.)
      */

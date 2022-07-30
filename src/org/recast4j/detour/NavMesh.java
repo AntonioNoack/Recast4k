@@ -252,19 +252,19 @@ public class NavMesh {
         return m_params;
     }
 
-    public NavMesh(MeshData data, int maxVertsPerPoly, int flags) {
-        this(getNavMeshParams(data), maxVertsPerPoly);
+    public NavMesh(MeshData data, int maxVerticesPerPoly, int flags) {
+        this(getNavMeshParams(data), maxVerticesPerPoly);
         addTile(data, flags, 0);
     }
 
-    public NavMesh(NavMeshParams params, int maxVertsPerPoly) {
+    public NavMesh(NavMeshParams params, int maxVerticesPerPoly) {
         m_params = params;
         m_orig = params.orig;
         m_tileWidth = params.tileWidth;
         m_tileHeight = params.tileHeight;
         // Init tiles
         m_maxTiles = params.maxTiles;
-        m_maxVertPerPoly = maxVertsPerPoly;
+        m_maxVertPerPoly = maxVerticesPerPoly;
         m_tileLutMask = Math.max(1, nextPow2(params.maxTiles)) - 1;
         m_tiles = new MeshTile[m_maxTiles];
         for (int i = 0; i < m_maxTiles; i++) {
@@ -341,13 +341,13 @@ public class NavMesh {
                     continue;
                 }
                 // Calc polygon bounds.
-                int v = p.verts[0] * 3;
-                copy(bmin, tile.data.verts, v);
-                copy(bmax, tile.data.verts, v);
+                int v = p.vertices[0] * 3;
+                copy(bmin, tile.data.vertices, v);
+                copy(bmax, tile.data.vertices, v);
                 for (int j = 1; j < p.vertCount; ++j) {
-                    v = p.verts[j] * 3;
-                    min(bmin, tile.data.verts, v);
-                    max(bmax, tile.data.verts, v);
+                    v = p.vertices[j] * 3;
+                    min(bmin, tile.data.vertices, v);
+                    max(bmax, tile.data.vertices, v);
                 }
                 if (overlapBounds(qmin, qmax, bmin, bmax)) {
                     polys.add(base | i);
@@ -631,9 +631,9 @@ public class NavMesh {
                 }
 
                 // Create new links
-                int va = poly.verts[j] * 3;
-                int vb = poly.verts[(j + 1) % nv] * 3;
-                Triple<long[], float[], Integer> connectedPolys = findConnectingPolys(tile.data.verts, va, vb, target,
+                int va = poly.vertices[j] * 3;
+                int vb = poly.vertices[(j + 1) % nv] * 3;
+                Triple<long[], float[], Integer> connectedPolys = findConnectingPolys(tile.data.vertices, va, vb, target,
                         oppositeTile(dir), 4);
                 long[] nei = connectedPolys.first;
                 float[] neia = connectedPolys.second;
@@ -650,10 +650,10 @@ public class NavMesh {
 
                     // Compress portal limits to a byte value.
                     if (dir == 0 || dir == 4) {
-                        float tmin = (neia[k * 2] - tile.data.verts[va + 2])
-                                / (tile.data.verts[vb + 2] - tile.data.verts[va + 2]);
-                        float tmax = (neia[k * 2 + 1] - tile.data.verts[va + 2])
-                                / (tile.data.verts[vb + 2] - tile.data.verts[va + 2]);
+                        float tmin = (neia[k * 2] - tile.data.vertices[va + 2])
+                                / (tile.data.vertices[vb + 2] - tile.data.vertices[va + 2]);
+                        float tmax = (neia[k * 2 + 1] - tile.data.vertices[va + 2])
+                                / (tile.data.vertices[vb + 2] - tile.data.vertices[va + 2]);
                         if (tmin > tmax) {
                             float temp = tmin;
                             tmin = tmax;
@@ -662,10 +662,10 @@ public class NavMesh {
                         link.bmin = Math.round(clamp(tmin, 0.0f, 1.0f) * 255.0f);
                         link.bmax = Math.round(clamp(tmax, 0.0f, 1.0f) * 255.0f);
                     } else if (dir == 2 || dir == 6) {
-                        float tmin = (neia[k * 2] - tile.data.verts[va])
-                                / (tile.data.verts[vb] - tile.data.verts[va]);
-                        float tmax = (neia[k * 2 + 1] - tile.data.verts[va])
-                                / (tile.data.verts[vb] - tile.data.verts[va]);
+                        float tmin = (neia[k * 2] - tile.data.vertices[va])
+                                / (tile.data.vertices[vb] - tile.data.vertices[va]);
+                        float tmax = (neia[k * 2 + 1] - tile.data.vertices[va])
+                                / (tile.data.vertices[vb] - tile.data.vertices[va]);
                         if (tmin > tmax) {
                             float temp = tmin;
                             tmin = tmax;
@@ -718,9 +718,9 @@ public class NavMesh {
                 continue;
             }
             // Make sure the location is on current mesh.
-            target.data.verts[targetPoly.verts[1] * 3] = nearestPt.x;
-            target.data.verts[targetPoly.verts[1] * 3 + 1] = nearestPt.y;
-            target.data.verts[targetPoly.verts[1] * 3 + 2] = nearestPt.z;
+            target.data.vertices[targetPoly.vertices[1] * 3] = nearestPt.x;
+            target.data.vertices[targetPoly.vertices[1] * 3 + 1] = nearestPt.y;
+            target.data.vertices[targetPoly.vertices[1] * 3 + 2] = nearestPt.z;
 
             // Link off-mesh connection to target poly.
             int idx = allocLink(target);
@@ -750,7 +750,7 @@ public class NavMesh {
         }
     }
 
-    Triple<long[], float[], Integer> findConnectingPolys(float[] verts, int va, int vb, MeshTile tile, int side, int maxcon) {
+    Triple<long[], float[], Integer> findConnectingPolys(float[] vertices, int va, int vb, MeshTile tile, int side, int maxcon) {
         if (tile == null) {
             return new Triple<>(null, null, 0);
         }
@@ -758,8 +758,8 @@ public class NavMesh {
         float[] conarea = new float[maxcon * 2];
         float[] amin = new float[2];
         float[] amax = new float[2];
-        calcSlabEndPoints(verts, va, vb, amin, amax, side);
-        float apos = getSlabCoord(verts, va, side);
+        calcSlabEndPoints(vertices, va, vb, amin, amax, side);
+        float apos = getSlabCoord(vertices, va, side);
 
         // Remove links pointing to 'side' and compact the links array.
         float[] bmin = new float[2];
@@ -776,16 +776,16 @@ public class NavMesh {
                 if (poly.neis[j] != m) {
                     continue;
                 }
-                int vc = poly.verts[j] * 3;
-                int vd = poly.verts[(j + 1) % nv] * 3;
-                float bpos = getSlabCoord(tile.data.verts, vc, side);
+                int vc = poly.vertices[j] * 3;
+                int vd = poly.vertices[(j + 1) % nv] * 3;
+                float bpos = getSlabCoord(tile.data.vertices, vc, side);
                 // Segments are not close enough.
                 if (Math.abs(apos - bpos) > 0.01f) {
                     continue;
                 }
 
                 // Check if the segments touch.
-                calcSlabEndPoints(tile.data.verts, vc, vd, bmin, bmax, side);
+                calcSlabEndPoints(tile.data.vertices, vc, vd, bmin, bmax, side);
 
                 if (!overlapSlabs(amin, amax, bmin, bmax, 0.01f, tile.data.header.walkableClimb)) {
                     continue;
@@ -804,39 +804,39 @@ public class NavMesh {
         return new Triple<>(con, conarea, n);
     }
 
-    static float getSlabCoord(float[] verts, int va, int side) {
+    static float getSlabCoord(float[] vertices, int va, int side) {
         if (side == 0 || side == 4) {
-            return verts[va];
+            return vertices[va];
         } else if (side == 2 || side == 6) {
-            return verts[va + 2];
+            return vertices[va + 2];
         }
         return 0;
     }
 
-    static void calcSlabEndPoints(float[] verts, int va, int vb, float[] bmin, float[] bmax, int side) {
+    static void calcSlabEndPoints(float[] vertices, int va, int vb, float[] bmin, float[] bmax, int side) {
         if (side == 0 || side == 4) {
-            if (verts[va + 2] < verts[vb + 2]) {
-                bmin[0] = verts[va + 2];
-                bmin[1] = verts[va + 1];
-                bmax[0] = verts[vb + 2];
-                bmax[1] = verts[vb + 1];
+            if (vertices[va + 2] < vertices[vb + 2]) {
+                bmin[0] = vertices[va + 2];
+                bmin[1] = vertices[va + 1];
+                bmax[0] = vertices[vb + 2];
+                bmax[1] = vertices[vb + 1];
             } else {
-                bmin[0] = verts[vb + 2];
-                bmin[1] = verts[vb + 1];
-                bmax[0] = verts[va + 2];
-                bmax[1] = verts[va + 1];
+                bmin[0] = vertices[vb + 2];
+                bmin[1] = vertices[vb + 1];
+                bmax[0] = vertices[va + 2];
+                bmax[1] = vertices[va + 1];
             }
         } else if (side == 2 || side == 6) {
-            if (verts[va] < verts[vb]) {
-                bmin[0] = verts[va];
-                bmin[1] = verts[va + 1];
-                bmax[0] = verts[vb];
-                bmax[1] = verts[vb + 1];
+            if (vertices[va] < vertices[vb]) {
+                bmin[0] = vertices[va];
+                bmin[1] = vertices[va + 1];
+                bmax[0] = vertices[vb];
+                bmax[1] = vertices[vb + 1];
             } else {
-                bmin[0] = verts[vb];
-                bmin[1] = verts[vb + 1];
-                bmax[0] = verts[va];
-                bmax[1] = verts[va + 1];
+                bmin[0] = vertices[vb];
+                bmin[1] = vertices[vb + 1];
+                bmax[0] = vertices[va];
+                bmax[1] = vertices[va + 1];
             }
         }
     }
@@ -908,7 +908,7 @@ public class NavMesh {
                 continue;
             }
             // Make sure the location is on current mesh.
-            copy(tile.data.verts, poly.verts[0] * 3, nearestPt);
+            copy(tile.data.vertices, poly.vertices[0] * 3, nearestPt);
 
             // Link off-mesh connection to target poly.
             int idx = allocLink(tile);
@@ -960,13 +960,13 @@ public class NavMesh {
                 Vector3f[] v = {new Vector3f(), new Vector3f(), new Vector3f()};
                 for (int j = 0; j < 3; ++j) {
                     if (tris[ti + j] < poly.vertCount) {
-                        int index = poly.verts[tris[ti + j]] * 3;
-                        v[j].set(tile.data.verts[index], tile.data.verts[index + 1],
-                                tile.data.verts[index + 2]);
+                        int index = poly.vertices[tris[ti + j]] * 3;
+                        v[j].set(tile.data.vertices[index], tile.data.vertices[index + 1],
+                                tile.data.vertices[index + 2]);
                     } else {
                         int index = (pd.vertBase + (tris[ti + j] - poly.vertCount)) * 3;
-                        v[j].set(tile.data.detailVerts[index], tile.data.detailVerts[index + 1],
-                                tile.data.detailVerts[index + 2]);
+                        v[j].set(tile.data.detailVertices[index], tile.data.detailVertices[index + 1],
+                                tile.data.detailVertices[index + 2]);
                     }
                 }
 
@@ -994,8 +994,8 @@ public class NavMesh {
             Vector3f v1 = new Vector3f();
             for (int j = 0; j < poly.vertCount; ++j) {
                 int k = (j + 1) % poly.vertCount;
-                copy(v0, tile.data.verts, poly.verts[j] * 3);
-                copy(v1, tile.data.verts, poly.verts[k] * 3);
+                copy(v0, tile.data.vertices, poly.vertices[j] * 3);
+                copy(v1, tile.data.vertices, poly.vertices[k] * 3);
                 Pair<Float, Float> dt = distancePtSegSqr2D(pos, v0, v1);
                 float d = dt.first;
                 float t = dt.second;
@@ -1020,13 +1020,13 @@ public class NavMesh {
 
         int ip = poly.index;
 
-        float[] verts = new float[m_maxVertPerPoly * 3];
+        float[] vertices = new float[m_maxVertPerPoly * 3];
         int nv = poly.vertCount;
         for (int i = 0; i < nv; ++i) {
-            System.arraycopy(tile.data.verts, poly.verts[i] * 3, verts, i * 3, 3);
+            System.arraycopy(tile.data.vertices, poly.vertices[i] * 3, vertices, i * 3, 3);
         }
 
-        if (!pointInPolygon(pos, verts, nv)) {
+        if (!pointInPolygon(pos, vertices, nv)) {
             return Optional.empty();
         }
 
@@ -1038,11 +1038,11 @@ public class NavMesh {
                 Vector3f[] v = {new Vector3f(), new Vector3f(), new Vector3f()};
                 for (int k = 0; k < 3; ++k) {
                     if (tile.data.detailTris[t + k] < poly.vertCount) {
-                        int index = poly.verts[tile.data.detailTris[t + k]] * 3;
-                        copy(v[k], tile.data.verts, index);
+                        int index = poly.vertices[tile.data.detailTris[t + k]] * 3;
+                        copy(v[k], tile.data.vertices, index);
                     } else {
                         int index = (pd.vertBase + (tile.data.detailTris[t + k] - poly.vertCount)) * 3;
-                        copy(v[k], tile.data.detailVerts, index);
+                        copy(v[k], tile.data.detailVertices, index);
                     }
                 }
                 Optional<Float> h = closestHeightPointTriangle(pos, v[0], v[1], v[2]);
@@ -1054,10 +1054,10 @@ public class NavMesh {
             Vector3f v0 = new Vector3f();
             Vector3f v1 = new Vector3f();
             Vector3f v2 = new Vector3f();
-            copy(v0, tile.data.verts, poly.verts[0] * 3);
+            copy(v0, tile.data.vertices, poly.vertices[0] * 3);
             for (int j = 1; j < poly.vertCount - 1; ++j) {
-                copy(v1, tile.data.verts, poly.verts[j + 1] * 3);
-                copy(v2, tile.data.verts, poly.verts[j + 2] * 3);
+                copy(v1, tile.data.vertices, poly.vertices[j + 1] * 3);
+                copy(v2, tile.data.vertices, poly.vertices[j + 2] * 3);
                 Optional<Float> h = closestHeightPointTriangle(pos, v0, v1, v2);
                 if (h.isPresent()) return h;
             }
@@ -1084,10 +1084,10 @@ public class NavMesh {
 
         // Off-mesh connections don't have detail polygons.
         if (poly.getType() == Poly.DT_POLYTYPE_OFFMESH_CONNECTION) {
-            int i = poly.verts[0] * 3;
-            Vector3f v0 = new Vector3f(tile.data.verts[i], tile.data.verts[i + 1], tile.data.verts[i + 2]);
-            i = poly.verts[1] * 3;
-            Vector3f v1 = new Vector3f(tile.data.verts[i], tile.data.verts[i + 1], tile.data.verts[i + 2]);
+            int i = poly.vertices[0] * 3;
+            Vector3f v0 = new Vector3f(tile.data.vertices[i], tile.data.vertices[i + 1], tile.data.vertices[i + 2]);
+            i = poly.vertices[1] * 3;
+            Vector3f v1 = new Vector3f(tile.data.vertices[i], tile.data.vertices[i + 1], tile.data.vertices[i + 2]);
             Pair<Float, Float> dt = distancePtSegSqr2D(pos, v0, v1);
             return new ClosestPointOnPolyResult(false, vLerp(v0, v1, dt.second));
         }
@@ -1273,13 +1273,13 @@ public class NavMesh {
         }
         Vector3f startPos = new Vector3f();
         Vector3f endPos = new Vector3f();
-        copy(startPos, tile.data.verts, poly.verts[idx0] * 3);
-        copy(endPos, tile.data.verts, poly.verts[idx1] * 3);
+        copy(startPos, tile.data.vertices, poly.vertices[idx0] * 3);
+        copy(endPos, tile.data.vertices, poly.vertices[idx1] * 3);
         return Result.success(new Pair<>(startPos, endPos));
 
     }
 
-    public int getMaxVertsPerPoly() {
+    public int getMaxVerticesPerPoly() {
         return m_maxVertPerPoly;
     }
 
@@ -1309,7 +1309,7 @@ public class NavMesh {
 
         // Change flags.
         poly.flags = flags;
-        return Status.SUCCSESS;
+        return Status.SUCCESS;
     }
 
     public Result<Integer> getPolyFlags(long ref) {
@@ -1357,7 +1357,7 @@ public class NavMesh {
 
         poly.setArea(area);
 
-        return Status.SUCCSESS;
+        return Status.SUCCESS;
     }
 
     public Result<Integer> getPolyArea(long ref) {

@@ -48,62 +48,39 @@ public class RecastBuilder {
     }
 
     public static class RecastBuilderResult {
+        
         public final int tileX;
         public final int tileZ;
-        private final CompactHeightfield compactHeightField;
-        private final ContourSet countourSet;
-        private final PolyMesh pmesh;
-        private final PolyMeshDetail dmesh;
-        private final Heightfield solid;
-        private final Telemetry telemetry;
+        public final CompactHeightfield compactHeightField;
+        public final ContourSet countourSet;
+        public final PolyMesh mesh;
+        public final PolyMeshDetail meshDetail;
+        public final Heightfield solidHeightField;
+        public final Telemetry telemetry;
 
-        public RecastBuilderResult(int tileX, int tileZ, Heightfield solid, CompactHeightfield compactHeightField, ContourSet countourSet, PolyMesh pmesh,
-                                   PolyMeshDetail dmesh, Telemetry ctx) {
+        public RecastBuilderResult(int tileX, int tileZ, Heightfield solidHeightField, CompactHeightfield compactHeightField, ContourSet countourSet, PolyMesh mesh,
+                                   PolyMeshDetail meshDetail, Telemetry ctx) {
             this.tileX = tileX;
             this.tileZ = tileZ;
-            this.solid = solid;
+            this.solidHeightField = solidHeightField;
             this.compactHeightField = compactHeightField;
             this.countourSet = countourSet;
-            this.pmesh = pmesh;
-            this.dmesh = dmesh;
+            this.mesh = mesh;
+            this.meshDetail = meshDetail;
             telemetry = ctx;
-        }
-
-        public PolyMesh getMesh() {
-            return pmesh;
-        }
-
-        public PolyMeshDetail getMeshDetail() {
-            return dmesh;
-        }
-
-        public CompactHeightfield getCompactHeightfield() {
-            return compactHeightField;
-        }
-
-        public ContourSet getContourSet() {
-            return countourSet;
-        }
-
-        public Heightfield getSolidHeightfield() {
-            return solid;
-        }
-
-        public Telemetry getTelemetry() {
-            return telemetry;
         }
 
     }
 
     @SuppressWarnings("unused")
-    public List<RecastBuilderResult> buildTiles(InputGeomProvider geom, RecastConfig cfg, Optional<Executor> executor) {
+    public List<RecastBuilderResult> buildTiles(InputGeomProvider geom, RecastConfig cfg, Executor executor) {
         Vector3f bmin = geom.getMeshBoundsMin();
         Vector3f bmax = geom.getMeshBoundsMax();
         int[] twh = Recast.calcTileCount(bmin, bmax, cfg.cs, cfg.tileSizeX, cfg.tileSizeZ);
         int tw = twh[0];
         int th = twh[1];
-        if (executor.isPresent()) {
-            return buildMultiThread(geom, cfg, bmin, bmax, tw, th, executor.get());
+        if (executor != null) {
+            return buildMultiThread(geom, cfg, bmin, bmax, tw, th, executor);
         } else {
             return buildSingleThread(geom, cfg, bmin, bmax, tw, th);
         }
@@ -240,7 +217,7 @@ public class RecastBuilder {
         // Step 6. Build polygons mesh from contours.
         //
 
-        PolyMesh pmesh = RecastMesh.buildPolyMesh(ctx, cset, cfg.maxVertsPerPoly);
+        PolyMesh pmesh = RecastMesh.buildPolyMesh(ctx, cset, cfg.maxVerticesPerPoly);
 
         //
         // Step 7. Create detail mesh which allows to access approximate height
@@ -285,7 +262,7 @@ public class RecastBuilder {
         // (Optional) Mark areas.
         if (volumeProvider != null) {
             for (ConvexVolume vol : volumeProvider.convexVolumes()) {
-                RecastArea.markConvexPolyArea(ctx, vol.verts, vol.hmin, vol.hmax, vol.areaMod, chf);
+                RecastArea.markConvexPolyArea(ctx, vol.vertices, vol.hmin, vol.hmax, vol.areaMod, chf);
             }
         }
         return chf;

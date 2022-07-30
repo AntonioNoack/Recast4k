@@ -45,7 +45,7 @@ public class RecastVoxelization {
         // calculate
         // the are type for each of the meshes and rasterize them.
         for (TriMesh geom : geomProvider.meshes()) {
-            float[] verts = geom.getVerts();
+            float[] vertices = geom.getVertices();
             if (cfg.useTiles) {
                 float[] tbmin = new float[2];
                 float[] tbmax = new float[2];
@@ -57,16 +57,16 @@ public class RecastVoxelization {
                 for (Node1 node : nodes) {
                     int[] tris = node.tris;
                     int ntris = tris.length / 3;
-                    int[] m_triareas = Recast.markWalkableTriangles(ctx, cfg.walkableSlopeAngle, verts, tris, ntris,
+                    int[] m_triareas = Recast.markWalkableTriangles(ctx, cfg.walkableSlopeAngle, vertices, tris, ntris,
                             cfg.walkableAreaMod);
-                    RecastRasterization.rasterizeTriangles(solid, verts, tris, m_triareas, ntris, cfg.walkableClimb, ctx);
+                    RecastRasterization.rasterizeTriangles(solid, vertices, tris, m_triareas, ntris, cfg.walkableClimb, ctx);
                 }
             } else {
                 int[] tris = geom.getTris();
                 int ntris = tris.length / 3;
-                int[] m_triareas = Recast.markWalkableTriangles(ctx, cfg.walkableSlopeAngle, verts, tris, ntris,
+                int[] m_triareas = Recast.markWalkableTriangles(ctx, cfg.walkableSlopeAngle, vertices, tris, ntris,
                         cfg.walkableAreaMod);
-                RecastRasterization.rasterizeTriangles(solid, verts, tris, m_triareas, ntris, cfg.walkableClimb, ctx);
+                RecastRasterization.rasterizeTriangles(solid, vertices, tris, m_triareas, ntris, cfg.walkableClimb, ctx);
             }
         }
 

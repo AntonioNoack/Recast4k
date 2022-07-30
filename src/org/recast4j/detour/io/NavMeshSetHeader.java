@@ -30,6 +30,6 @@ public class NavMeshSetHeader {
     int version;
     int numTiles;
     NavMeshParams params = new NavMeshParams();
-    int maxVertsPerPoly;
+    int maxVerticesPerPoly;
 
 }

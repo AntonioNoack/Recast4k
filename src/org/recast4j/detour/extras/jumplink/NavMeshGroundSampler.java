@@ -42,25 +42,25 @@ class NavMeshGroundSampler extends AbstractGroundSampler {
 
     private NavMeshQuery createNavMesh(RecastBuilderResult r, float agentRadius, float agentHeight, float agentClimb) {
         NavMeshDataCreateParams params = new NavMeshDataCreateParams();
-        params.verts = r.getMesh().verts;
-        params.vertCount = r.getMesh().nverts;
-        params.polys = r.getMesh().polys;
-        params.polyAreas = r.getMesh().areas;
-        params.polyFlags = r.getMesh().flags;
-        params.polyCount = r.getMesh().npolys;
-        params.nvp = r.getMesh().nvp;
-        params.detailMeshes = r.getMeshDetail().meshes;
-        params.detailVerts = r.getMeshDetail().verts;
-        params.detailVertsCount = r.getMeshDetail().nverts;
-        params.detailTris = r.getMeshDetail().tris;
-        params.detailTriCount = r.getMeshDetail().ntris;
+        params.vertices = r.mesh.vertices;
+        params.vertCount = r.mesh.nvertices;
+        params.polys = r.mesh.polys;
+        params.polyAreas = r.mesh.areas;
+        params.polyFlags = r.mesh.flags;
+        params.polyCount = r.mesh.npolys;
+        params.nvp = r.mesh.nvp;
+        params.detailMeshes = r.meshDetail.meshes;
+        params.detailVertices = r.meshDetail.vertices;
+        params.detailVerticesCount = r.meshDetail.nvertices;
+        params.detailTris = r.meshDetail.tris;
+        params.detailTriCount = r.meshDetail.ntris;
         params.walkableRadius = agentRadius;
         params.walkableHeight = agentHeight;
         params.walkableClimb = agentClimb;
-        params.bmin = r.getMesh().bmin;
-        params.bmax = r.getMesh().bmax;
-        params.cs = r.getMesh().cs;
-        params.ch = r.getMesh().ch;
+        params.bmin = r.mesh.bmin;
+        params.bmax = r.mesh.bmax;
+        params.cs = r.mesh.cs;
+        params.ch = r.mesh.ch;
         params.buildBvTree = true;
         return new NavMeshQuery(new NavMesh(NavMeshBuilder.createNavMeshData(params), params.nvp, 0));
     }

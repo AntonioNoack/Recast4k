@@ -53,7 +53,7 @@ public class VoxelFile {
     public float maxEdgeLen;
     public float minRegionArea;
     public float regionMergeArea;
-    public int vertsPerPoly;
+    public int verticesPerPoly;
     public boolean buildMeshDetail;
     public float detailSampleDistance;
     public float detailSampleMaxError;
@@ -68,12 +68,12 @@ public class VoxelFile {
         tiles.add(tile);
     }
 
-    public RecastConfig getConfig(VoxelTile tile, PartitionType partitionType, int maxPolyVerts, int regionMergeSize,
+    public RecastConfig getConfig(VoxelTile tile, PartitionType partitionType, int maxPolyVertices, int regionMergeSize,
             boolean filterLowHangingObstacles, boolean filterLedgeSpans, boolean filterWalkableLowHeightSpans,
             AreaModification walkbableAreaMod, boolean buildMeshDetail, float detailSampleDist, float detailSampleMaxError) {
         return new RecastConfig(useTiles, tileSizeX, tileSizeZ, tile.borderSize, partitionType, cellSize, tile.cellHeight,
                 walkableSlopeAngle, filterLowHangingObstacles, filterLedgeSpans, filterWalkableLowHeightSpans, walkableHeight,
-                walkableRadius, walkableClimb, minRegionArea, regionMergeArea, maxEdgeLen, maxSimplificationError, maxPolyVerts,
+                walkableRadius, walkableClimb, minRegionArea, regionMergeArea, maxEdgeLen, maxSimplificationError, maxPolyVertices,
                 buildMeshDetail, detailSampleDist, detailSampleMaxError, walkbableAreaMod);
     }
 
@@ -93,7 +93,7 @@ public class VoxelFile {
         f.maxEdgeLen = config.maxEdgeLenWorld;
         f.minRegionArea = config.minRegionAreaWorld;
         f.regionMergeArea = config.mergeRegionAreaWorld;
-        f.vertsPerPoly = config.maxVertsPerPoly;
+        f.verticesPerPoly = config.maxVerticesPerPoly;
         f.buildMeshDetail = config.buildMeshDetail;
         f.detailSampleDistance = config.detailSampleDist;
         f.detailSampleMaxError = config.detailSampleMaxError;
@@ -103,8 +103,8 @@ public class VoxelFile {
         f.bounds = new float[] { Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY,
                 Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY };
         for (RecastBuilderResult r : results) {
-            f.tiles.add(new VoxelTile(r.tileX, r.tileZ, r.getSolidHeightfield()));
-            Vector3f bmin = r.getSolidHeightfield().bmin, bmax = r.getSolidHeightfield().bmax;
+            f.tiles.add(new VoxelTile(r.tileX, r.tileZ, r.solidHeightField));
+            Vector3f bmin = r.solidHeightField.bmin, bmax = r.solidHeightField.bmax;
             f.bounds[0] = Math.min(f.bounds[0], bmin.x);
             f.bounds[1] = Math.min(f.bounds[1], bmin.y);
             f.bounds[2] = Math.min(f.bounds[2], bmin.z);
@@ -132,7 +132,7 @@ public class VoxelFile {
         f.maxEdgeLen = config.maxEdgeLen;
         f.minRegionArea = config.minRegionArea;
         f.regionMergeArea = config.regionMergeArea;
-        f.vertsPerPoly = config.vertsPerPoly;
+        f.verticesPerPoly = config.verticesPerPoly;
         f.buildMeshDetail = config.buildDetailMesh;
         f.detailSampleDistance = config.detailSampleDistance;
         f.detailSampleMaxError = config.detailSampleMaxError;

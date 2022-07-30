@@ -71,27 +71,25 @@ import static org.recast4j.detour.DetourCommon.*;
  * 25 agents for 0.5ms per frame.
  *
  * @note This is a summary list of members. Use the index or search feature to find minor members.
- * @struct dtCrowdAgentParams
- * @var dtCrowdAgentParams::obstacleAvoidanceType
- * @par #dtCrowd permits agents to use different avoidance configurations. This value is the index of the
+ * struct dtCrowdAgentParams
+ * var dtCrowdAgentParams::obstacleAvoidanceType
+ * par #dtCrowd permits agents to use different avoidance configurations. This value is the index of the
  * #dtObstacleAvoidanceParams within the crowd.
- * @var dtCrowdAgentParams::collisionQueryRange
- * @par Collision elements include other agents and navigation mesh boundaries.
+ * var dtCrowdAgentParams::collisionQueryRange
+ * par Collision elements include other agents and navigation mesh boundaries.
  * <p>
  * This value is often based on the agent radius and/or maximum speed. E.g. radius * 8
- * @var dtCrowdAgentParams::pathOptimizationRange
- * @par Only applicalbe if #updateFlags includes the #DT_CROWD_OPTIMIZE_VIS flag.
+ * var dtCrowdAgentParams::pathOptimizationRange
+ * par Only applicalbe if #updateFlags includes the #DT_CROWD_OPTIMIZE_VIS flag.
  * <p>
  * This value is often based on the agent radius. E.g. radius * 30
- * @var dtCrowdAgentParams::separationWeight
- * @par A higher value will result in agents trying to stay farther away from each other at the cost of more difficult
+ * var dtCrowdAgentParams::separationWeight
+ * par A higher value will result in agents trying to stay farther away from each other at the cost of more difficult
  * steering in tight spaces.
- * @see CrowdAgent, Crowd::addAgent(), Crowd::updateAgentParameters()
- * @see dtObstacleAvoidanceParams, dtCrowd::setObstacleAvoidanceParams(), dtCrowd::getObstacleAvoidanceParams()
- * @see dtPathCorridor::optimizePathVisibility()
- */
-
-/**
+ * see CrowdAgent, Crowd::addAgent(), Crowd::updateAgentParameters()
+ * see dtObstacleAvoidanceParams, dtCrowd::setObstacleAvoidanceParams(), dtCrowd::getObstacleAvoidanceParams()
+ * see dtPathCorridor::optimizePathVisibility()
+ *
  * This is the core class of the @ref crowd module. See the @ref crowd documentation for a summary of the crowd
  * features. A common method for setting up the crowd is as follows: -# Allocate the crowd -# Set the avoidance
  * configurations using #setObstacleAvoidanceParams(). -# Add agents using #addAgent() and make an initial movement
@@ -131,19 +129,20 @@ public class Crowd {
     static final int DT_CROWD_MAX_QUERY_FILTER_TYPE = 16;
 
     private final AtomicInteger agentId = new AtomicInteger();
-    private final Set<CrowdAgent> m_agents;
-    private final PathQueue m_pathq;
+    private final Set<CrowdAgent> activeAgents;
+    public final PathQueue pathQueue;
     private final ObstacleAvoidanceParams[] m_obstacleQueryParams = new ObstacleAvoidanceParams[DT_CROWD_MAX_OBSTAVOIDANCE_PARAMS];
     private final ObstacleAvoidanceQuery m_obstacleQuery;
-    private ProximityGrid m_grid;
-    private final Vector3f m_ext = new Vector3f();
+    public ProximityGrid grid;
+    public final Vector3f queryExtends = new Vector3f();
     private final QueryFilter[] m_filters = new QueryFilter[DT_CROWD_MAX_QUERY_FILTER_TYPE];
     private NavMeshQuery navQuery;
     private NavMesh navMesh;
-    private final CrowdConfig config;
-    private final CrowdTelemetry telemetry = new CrowdTelemetry();
+    public final CrowdConfig config;
+    public final CrowdTelemetry telemetry = new CrowdTelemetry();
     int m_velocitySampleCount;
 
+    @SuppressWarnings("unused")
     public Crowd(CrowdConfig config, NavMesh nav) {
         this(config, nav, i -> new DefaultQueryFilter());
     }
@@ -151,7 +150,7 @@ public class Crowd {
     public Crowd(CrowdConfig config, NavMesh nav, IntFunction<QueryFilter> queryFilterFactory) {
 
         this.config = config;
-        vSet(m_ext, config.maxAgentRadius * 2.0f, config.maxAgentRadius * 1.5f, config.maxAgentRadius * 2.0f);
+        vSet(queryExtends, config.maxAgentRadius * 2.0f, config.maxAgentRadius * 1.5f, config.maxAgentRadius * 2.0f);
 
         m_obstacleQuery = new ObstacleAvoidanceQuery(config.maxObstacleAvoidanceCircles, config.maxObstacleAvoidanceSegments);
 
@@ -164,8 +163,8 @@ public class Crowd {
         }
 
         // Allocate temp buffer for merging paths.
-        m_pathq = new PathQueue(config);
-        m_agents = new HashSet<>();
+        pathQueue = new PathQueue(config);
+        activeAgents = new HashSet<>();
 
         // The navQuery is mostly used for local searches, no need for large node pool.
         navMesh = nav;
@@ -212,13 +211,14 @@ public class Crowd {
      * @param params The configutation of the agent.
      * @return The newly created agent object
      */
+    @SuppressWarnings("unused")
     public CrowdAgent addAgent(Vector3f pos, CrowdAgentParams params) {
         CrowdAgent ag = new CrowdAgent(agentId.getAndIncrement());
-        m_agents.add(ag);
+        activeAgents.add(ag);
         updateAgentParameters(ag, params);
 
         // Find nearest position on navmesh and place the agent there.
-        Result<FindNearestPolyResult> nearestPoly = navQuery.findNearestPoly(pos, m_ext, m_filters[ag.params.queryFilterType]);
+        Result<FindNearestPolyResult> nearestPoly = navQuery.findNearestPoly(pos, queryExtends, m_filters[ag.params.queryFilterType]);
 
         Vector3f nearest = nearestPoly.succeeded() ? nearestPoly.result.getNearestPos() : pos;
         long ref = nearestPoly.succeeded() ? nearestPoly.result.getNearestRef() : 0L;
@@ -252,8 +252,9 @@ public class Crowd {
      *
      * @param agent Agent to be removed
      */
+    @SuppressWarnings("unused")
     public void removeAgent(CrowdAgent agent) {
-        m_agents.remove(agent);
+        activeAgents.remove(agent);
     }
 
     private void requestMoveTargetReplan(CrowdAgent ag, long ref, Vector3f pos) {
@@ -272,6 +273,7 @@ public class Crowd {
     /// The position will be constrained to the surface of the navigation mesh.
     ///
     /// The request will be processed during the next #update().
+    @SuppressWarnings("unused")
     public boolean requestMoveTarget(CrowdAgent agent, long ref, Vector3f pos) {
         if (ref == 0) return false;
         // Initialize request.
@@ -284,6 +286,7 @@ public class Crowd {
     /// @param[in] idx The agent index. [Limits: 0 <= value < #getAgentCount()]
     /// @param[in] vel The movement velocity. [(x, y, z)]
     /// @return True if the request was successfully submitted.
+    @SuppressWarnings("unused")
     public boolean requestMoveVelocity(CrowdAgent agent, Vector3f vel) {
         // Initialize request.
         agent.targetRef = 0;
@@ -297,6 +300,7 @@ public class Crowd {
     /// Resets any request for the specified agent.
     /// @param[in] idx The agent index. [Limits: 0 <= value < #getAgentCount()]
     /// @return True if the request was successfully reseted.
+    @SuppressWarnings("unused")
     public boolean resetMoveTarget(CrowdAgent agent) {
         // Initialize request.
         agent.targetRef = 0;
@@ -314,31 +318,12 @@ public class Crowd {
      * @return List of active agents
      */
     public List<CrowdAgent> getActiveAgents() {
-        return new ArrayList<>(m_agents);
+        return new ArrayList<>(activeAgents);
     }
 
-    public Vector3f getQueryExtents() {
-        return m_ext;
-    }
-
+    @SuppressWarnings("unused")
     public QueryFilter getFilter(int i) {
         return i >= 0 && i < DT_CROWD_MAX_QUERY_FILTER_TYPE ? m_filters[i] : null;
-    }
-
-    public ProximityGrid getGrid() {
-        return m_grid;
-    }
-
-    public PathQueue getPathQueue() {
-        return m_pathq;
-    }
-
-    public CrowdTelemetry telemetry() {
-        return telemetry;
-    }
-
-    public CrowdConfig config() {
-        return config;
     }
 
     public CrowdTelemetry update(float dt, CrowdAgentDebugInfo debug) {
@@ -388,7 +373,6 @@ public class Crowd {
         return telemetry;
     }
 
-
     private void checkPathValidity(Collection<CrowdAgent> agents, float dt) {
         telemetry.start("checkPathValidity");
 
@@ -409,7 +393,7 @@ public class Crowd {
             if (!navQuery.isValidPolyRef(agentRef, m_filters[ag.params.queryFilterType])) {
                 // Current location is not valid, try to reposition.
                 // TODO: this can snap agents, how to handle that?
-                Result<FindNearestPolyResult> nearestPoly = navQuery.findNearestPoly(ag.npos, m_ext,
+                Result<FindNearestPolyResult> nearestPoly = navQuery.findNearestPoly(ag.npos, queryExtends,
                         m_filters[ag.params.queryFilterType]);
                 agentRef = nearestPoly.succeeded() ? nearestPoly.result.getNearestRef() : 0L;
                 if (nearestPoly.succeeded()) {
@@ -448,7 +432,7 @@ public class Crowd {
             if (ag.targetState != MoveRequestState.DT_CROWDAGENT_TARGET_FAILED) {
                 if (!navQuery.isValidPolyRef(ag.targetRef, m_filters[ag.params.queryFilterType])) {
                     // Current target is not valid, try to reposition.
-                    Result<FindNearestPolyResult> fnp = navQuery.findNearestPoly(ag.targetPos, m_ext,
+                    Result<FindNearestPolyResult> fnp = navQuery.findNearestPoly(ag.targetPos, queryExtends,
                             m_filters[ag.params.queryFilterType]);
                     ag.targetRef = fnp.succeeded() ? fnp.result.getNearestRef() : 0L;
                     if (fnp.succeeded()) {
@@ -573,7 +557,7 @@ public class Crowd {
 
         while (!queue.isEmpty()) {
             CrowdAgent ag = queue.poll();
-            ag.targetPathQueryResult = m_pathq.request(ag.corridor.getLastPoly(), ag.targetRef, ag.corridor.getTarget(),
+            ag.targetPathQueryResult = pathQueue.request(ag.corridor.getLastPoly(), ag.targetRef, ag.corridor.getTarget(),
                     ag.targetPos, m_filters[ag.params.queryFilterType]);
             if (ag.targetPathQueryResult != null) {
                 ag.targetState = MoveRequestState.DT_CROWDAGENT_TARGET_WAITING_FOR_PATH;
@@ -585,7 +569,7 @@ public class Crowd {
 
         // Update requests.
         telemetry.start("pathQueueUpdate");
-        m_pathq.update(navMesh);
+        pathQueue.update(navMesh);
         telemetry.stop("pathQueueUpdate");
 
         // Process path results.
@@ -723,11 +707,11 @@ public class Crowd {
 
     private void buildProximityGrid(Collection<CrowdAgent> agents) {
         telemetry.start("buildProximityGrid");
-        m_grid = new ProximityGrid(config.maxAgentRadius * 3);
+        grid = new ProximityGrid(config.maxAgentRadius * 3);
         for (CrowdAgent ag : agents) {
             Vector3f p = ag.npos;
             float r = ag.params.radius;
-            m_grid.addItem(ag, p.x - r, p.z - r, p.x + r, p.z + r);
+            grid.addItem(ag, p.x - r, p.z - r, p.x + r, p.z + r);
         }
         telemetry.stop("buildProximityGrid");
     }
@@ -748,7 +732,7 @@ public class Crowd {
                         m_filters[ag.params.queryFilterType]);
             }
             // Query neighbour agents
-            ag.neis = getNeighbours(ag.npos, ag.params.height, ag.params.collisionQueryRange, ag, m_grid);
+            ag.neis = getNeighbours(ag.npos, ag.params.height, ag.params.collisionQueryRange, ag, grid);
         }
         telemetry.stop("buildNeighbours");
     }
@@ -775,7 +759,7 @@ public class Crowd {
 
             result.add(new CrowdNeighbour(ag, distSqr));
         }
-        Collections.sort(result, (o1, o2) -> Float.compare(o1.dist, o2.dist));
+        result.sort((o1, o2) -> Float.compare(o1.dist, o2.dist));
         return result;
 
     }
@@ -799,7 +783,7 @@ public class Crowd {
             // Check to see if the corner after the next corner is directly visible,
             // and short cut to there.
             if ((ag.params.updateFlags & CrowdAgentParams.DT_CROWD_OPTIMIZE_VIS) != 0 && ag.corners.size() > 0) {
-                Vector3f target = ag.corners.get(Math.min(1, ag.corners.size() - 1)).getPos();
+                Vector3f target = ag.corners.get(Math.min(1, ag.corners.size() - 1)).pos;
                 ag.corridor.optimizePathVisibility(target, ag.params.pathOptimizationRange, navQuery,
                         m_filters[ag.params.queryFilterType]);
 

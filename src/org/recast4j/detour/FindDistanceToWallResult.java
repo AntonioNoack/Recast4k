@@ -21,26 +21,14 @@ package org.recast4j.detour;
 import org.joml.Vector3f;
 
 public class FindDistanceToWallResult {
-    private final float distance;
-    private final Vector3f position;
-    private final Vector3f normal;
+    public final float distance;
+    public final Vector3f position;
+    public final Vector3f normal;
 
     public FindDistanceToWallResult(float distance, Vector3f position, Vector3f normal) {
         this.distance = distance;
         this.position = position;
         this.normal = normal;
-    }
-
-    public float getDistance() {
-        return distance;
-    }
-
-    public Vector3f getPosition() {
-        return position;
-    }
-
-    public Vector3f getNormal() {
-        return normal;
     }
 
 }

@@ -137,7 +137,7 @@ public class RecastRasterization {
         return new int[]{m, n};
     }
 
-    private static void rasterizeTri(float[] verts, int v0, int v1, int v2, int area, Heightfield hf, Vector3f bmin, Vector3f bmax,
+    private static void rasterizeTri(float[] vertices, int v0, int v1, int v2, int area, Heightfield hf, Vector3f bmin, Vector3f bmax,
                                      float cs, float ics, float ich, int flagMergeThr) {
         int w = hf.width;
         int h = hf.height;
@@ -145,12 +145,12 @@ public class RecastRasterization {
         float by = bmax.y - bmin.y;
 
         // Calculate the bounding box of the triangle.
-        RecastVectors.copy(tmin, verts, v0 * 3);
-        RecastVectors.copy(tmax, verts, v0 * 3);
-        RecastVectors.min(tmin, verts, v1 * 3);
-        RecastVectors.min(tmin, verts, v2 * 3);
-        RecastVectors.max(tmax, verts, v1 * 3);
-        RecastVectors.max(tmax, verts, v2 * 3);
+        RecastVectors.copy(tmin, vertices, v0 * 3);
+        RecastVectors.copy(tmax, vertices, v0 * 3);
+        RecastVectors.min(tmin, vertices, v1 * 3);
+        RecastVectors.min(tmin, vertices, v2 * 3);
+        RecastVectors.max(tmax, vertices, v1 * 3);
+        RecastVectors.max(tmax, vertices, v2 * 3);
 
         // If the triangle does not touch the bbox of the heightfield, skip the triagle.
         if (!overlapBounds(bmin, bmax, tmin, tmax))
@@ -170,9 +170,9 @@ public class RecastRasterization {
         int p1 = inrow + 7 * 3;
         int p2 = p1 + 7 * 3;
 
-        RecastVectors.copy(buf, 0, verts, v0 * 3);
-        RecastVectors.copy(buf, 3, verts, v1 * 3);
-        RecastVectors.copy(buf, 6, verts, v2 * 3);
+        RecastVectors.copy(buf, 0, vertices, v0 * 3);
+        RecastVectors.copy(buf, 3, vertices, v1 * 3);
+        RecastVectors.copy(buf, 6, vertices, v2 * 3);
         int nvrow, nvIn = 3;
 
         for (int y = y0; y <= y1; ++y) {
@@ -258,14 +258,14 @@ public class RecastRasterization {
      *
      * @see Heightfield
      */
-    public static void rasterizeTriangle(Heightfield solid, float[] verts, int v0, int v1, int v2, int area, int flagMergeThr,
+    public static void rasterizeTriangle(Heightfield solid, float[] vertices, int v0, int v1, int v2, int area, int flagMergeThr,
                                          Telemetry ctx) {
 
         ctx.startTimer("RASTERIZE_TRIANGLES");
 
         float ics = 1.0f / solid.cs;
         float ich = 1.0f / solid.ch;
-        rasterizeTri(verts, v0, v1, v2, area, solid, solid.bmin, solid.bmax, solid.cs, ics, ich, flagMergeThr);
+        rasterizeTri(vertices, v0, v1, v2, area, solid, solid.bmin, solid.bmax, solid.cs, ics, ich, flagMergeThr);
 
         ctx.stopTimer("RASTERIZE_TRIANGLES");
     }
@@ -275,7 +275,7 @@ public class RecastRasterization {
      *
      * @see Heightfield
      */
-    public static void rasterizeTriangles(Heightfield solid, float[] verts, int[] tris, int[] areas, int nt, int flagMergeThr,
+    public static void rasterizeTriangles(Heightfield solid, float[] vertices, int[] tris, int[] areas, int nt, int flagMergeThr,
                                           Telemetry ctx) {
 
         ctx.startTimer("RASTERIZE_TRIANGLES");
@@ -288,7 +288,7 @@ public class RecastRasterization {
             int v1 = tris[i * 3 + 1];
             int v2 = tris[i * 3 + 2];
             // Rasterize.
-            rasterizeTri(verts, v0, v1, v2, areas[i], solid, solid.bmin, solid.bmax, solid.cs, ics, ich, flagMergeThr);
+            rasterizeTri(vertices, v0, v1, v2, areas[i], solid, solid.bmin, solid.bmax, solid.cs, ics, ich, flagMergeThr);
         }
 
         ctx.stopTimer("RASTERIZE_TRIANGLES");
@@ -300,7 +300,7 @@ public class RecastRasterization {
      * @see Heightfield
      */
     @SuppressWarnings("unused")
-    public static void rasterizeTriangles(Heightfield solid, float[] verts, int[] areas, int nt, int flagMergeThr,
+    public static void rasterizeTriangles(Heightfield solid, float[] vertices, int[] areas, int nt, int flagMergeThr,
                                           Telemetry ctx) {
         ctx.startTimer("RASTERIZE_TRIANGLES");
 
@@ -312,7 +312,7 @@ public class RecastRasterization {
             int v1 = (i * 3 + 1);
             int v2 = (i * 3 + 2);
             // Rasterize.
-            rasterizeTri(verts, v0, v1, v2, areas[i], solid, solid.bmin, solid.bmax, solid.cs, ics, ich, flagMergeThr);
+            rasterizeTri(vertices, v0, v1, v2, areas[i], solid, solid.bmin, solid.bmax, solid.cs, ics, ich, flagMergeThr);
         }
         ctx.stopTimer("RASTERIZE_TRIANGLES");
     }

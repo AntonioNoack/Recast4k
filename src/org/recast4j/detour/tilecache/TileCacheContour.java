@@ -19,8 +19,8 @@ freely, subject to the following restrictions:
 package org.recast4j.detour.tilecache;
 
 public class TileCacheContour {
-    int nverts;
-    int[] verts;
+    int nvertices;
+    int[] vertices;
     int reg;
     int area;
 }

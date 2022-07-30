@@ -40,8 +40,6 @@ public class CrowdAgent {
         DT_CROWDAGENT_STATE_OFFMESH, /// < The agent is traversing an off-mesh connection.
     }
 
-    ;
-
     public enum MoveRequestState {
         DT_CROWDAGENT_TARGET_NONE,
         DT_CROWDAGENT_TARGET_FAILED,
@@ -51,8 +49,6 @@ public class CrowdAgent {
         DT_CROWDAGENT_TARGET_WAITING_FOR_PATH,
         DT_CROWDAGENT_TARGET_VELOCITY,
     }
-
-    ;
 
     public final long idx;
     /// The type of mesh polygon the agent is traversing. (See: #CrowdAgentState)
@@ -127,7 +123,7 @@ public class CrowdAgent {
         boolean offMeshConnection = (corners.get(corners.size() - 1).getFlags()
                 & NavMeshQuery.DT_STRAIGHTPATH_OFFMESH_CONNECTION) != 0;
         if (offMeshConnection) {
-            float distSq = vDist2DSqr(npos, corners.get(corners.size() - 1).getPos());
+            float distSq = vDist2DSqr(npos, corners.get(corners.size() - 1).pos);
             return distSq < radius * radius;
         }
         return false;
@@ -139,7 +135,7 @@ public class CrowdAgent {
 
         boolean endOfPath = (corners.get(corners.size() - 1).getFlags() & NavMeshQuery.DT_STRAIGHTPATH_END) != 0;
         if (endOfPath)
-            return Math.min(vDist2D(npos, corners.get(corners.size() - 1).getPos()), range);
+            return Math.min(vDist2D(npos, corners.get(corners.size() - 1).pos), range);
 
         return range;
     }
@@ -150,8 +146,8 @@ public class CrowdAgent {
 
             int ip0 = 0;
             int ip1 = Math.min(1, corners.size() - 1);
-            Vector3f p0 = corners.get(ip0).getPos();
-            Vector3f p1 = corners.get(ip1).getPos();
+            Vector3f p0 = corners.get(ip0).pos;
+            Vector3f p1 = corners.get(ip1).pos;
 
             Vector3f dir0 = vSub(p0, npos);
             Vector3f dir1 = vSub(p1, npos);
@@ -161,7 +157,7 @@ public class CrowdAgent {
             float len0 = dir0.length();
             float len1 = dir1.length();
             if (len1 > 0.001f)
-                dir1.mul( 1.0f / len1);
+                dir1.mul(1.0f / len1);
 
             dir.x = dir0.x - dir1.x * len0 * 0.5f;
             dir.y = 0;
@@ -175,7 +171,7 @@ public class CrowdAgent {
     public Vector3f calcStraightSteerDirection() {
         Vector3f dir = new Vector3f();
         if (!corners.isEmpty()) {
-            dir.set(corners.get(0).getPos()).sub(npos);
+            dir.set(corners.get(0).pos).sub(npos);
             dir.y = 0;
             dir.normalize();
         }
@@ -186,11 +182,7 @@ public class CrowdAgent {
         targetRef = ref;
         copy(targetPos, pos);
         targetPathQueryResult = null;
-        if (targetRef != 0) {
-            targetState = MoveRequestState.DT_CROWDAGENT_TARGET_REQUESTING;
-        } else {
-            targetState = MoveRequestState.DT_CROWDAGENT_TARGET_FAILED;
-        }
+        targetState = targetRef != 0 ? MoveRequestState.DT_CROWDAGENT_TARGET_REQUESTING : MoveRequestState.DT_CROWDAGENT_TARGET_FAILED;
     }
 
 }

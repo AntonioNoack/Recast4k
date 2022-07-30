@@ -26,9 +26,9 @@ import org.joml.Vector3f;
 public class PolyMesh {
 
     /**
-     * The mesh vertices. [Form: (x, y, z) coordinates * #nverts]
+     * The mesh vertices. [Form: (x, y, z) coordinates * #nvertices]
      */
-    public int[] verts;
+    public int[] vertices;
     /**
      * Polygon and neighbor data. [Length: #maxpolys * 2 * #nvp]
      */
@@ -44,7 +44,7 @@ public class PolyMesh {
     /**
      * The number of vertices.
      */
-    public int nverts;
+    public int nvertices;
     /**
      * The number of polygons.
      */

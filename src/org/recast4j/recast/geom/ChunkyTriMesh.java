@@ -120,7 +120,7 @@ public class ChunkyTriMesh {
         }
     }
 
-    public ChunkyTriMesh(float[] verts, int[] tris, int ntris, int trisPerChunk) {
+    public ChunkyTriMesh(float[] vertices, int[] tris, int ntris, int trisPerChunk) {
         int nchunks = (ntris + trisPerChunk - 1) / trisPerChunk;
 
         nodes = new ArrayList<>(nchunks);
@@ -134,22 +134,22 @@ public class ChunkyTriMesh {
             Node0 it = items[i] = new Node0();
             it.i = i;
             // Calc triangle XZ bounds.
-            it.minX = it.maxX = verts[tris[t] * 3];
-            it.minY = it.maxY = verts[tris[t] * 3 + 2];
+            it.minX = it.maxX = vertices[tris[t] * 3];
+            it.minY = it.maxY = vertices[tris[t] * 3 + 2];
             for (int j = 1; j < 3; ++j) {
                 int v = tris[t + j] * 3;
-                if (verts[v] < it.minX) {
-                    it.minX = verts[v];
+                if (vertices[v] < it.minX) {
+                    it.minX = vertices[v];
                 }
-                if (verts[v + 2] < it.minY) {
-                    it.minY = verts[v + 2];
+                if (vertices[v + 2] < it.minY) {
+                    it.minY = vertices[v + 2];
                 }
 
-                if (verts[v] > it.maxX) {
-                    it.maxX = verts[v];
+                if (vertices[v] > it.maxX) {
+                    it.maxX = vertices[v];
                 }
-                if (verts[v + 2] > it.maxY) {
-                    it.maxY = verts[v + 2];
+                if (vertices[v + 2] > it.maxY) {
+                    it.maxY = vertices[v + 2];
                 }
             }
         }

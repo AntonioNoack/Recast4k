@@ -21,9 +21,9 @@ package org.recast4j.detour;
 import org.joml.Vector3f;
 
 public class StraightPathItem {
-    Vector3f pos;
-    int flags;
-    long ref;
+    public Vector3f pos;
+    public int flags;
+    public long ref;
 
     public StraightPathItem(Vector3f pos, int flags, long ref) {
         this.pos = new Vector3f(pos);

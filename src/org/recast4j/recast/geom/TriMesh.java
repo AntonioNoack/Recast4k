@@ -38,7 +38,7 @@ public class TriMesh {
         return faces;
     }
 
-    public float[] getVerts() {
+    public float[] getVertices() {
         return vertices;
     }
 

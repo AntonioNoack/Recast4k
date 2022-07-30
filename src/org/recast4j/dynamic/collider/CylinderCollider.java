@@ -29,6 +29,7 @@ public class CylinderCollider extends AbstractCollider {
     private final Vector3f end;
     private final float radius;
 
+    @SuppressWarnings("unused")
     public CylinderCollider(Vector3f start, Vector3f end, float radius, int area, float flagMergeThreshold) {
         super(area, flagMergeThreshold, bounds(start, end, radius));
         this.start = start;

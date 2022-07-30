@@ -402,23 +402,23 @@ public class RecastContour {
 
     }
 
-    private static int calcAreaOfPolygon2D(int[] verts, int nverts) {
+    private static int calcAreaOfPolygon2D(int[] vertices, int nvertices) {
         int area = 0;
-        for (int i = 0, j = nverts - 1; i < nverts; j = i++) {
+        for (int i = 0, j = nvertices - 1; i < nvertices; j = i++) {
             int vi = i * 4;
             int vj = j * 4;
-            area += verts[vi] * verts[vj + 2] - verts[vj] * verts[vi + 2];
+            area += vertices[vi] * vertices[vj + 2] - vertices[vj] * vertices[vi + 2];
         }
         return (area + 1) / 2;
     }
 
-    private static boolean intersectSegCountour(int d0, int d1, int i, int n, int[] verts, int[] d0verts,
-                                                int[] d1verts) {
+    private static boolean intersectSegCountour(int d0, int d1, int i, int n, int[] vertices, int[] d0vertices,
+                                                int[] d1vertices) {
         // For each edge (k,k+1) of P
-        int[] pverts = new int[4 * 4];
+        int[] pvertices = new int[4 * 4];
         for (int g = 0; g < 4; g++) {
-            pverts[g] = d0verts[d0 + g];
-            pverts[4 + g] = d1verts[d1 + g];
+            pvertices[g] = d0vertices[d0 + g];
+            pvertices[4 + g] = d1vertices[d1 + g];
         }
         d0 = 0;
         d1 = 4;
@@ -430,42 +430,42 @@ public class RecastContour {
             int p0 = k * 4;
             int p1 = k1 * 4;
             for (int g = 0; g < 4; g++) {
-                pverts[8 + g] = verts[p0 + g];
-                pverts[12 + g] = verts[p1 + g];
+                pvertices[8 + g] = vertices[p0 + g];
+                pvertices[12 + g] = vertices[p1 + g];
             }
             p0 = 8;
             p1 = 12;
-            if (RecastMesh.vequal(pverts, d0, p0) || RecastMesh.vequal(pverts, d1, p0)
-                    || RecastMesh.vequal(pverts, d0, p1) || RecastMesh.vequal(pverts, d1, p1))
+            if (RecastMesh.vequal(pvertices, d0, p0) || RecastMesh.vequal(pvertices, d1, p0)
+                    || RecastMesh.vequal(pvertices, d0, p1) || RecastMesh.vequal(pvertices, d1, p1))
                 continue;
 
-            if (RecastMesh.intersect(pverts, d0, d1, p0, p1))
+            if (RecastMesh.intersect(pvertices, d0, d1, p0, p1))
                 return true;
         }
         return false;
     }
 
-    private static boolean inCone(int i, int n, int[] verts, int pj, int[] vertpj) {
+    private static boolean inCone(int i, int n, int[] vertices, int pj, int[] vertpj) {
         int pi = i * 4;
         int pi1 = RecastMesh.next(i, n) * 4;
         int pin1 = RecastMesh.prev(i, n) * 4;
-        int[] pverts = new int[4 * 4];
+        int[] pvertices = new int[4 * 4];
         for (int g = 0; g < 4; g++) {
-            pverts[g] = verts[pi + g];
-            pverts[4 + g] = verts[pi1 + g];
-            pverts[8 + g] = verts[pin1 + g];
-            pverts[12 + g] = vertpj[pj + g];
+            pvertices[g] = vertices[pi + g];
+            pvertices[4 + g] = vertices[pi1 + g];
+            pvertices[8 + g] = vertices[pin1 + g];
+            pvertices[12 + g] = vertpj[pj + g];
         }
         pi = 0;
         pi1 = 4;
         pin1 = 8;
         pj = 12;
         // If P[i] is a convex vertex [ i+1 left or on (i-1,i) ].
-        if (RecastMesh.leftOn(pverts, pin1, pi, pi1))
-            return RecastMesh.left(pverts, pi, pj, pin1) && RecastMesh.left(pverts, pj, pi, pi1);
+        if (RecastMesh.leftOn(pvertices, pin1, pi, pi1))
+            return RecastMesh.left(pvertices, pi, pj, pin1) && RecastMesh.left(pvertices, pj, pi, pi1);
         // Assume (i-1,i,i+1) not collinear.
         // else P[i] is reflex.
-        return !(RecastMesh.leftOn(pverts, pi, pj, pi1) && RecastMesh.leftOn(pverts, pj, pi, pin1));
+        return !(RecastMesh.leftOn(pvertices, pi, pj, pi1) && RecastMesh.leftOn(pvertices, pj, pi, pin1));
     }
 
     private static void removeDegenerateSegments(List<Integer> simplified) {
@@ -489,49 +489,49 @@ public class RecastContour {
     }
 
     private static void mergeContours(Contour ca, Contour cb, int ia, int ib) {
-        int maxVerts = ca.nverts + cb.nverts + 2;
-        int[] verts = new int[maxVerts * 4];
+        int maxVertices = ca.nvertices + cb.nvertices + 2;
+        int[] vertices = new int[maxVertices * 4];
 
         int nv = 0;
 
         // Copy contour A.
-        for (int i = 0; i <= ca.nverts; ++i) {
+        for (int i = 0; i <= ca.nvertices; ++i) {
             int dst = nv * 4;
-            int src = ((ia + i) % ca.nverts) * 4;
-            verts[dst] = ca.verts[src];
-            verts[dst + 1] = ca.verts[src + 1];
-            verts[dst + 2] = ca.verts[src + 2];
-            verts[dst + 3] = ca.verts[src + 3];
+            int src = ((ia + i) % ca.nvertices) * 4;
+            vertices[dst] = ca.vertices[src];
+            vertices[dst + 1] = ca.vertices[src + 1];
+            vertices[dst + 2] = ca.vertices[src + 2];
+            vertices[dst + 3] = ca.vertices[src + 3];
             nv++;
         }
 
         // Copy contour B
-        for (int i = 0; i <= cb.nverts; ++i) {
+        for (int i = 0; i <= cb.nvertices; ++i) {
             int dst = nv * 4;
-            int src = ((ib + i) % cb.nverts) * 4;
-            verts[dst] = cb.verts[src];
-            verts[dst + 1] = cb.verts[src + 1];
-            verts[dst + 2] = cb.verts[src + 2];
-            verts[dst + 3] = cb.verts[src + 3];
+            int src = ((ib + i) % cb.nvertices) * 4;
+            vertices[dst] = cb.vertices[src];
+            vertices[dst + 1] = cb.vertices[src + 1];
+            vertices[dst + 2] = cb.vertices[src + 2];
+            vertices[dst + 3] = cb.vertices[src + 3];
             nv++;
         }
 
-        ca.verts = verts;
-        ca.nverts = nv;
+        ca.vertices = vertices;
+        ca.nvertices = nv;
 
-        cb.verts = null;
-        cb.nverts = 0;
+        cb.vertices = null;
+        cb.nvertices = 0;
 
     }
 
     // Finds the lowest leftmost vertex of a contour.
     private static int[] findLeftMostVertex(Contour contour) {
-        int minx = contour.verts[0];
-        int minz = contour.verts[2];
+        int minx = contour.vertices[0];
+        int minz = contour.vertices[2];
         int leftmost = 0;
-        for (int i = 1; i < contour.nverts; i++) {
-            int x = contour.verts[i * 4];
-            int z = contour.verts[i * 4 + 2];
+        for (int i = 1; i < contour.nvertices; i++) {
+            int x = contour.vertices[i * 4];
+            int z = contour.vertices[i * 4 + 2];
             if (x < minx || (x == minx && z < minz)) {
                 minx = x;
                 minz = z;
@@ -566,12 +566,12 @@ public class RecastContour {
         }
         Arrays.sort(region.holes, new CompareHoles());
 
-        int maxVerts = region.outline.nverts;
+        int maxVertices = region.outline.nvertices;
         for (int i = 0; i < region.nholes; i++)
-            maxVerts += region.holes[i].contour.nverts;
+            maxVertices += region.holes[i].contour.nvertices;
 
-        PotentialDiagonal[] diags = new PotentialDiagonal[maxVerts];
-        for (int pd = 0; pd < maxVerts; pd++) {
+        PotentialDiagonal[] diags = new PotentialDiagonal[maxVertices];
+        for (int pd = 0; pd < maxVertices; pd++) {
             diags[pd] = new PotentialDiagonal();
         }
         Contour outline = region.outline;
@@ -582,7 +582,7 @@ public class RecastContour {
 
             int index = -1;
             int bestVertex = region.holes[i].leftmost;
-            for (int iter = 0; iter < hole.nverts; iter++) {
+            for (int iter = 0; iter < hole.nvertices; iter++) {
                 // Find potential diagonals.
                 // The 'best' vertex must be in the cone described by 3 cosequtive vertices of the outline.
                 // ..o j-1
@@ -593,10 +593,10 @@ public class RecastContour {
                 // :
                 int ndiags = 0;
                 int corner = bestVertex * 4;
-                for (int j = 0; j < outline.nverts; j++) {
-                    if (inCone(j, outline.nverts, outline.verts, corner, hole.verts)) {
-                        int dx = outline.verts[j * 4] - hole.verts[corner];
-                        int dz = outline.verts[j * 4 + 2] - hole.verts[corner + 2];
+                for (int j = 0; j < outline.nvertices; j++) {
+                    if (inCone(j, outline.nvertices, outline.vertices, corner, hole.vertices)) {
+                        int dx = outline.vertices[j * 4] - hole.vertices[corner];
+                        int dz = outline.vertices[j * 4 + 2] - hole.vertices[corner + 2];
                         diags[ndiags].vert = j;
                         diags[ndiags].dist = dx * dx + dz * dz;
                         ndiags++;
@@ -608,11 +608,11 @@ public class RecastContour {
                 // Find a diagonal that is not intersecting the outline not the remaining holes.
                 for (int j = 0; j < ndiags; j++) {
                     int pt = diags[j].vert * 4;
-                    boolean intersect = intersectSegCountour(pt, corner, diags[j].vert, outline.nverts, outline.verts,
-                            outline.verts, hole.verts);
+                    boolean intersect = intersectSegCountour(pt, corner, diags[j].vert, outline.nvertices, outline.vertices,
+                            outline.vertices, hole.vertices);
                     for (int k = i; k < region.nholes && !intersect; k++)
-                        intersect = intersectSegCountour(pt, corner, -1, region.holes[k].contour.nverts,
-                                region.holes[k].contour.verts, outline.verts, hole.verts);
+                        intersect = intersectSegCountour(pt, corner, -1, region.holes[k].contour.nvertices,
+                                region.holes[k].contour.vertices, outline.vertices, hole.vertices);
                     if (!intersect) {
                         index = diags[j].vert;
                         break;
@@ -622,7 +622,7 @@ public class RecastContour {
                 if (index != -1)
                     break;
                 // All the potential diagonals for the current vertex were intersecting, try next vertex.
-                bestVertex = (bestVertex + 1) % hole.nverts;
+                bestVertex = (bestVertex + 1) % hole.nvertices;
             }
 
             if (index == -1) {
@@ -704,7 +704,7 @@ public class RecastContour {
 
         ctx.stopTimer("CONTOURS_TRACE");
 
-        List<Integer> verts = new ArrayList<>(256);
+        List<Integer> vertices = new ArrayList<>(256);
         List<Integer> simplified = new ArrayList<>(64);
 
         for (int y = 0; y < h; ++y) {
@@ -720,15 +720,15 @@ public class RecastContour {
                         continue;
                     int area = chf.areas[i];
 
-                    verts.clear();
+                    vertices.clear();
                     simplified.clear();
 
                     ctx.startTimer("CONTOURS_WALK");
-                    walkContour(x, y, i, chf, flags, verts);
+                    walkContour(x, y, i, chf, flags, vertices);
                     ctx.stopTimer("CONTOURS_WALK");
 
                     ctx.startTimer("CONTOURS_SIMPLIFY");
-                    simplifyContour(verts, simplified, maxError, maxEdgeLen, buildFlags);
+                    simplifyContour(vertices, simplified, maxError, maxEdgeLen, buildFlags);
                     removeDegenerateSegments(simplified);
                     ctx.stopTimer("CONTOURS_SIMPLIFY");
 
@@ -739,30 +739,30 @@ public class RecastContour {
                         Contour cont = new Contour();
                         cset.conts.add(cont);
 
-                        cont.nverts = simplified.size() / 4;
-                        cont.verts = new int[simplified.size()];
-                        for (int l = 0; l < cont.verts.length; l++) {
-                            cont.verts[l] = simplified.get(l);
+                        cont.nvertices = simplified.size() / 4;
+                        cont.vertices = new int[simplified.size()];
+                        for (int l = 0; l < cont.vertices.length; l++) {
+                            cont.vertices[l] = simplified.get(l);
                         }
 
                         if (borderSize > 0) {
                             // If the heightfield was build with bordersize, remove the offset.
-                            for (int j = 0; j < cont.nverts; ++j) {
-                                cont.verts[j * 4] -= borderSize;
-                                cont.verts[j * 4 + 2] -= borderSize;
+                            for (int j = 0; j < cont.nvertices; ++j) {
+                                cont.vertices[j * 4] -= borderSize;
+                                cont.vertices[j * 4 + 2] -= borderSize;
                             }
                         }
 
-                        cont.nrverts = verts.size() / 4;
-                        cont.rverts = new int[verts.size()];
-                        for (int l = 0; l < cont.rverts.length; l++) {
-                            cont.rverts[l] = verts.get(l);
+                        cont.nrvertices = vertices.size() / 4;
+                        cont.rvertices = new int[vertices.size()];
+                        for (int l = 0; l < cont.rvertices.length; l++) {
+                            cont.rvertices[l] = vertices.get(l);
                         }
                         if (borderSize > 0) {
                             // If the heightfield was build with bordersize, remove the offset.
-                            for (int j = 0; j < cont.nrverts; ++j) {
-                                cont.rverts[j * 4] -= borderSize;
-                                cont.rverts[j * 4 + 2] -= borderSize;
+                            for (int j = 0; j < cont.nrvertices; ++j) {
+                                cont.rvertices[j * 4] -= borderSize;
+                                cont.rvertices[j * 4 + 2] -= borderSize;
                             }
                         }
 
@@ -781,7 +781,7 @@ public class RecastContour {
             for (int i = 0; i < cset.conts.size(); ++i) {
                 Contour cont = cset.conts.get(i);
                 // If the contour is wound backwards, it is a hole.
-                winding[i] = calcAreaOfPolygon2D(cont.verts, cont.nverts) < 0 ? -1 : 1;
+                winding[i] = calcAreaOfPolygon2D(cont.vertices, cont.nvertices) < 0 ? -1 : 1;
                 if (winding[i] < 0)
                     nholes++;
             }

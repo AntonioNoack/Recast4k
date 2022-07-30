@@ -34,7 +34,7 @@ public class MeshTile {
     /** The tile links. */
     public final List<Link> links = new ArrayList<>();
     /** Index to the next free link. */
-    int linksFreeList = NavMesh.DT_NULL_LINK; // FIXME: Remove
+    int linksFreeList = NavMesh.DT_NULL_LINK;
     /** Tile flags. (See: #dtTileFlags) */
     int flags;
 

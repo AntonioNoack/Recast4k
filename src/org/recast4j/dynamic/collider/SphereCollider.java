@@ -28,6 +28,7 @@ public class SphereCollider extends AbstractCollider {
     private final Vector3f center;
     private final float radius;
 
+    @SuppressWarnings("unused")
     public SphereCollider(Vector3f center, float radius, int area, float flagMergeThreshold) {
         super(area, flagMergeThreshold, bounds(center, radius));
         this.center = center;

@@ -74,7 +74,7 @@ public class RecastConfig {
      * The maximum number of vertices allowed for polygons generated during the contour to polygon conversion process.
      * [Limit: &gt;= 3]
      **/
-    public final int maxVertsPerPoly;
+    public final int maxVerticesPerPoly;
 
     /**
      * Sets the sampling distance to use when generating the detail mesh. (For height detail only.) [Limits: 0 or >=
@@ -110,10 +110,10 @@ public class RecastConfig {
     @SuppressWarnings("unused")
     public RecastConfig(PartitionType partitionType, float cellSize, float cellHeight, float agentHeight, float agentRadius,
             float agentMaxClimb, float agentMaxSlope, int regionMinSize, int regionMergeSize, float edgeMaxLen,
-            float edgeMaxError, int vertsPerPoly, float detailSampleDist, float detailSampleMaxError,
+            float edgeMaxError, int verticesPerPoly, float detailSampleDist, float detailSampleMaxError,
             AreaModification walkableAreaMod) {
         this(partitionType, cellSize, cellHeight, agentMaxSlope, true, true, true, agentHeight, agentRadius, agentMaxClimb,
-                regionMinSize, regionMergeSize, edgeMaxLen, edgeMaxError, vertsPerPoly, detailSampleDist, detailSampleMaxError,
+                regionMinSize, regionMergeSize, edgeMaxLen, edgeMaxError, verticesPerPoly, detailSampleDist, detailSampleMaxError,
                 walkableAreaMod, true);
     }
 
@@ -123,19 +123,19 @@ public class RecastConfig {
     public RecastConfig(PartitionType partitionType, float cellSize, float cellHeight, float agentMaxSlope,
             boolean filterLowHangingObstacles, boolean filterLedgeSpans, boolean filterWalkableLowHeightSpans, float agentHeight,
             float agentRadius, float agentMaxClimb, int regionMinSize, int regionMergeSize, float edgeMaxLen, float edgeMaxError,
-            int vertsPerPoly, float detailSampleDist, float detailSampleMaxError, AreaModification walkableAreaMod,
+            int verticesPerPoly, float detailSampleDist, float detailSampleMaxError, AreaModification walkableAreaMod,
             boolean buildMeshDetail) {
         // Note: area = size*size in [Units: wu]
         this(false, 0, 0, 0, partitionType, cellSize, cellHeight, agentMaxSlope, filterLowHangingObstacles, filterLedgeSpans,
                 filterWalkableLowHeightSpans, agentHeight, agentRadius, agentMaxClimb,
                 regionMinSize * regionMinSize * cellSize * cellSize, regionMergeSize * regionMergeSize * cellSize * cellSize,
-                edgeMaxLen, edgeMaxError, vertsPerPoly, buildMeshDetail, detailSampleDist, detailSampleMaxError, walkableAreaMod);
+                edgeMaxLen, edgeMaxError, verticesPerPoly, buildMeshDetail, detailSampleDist, detailSampleMaxError, walkableAreaMod);
     }
 
     public RecastConfig(boolean useTiles, int tileSizeX, int tileSizeZ, int borderSize, PartitionType partitionType,
             float cellSize, float cellHeight, float agentMaxSlope, boolean filterLowHangingObstacles, boolean filterLedgeSpans,
             boolean filterWalkableLowHeightSpans, float agentHeight, float agentRadius, float agentMaxClimb, float minRegionArea,
-            float mergeRegionArea, float edgeMaxLen, float edgeMaxError, int vertsPerPoly, boolean buildMeshDetail,
+            float mergeRegionArea, float edgeMaxLen, float edgeMaxError, int verticesPerPoly, boolean buildMeshDetail,
             float detailSampleDist, float detailSampleMaxError, AreaModification walkableAreaMod) {
         this.useTiles = useTiles;
         this.tileSizeX = tileSizeX;
@@ -158,7 +158,7 @@ public class RecastConfig {
         maxEdgeLen = (int) (edgeMaxLen / cellSize);
         maxEdgeLenWorld = edgeMaxLen;
         maxSimplificationError = edgeMaxError;
-        maxVertsPerPoly = vertsPerPoly;
+        maxVerticesPerPoly = verticesPerPoly;
         this.detailSampleDist = detailSampleDist < 0.9f ? 0 : cellSize * detailSampleDist;
         this.detailSampleMaxError = cellHeight * detailSampleMaxError;
         this.walkableAreaMod = walkableAreaMod;

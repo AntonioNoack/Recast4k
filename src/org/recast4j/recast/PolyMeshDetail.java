@@ -26,14 +26,14 @@ public class PolyMeshDetail {
 
     /** The sub-mesh data. [Size: 4*#nmeshes] */
     public int[] meshes;
-    /** The mesh vertices. [Size: 3*#nverts] */
-    public float[] verts;
+    /** The mesh vertices. [Size: 3*#nvertices] */
+    public float[] vertices;
     /** The mesh triangles. [Size: 4*#ntris] */
     public int[] tris;
     /** The number of sub-meshes defined by #meshes. */
     public int nmeshes;
-    /** The number of vertices in #verts. */
-    public int nverts;
+    /** The number of vertices in #vertices. */
+    public int nvertices;
     /** The number of triangles in #tris. */
     public int ntris;
 

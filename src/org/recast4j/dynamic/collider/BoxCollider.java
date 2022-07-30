@@ -29,6 +29,7 @@ public class BoxCollider extends AbstractCollider {
     private final Vector3f center;
     private final float[][] halfEdges;
 
+    @SuppressWarnings("unused")
     public BoxCollider(Vector3f center, float[][] halfEdges, int area, float flagMergeThreshold) {
         super(area, flagMergeThreshold, bounds(center, halfEdges));
         this.center = center;
@@ -60,24 +61,5 @@ public class BoxCollider extends AbstractCollider {
         RecastFilledVolumeRasterization.rasterizeBox(hf, center, halfEdges, area, (int) Math.floor(flagMergeThreshold / hf.ch),
                 telemetry);
     }
-
-    /*public static float[][] getHalfEdges(float[] up, float[] forward, float[] extent) {
-        float[][] halfEdges = new float[][] { new Vector3f(), new float[] { up[0], up[1], up[2] }, new Vector3f() };
-        RecastVectors.normalize(halfEdges[1]);
-        RecastVectors.cross(halfEdges[0], up, forward);
-        RecastVectors.normalize(halfEdges[0]);
-        RecastVectors.cross(halfEdges[2], halfEdges[0], up);
-        RecastVectors.normalize(halfEdges[2]);
-        halfEdges[0][0] *= extent[0];
-        halfEdges[0][1] *= extent[0];
-        halfEdges[0][2] *= extent[0];
-        halfEdges[1][0] *= extent[1];
-        halfEdges[1][1] *= extent[1];
-        halfEdges[1][2] *= extent[1];
-        halfEdges[2][0] *= extent[2];
-        halfEdges[2][1] *= extent[2];
-        halfEdges[2][2] *= extent[2];
-        return halfEdges;
-    }*/
 
 }

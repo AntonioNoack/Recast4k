@@ -49,25 +49,25 @@ public class MeshDataWriter extends DetourWriter {
         write(stream, header.bmin, order);
         write(stream, header.bmax, order);
         write(stream, header.bvQuantFactor, order);
-        writeVerts(stream, data.verts, header.vertCount, order);
+        writeVertices(stream, data.vertices, header.vertCount, order);
         writePolys(stream, data, order);
         writePolyDetails(stream, data, order);
-        writeVerts(stream, data.detailVerts, header.detailVertCount, order);
+        writeVertices(stream, data.detailVertices, header.detailVertCount, order);
         writeDTris(stream, data);
         writeBVTree(stream, data, order);
         writeOffMeshCons(stream, data, order);
     }
 
-    private void writeVerts(OutputStream stream, float[] verts, int count, ByteOrder order) throws IOException {
+    private void writeVertices(OutputStream stream, float[] vertices, int count, ByteOrder order) throws IOException {
         for (int i = 0; i < count * 3; i++) {
-            write(stream, verts[i], order);
+            write(stream, vertices[i], order);
         }
     }
 
     private void writePolys(OutputStream stream, MeshData data, ByteOrder order) throws IOException {
         for (int i = 0; i < data.header.polyCount; i++) {
-            for (int j = 0; j < data.polys[i].verts.length; j++) {
-                write(stream, (short) data.polys[i].verts[j], order);
+            for (int j = 0; j < data.polys[i].vertices.length; j++) {
+                write(stream, (short) data.polys[i].vertices[j], order);
             }
             for (int j = 0; j < data.polys[i].neis.length; j++) {
                 write(stream, (short) data.polys[i].neis[j], order);

@@ -37,7 +37,7 @@ public class DynamicNavMeshConfig {
     public float regionMergeArea;
     public float maxEdgeLen;
     public float maxSimplificationError;
-    public int vertsPerPoly;
+    public int verticesPerPoly;
     public boolean buildDetailMesh;
     public float detailSampleDistance;
     public float detailSampleMaxError;

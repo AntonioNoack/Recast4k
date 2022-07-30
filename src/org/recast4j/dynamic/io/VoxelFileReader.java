@@ -51,13 +51,13 @@ public class VoxelFileReader {
         file.minRegionArea = (int) buf.getFloat();
         if (!isExportedFromAstar) {
             file.regionMergeArea = buf.getFloat();
-            file.vertsPerPoly = buf.getInt();
+            file.verticesPerPoly = buf.getInt();
             file.buildMeshDetail = buf.get() != 0;
             file.detailSampleDistance = buf.getFloat();
             file.detailSampleMaxError = buf.getFloat();
         } else {
             file.regionMergeArea = 6 * file.minRegionArea;
-            file.vertsPerPoly = 6;
+            file.verticesPerPoly = 6;
             file.buildMeshDetail = true;
             file.detailSampleDistance = file.maxEdgeLen * 0.5f;
             file.detailSampleMaxError = file.maxSimplificationError * 0.8f;

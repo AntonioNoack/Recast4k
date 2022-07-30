@@ -87,15 +87,15 @@ public class LocalBoundary {
         // First query non-overlapping polygons.
         Result<FindLocalNeighbourhoodResult> res = navquery.findLocalNeighbourhood(ref, pos, collisionQueryRange, filter);
         if (res.succeeded()) {
-            m_polys = res.result.getRefs();
+            m_polys = res.result.refs;
             m_segs.clear();
             // Secondly, store all polygon edges.
             for (Long m_poly : m_polys) {
                 Result<GetPolyWallSegmentsResult> result = navquery.getPolyWallSegments(m_poly, false, filter);
                 if (result.succeeded()) {
                     GetPolyWallSegmentsResult gpws = result.result;
-                    for (int k = 0; k < gpws.getSegmentRefs().size(); ++k) {
-                        float[] s = gpws.getSegmentVerts().get(k);
+                    for (int k = 0; k < gpws.segmentRefs.size(); ++k) {
+                        float[] s = gpws.segmentVertices.get(k);
                         // Skip too distant segments.
                         Pair<Float, Float> distseg = distancePtSegSqr2D(pos, s, 0, 3);
                         if (distseg.first > sqr(collisionQueryRange)) {

@@ -39,7 +39,7 @@ public class ProximityGrid {
         items = new HashMap<>();
     }
 
-    void clear() {
+    public void clear() {
         items.clear();
     }
 
@@ -52,11 +52,7 @@ public class ProximityGrid {
         for (int y = iminy; y <= imaxy; ++y) {
             for (int x = iminx; x <= imaxx; ++x) {
                 ItemKey key = new ItemKey(x, y);
-                List<CrowdAgent> ids = items.get(key);
-                if (ids == null) {
-                    ids = new ArrayList<>();
-                    items.put(key, ids);
-                }
+                List<CrowdAgent> ids = items.computeIfAbsent(key, k -> new ArrayList<>());
                 ids.add(agent);
             }
         }
@@ -82,6 +78,7 @@ public class ProximityGrid {
         return result;
     }
 
+    @SuppressWarnings("unused")
     public List<int[]> getItemCounts() {
         return items.entrySet().stream().filter(e -> e.getValue() != null && e.getValue().size() > 0)
                 .map(e -> new int[] { e.getKey().x, e.getKey().y, e.getValue().size() }).collect(toList());
@@ -120,9 +117,7 @@ public class ProximityGrid {
             ItemKey other = (ItemKey) obj;
             if (x != other.x)
                 return false;
-            if (y != other.y)
-                return false;
-            return true;
+            return y == other.y;
         }
 
     };

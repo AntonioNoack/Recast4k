@@ -24,7 +24,7 @@ import static org.recast4j.detour.DetourCommon.vDist2DSqr;
 
 public interface PolygonByCircleConstraint {
 
-    float[] apply(float[] polyVerts, Vector3f circleCenter, float radius);
+    float[] apply(float[] polyVertices, Vector3f circleCenter, float radius);
 
     static PolygonByCircleConstraint noop() {
         return new NoOpPolygonByCircleConstraint();
@@ -36,8 +36,8 @@ public interface PolygonByCircleConstraint {
 
     class NoOpPolygonByCircleConstraint implements PolygonByCircleConstraint {
         @Override
-        public float[] apply(float[] polyVerts, Vector3f circleCenter, float radius) {
-            return polyVerts;
+        public float[] apply(float[] polyVertices, Vector3f circleCenter, float radius) {
+            return polyVertices;
         }
 
     }
@@ -51,22 +51,22 @@ public interface PolygonByCircleConstraint {
         private static float[] unitCircle;
 
         @Override
-        public float[] apply(float[] verts, Vector3f center, float radius) {
+        public float[] apply(float[] vertices, Vector3f center, float radius) {
             float radiusSqr = radius * radius;
             int outsideVertex = -1;
-            for (int pv = 0; pv < verts.length; pv += 3) {
-                if (vDist2DSqr(center, verts, pv) > radiusSqr) {
+            for (int pv = 0; pv < vertices.length; pv += 3) {
+                if (vDist2DSqr(center, vertices, pv) > radiusSqr) {
                     outsideVertex = pv;
                     break;
                 }
             }
             if (outsideVertex == -1) {
                 // polygon inside circle
-                return verts;
+                return vertices;
             }
             float[] circle = circle(center, radius);
-            float[] intersection = ConvexConvexIntersection.intersect(verts, circle);
-            if (intersection == null && pointInPolygon(center, verts, verts.length / 3)) {
+            float[] intersection = ConvexConvexIntersection.intersect(vertices, circle);
+            if (intersection == null && pointInPolygon(center, vertices, vertices.length / 3)) {
                 // circle inside polygon
                 return circle;
             }

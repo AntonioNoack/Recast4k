@@ -34,11 +34,11 @@ public class ConvexConvexIntersection {
     private static final float EPSILON = 0.0001f;
 
     private enum InFlag {
-        Pin, Qin, Unknown;
+        Pin, Qin, Unknown
     }
 
     private enum Intersection {
-        None, Single, Overlap;
+        None, Single, Overlap
     }
 
     public static float[] intersect(float[] p, float[] q) {
@@ -78,7 +78,7 @@ public class ConvexConvexIntersection {
                 cross = 0f;
             }
             boolean parallel = cross == 0f;
-            Intersection code = parallel ? parallelInt(a1, a, b1, b, ip, iq) : segSegInt(a1, a, b1, b, ip, iq);
+            Intersection code = parallel ? parallelInt(a1, a, b1, b, ip, iq) : segSegInt(a1, a, b1, b, ip);
 
             if (code == Intersection.Single) {
                 if (FirstPoint) {
@@ -177,11 +177,11 @@ public class ConvexConvexIntersection {
         return inflag;
     }
 
-    private static Intersection segSegInt(Vector3f a, Vector3f b, Vector3f c, Vector3f d, Vector3f p, Vector3f q) {
-        Optional<Pair<Float, Float>> isec = intersectSegSeg2D(a, b, c, d);
-        if (isec.isPresent()) {
-            float s = isec.get().first;
-            float t = isec.get().second;
+    private static Intersection segSegInt(Vector3f a, Vector3f b, Vector3f c, Vector3f d, Vector3f p) {
+        Optional<Pair<Float, Float>> i = intersectSegSeg2D(a, b, c, d);
+        if (i.isPresent()) {
+            float s = i.get().first;
+            float t = i.get().second;
             if (s >= 0.0f && s <= 1.0f && t >= 0.0f && t <= 1.0f) {
                 p.set(a).lerp(b, s);
                 return Intersection.Single;

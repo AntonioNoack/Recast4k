@@ -44,14 +44,14 @@ public class Recast {
     /// See the #rcConfig documentation for more information on the configuration parameters.
     ///
     /// @see rcHeightfield, rcClearUnwalkableTriangles, rcRasterizeTriangles
-    public static int[] markWalkableTriangles(Telemetry ctx, float walkableSlopeAngle, float[] verts, int[] tris, int nt,
+    public static int[] markWalkableTriangles(Telemetry ctx, float walkableSlopeAngle, float[] vertices, int[] tris, int nt,
                                               AreaModification areaMod) {
         int[] areas = new int[nt];
         float walkableThr = (float) Math.cos(walkableSlopeAngle / 180.0f * Math.PI);
         Vector3f norm = new Vector3f();
         for (int i = 0; i < nt; ++i) {
             int tri = i * 3;
-            calcTriNormal(verts, tris[tri], tris[tri + 1], tris[tri + 2], norm);
+            calcTriNormal(vertices, tris[tri], tris[tri + 1], tris[tri + 2], norm);
             // Check if the face is walkable.
             if (norm.y > walkableThr)
                 areas[i] = areaMod.apply(areas[i]);
@@ -59,10 +59,10 @@ public class Recast {
         return areas;
     }
 
-    static void calcTriNormal(float[] verts, int v0, int v1, int v2, Vector3f norm) {
+    static void calcTriNormal(float[] vertices, int v0, int v1, int v2, Vector3f norm) {
         Vector3f e0 = new Vector3f(), e1 = new Vector3f();
-        RecastVectors.sub(e0, verts, v1 * 3, v0 * 3);
-        RecastVectors.sub(e1, verts, v2 * 3, v0 * 3);
+        RecastVectors.sub(e0, vertices, v1 * 3, v0 * 3);
+        RecastVectors.sub(e1, vertices, v2 * 3, v0 * 3);
         e0.cross(e1, norm).normalize();
     }
 
@@ -75,14 +75,14 @@ public class Recast {
     ///
     /// @see rcHeightfield, rcClearUnwalkableTriangles, rcRasterizeTriangles
     @SuppressWarnings("unused")
-    public static void clearUnwalkableTriangles(float walkableSlopeAngle, float[] verts,
+    public static void clearUnwalkableTriangles(float walkableSlopeAngle, float[] vertices,
                                                 int[] tris, int nt, int[] areas) {
         float walkableThr = (float) Math.cos(walkableSlopeAngle / 180.0f * Math.PI);
 
         Vector3f norm = new Vector3f();
         for (int i = 0; i < nt; ++i) {
             int tri = i * 3;
-            calcTriNormal(verts, tris[tri], tris[tri + 1], tris[tri + 2], norm);
+            calcTriNormal(vertices, tris[tri], tris[tri + 1], tris[tri + 2], norm);
             // Check if the face is walkable.
             if (norm.y <= walkableThr)
                 areas[i] = RC_NULL_AREA;

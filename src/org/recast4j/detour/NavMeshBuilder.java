@@ -29,67 +29,50 @@ public class NavMeshBuilder {
 
     static final int MESH_NULL_IDX = 0xffff;
 
-    public static class BVItem {
-        public final int[] bmin = new int[3];
-        public final int[] bmax = new int[3];
-        public int i;
-    }
-
-    ;
-
-    private static class CompareItemX implements Comparator<BVItem> {
+    private static class CompareItemX implements Comparator<BVNode> {
         @Override
-        public int compare(BVItem a, BVItem b) {
-            return Integer.compare(a.bmin[0], b.bmin[0]);
+        public int compare(BVNode a, BVNode b) {
+            return Integer.compare(a.minX, b.minX);
         }
     }
 
-    private static class CompareItemY implements Comparator<BVItem> {
+    private static class CompareItemY implements Comparator<BVNode> {
 
         @Override
-        public int compare(BVItem a, BVItem b) {
-            return Integer.compare(a.bmin[1], b.bmin[1]);
+        public int compare(BVNode a, BVNode b) {
+            return Integer.compare(a.minY, b.minY);
         }
 
     }
 
-    private static class CompareItemZ implements Comparator<BVItem> {
+    private static class CompareItemZ implements Comparator<BVNode> {
 
         @Override
-        public int compare(BVItem a, BVItem b) {
-            return Integer.compare(a.bmin[2], b.bmin[2]);
+        public int compare(BVNode a, BVNode b) {
+            return Integer.compare(a.minZ, b.minZ);
         }
 
     }
 
-    private static int[][] calcExtends(BVItem[] items, int imin, int imax) {
-        int[] bmin = new int[3];
-        int[] bmax = new int[3];
-        bmin[0] = items[imin].bmin[0];
-        bmin[1] = items[imin].bmin[1];
-        bmin[2] = items[imin].bmin[2];
+    private static void calcExtends(BVNode[] items, int imin, int imax, BVNode dst) {
 
-        bmax[0] = items[imin].bmax[0];
-        bmax[1] = items[imin].bmax[1];
-        bmax[2] = items[imin].bmax[2];
+        dst.minX = items[imin].minX;
+        dst.minY = items[imin].minY;
+        dst.minZ = items[imin].minZ;
+
+        dst.maxX = items[imin].maxX;
+        dst.maxY = items[imin].maxY;
+        dst.maxZ = items[imin].maxZ;
 
         for (int i = imin + 1; i < imax; ++i) {
-            BVItem it = items[i];
-            if (it.bmin[0] < bmin[0])
-                bmin[0] = it.bmin[0];
-            if (it.bmin[1] < bmin[1])
-                bmin[1] = it.bmin[1];
-            if (it.bmin[2] < bmin[2])
-                bmin[2] = it.bmin[2];
-
-            if (it.bmax[0] > bmax[0])
-                bmax[0] = it.bmax[0];
-            if (it.bmax[1] > bmax[1])
-                bmax[1] = it.bmax[1];
-            if (it.bmax[2] > bmax[2])
-                bmax[2] = it.bmax[2];
+            BVNode it = items[i];
+            dst.minX = Math.min(dst.minX, it.minX);
+            dst.minY = Math.min(dst.minY, it.minY);
+            dst.minZ = Math.min(dst.minZ, it.minZ);
+            dst.maxX = Math.max(dst.maxX, it.maxX);
+            dst.maxY = Math.max(dst.maxY, it.maxY);
+            dst.maxZ = Math.max(dst.maxZ, it.maxZ);
         }
-        return new int[][]{bmin, bmax};
     }
 
     private static int longestAxis(int x, int y, int z) {
@@ -99,32 +82,32 @@ public class NavMeshBuilder {
             axis = 1;
             maxVal = y;
         }
-        if (z > maxVal) {
-            axis = 2;
-            maxVal = z;
-        }
-        return axis;
+        return z > maxVal ? 2 : axis;
     }
 
-    public static int subdivide(BVItem[] items, int imin, int imax, int curNode, BVNode[] nodes) {
+    public static int subdivide(BVNode[] items, int imin, int imax, int curBVNode, BVNode[] BVNodes) {
         int inum = imax - imin;
-        int icur = curNode;
+        int icur = curBVNode;
 
-        BVNode node = new BVNode();
-        nodes[curNode++] = node;
+        BVNode n = new BVNode();
+        BVNodes[curBVNode++] = n;
 
         if (inum == 1) {
             // Leaf
-            node.bmin.set(items[imin].bmin[0]);
-            node.bmax.set(items[imin].bmax);
-            node.i = items[imin].i;
+            BVNode i = items[imin];
+            n.minX = i.minX;
+            n.minY = i.minY;
+            n.minZ = i.minZ;
+            n.maxX = i.maxX;
+            n.maxY = i.maxY;
+            n.maxZ = i.maxZ;
+            n.i = i.i;
         } else {
-            // Split
-            int[][] minmax = calcExtends(items, imin, imax);
-            node.bmin.set(minmax[0]);
-            node.bmax.set(minmax[1]);
 
-            int axis = longestAxis(node.bmax.x - node.bmin.x, node.bmax.y - node.bmin.y, node.bmax.z - node.bmin.z);
+            // Split
+            calcExtends(items, imin, imax, n);
+
+            int axis = longestAxis(n.maxX - n.minX, n.maxY - n.minY, n.maxZ - n.minZ);
 
             if (axis == 0) {
                 // Sort along x-axis
@@ -140,23 +123,23 @@ public class NavMeshBuilder {
             int isplit = imin + inum / 2;
 
             // Left
-            curNode = subdivide(items, imin, isplit, curNode, nodes);
+            curBVNode = subdivide(items, imin, isplit, curBVNode, BVNodes);
             // Right
-            curNode = subdivide(items, isplit, imax, curNode, nodes);
+            curBVNode = subdivide(items, isplit, imax, curBVNode, BVNodes);
 
-            int iescape = curNode - icur;
+            int iescape = curBVNode - icur;
             // Negative index means escape.
-            node.i = -iescape;
+            n.i = -iescape;
         }
-        return curNode;
+        return curBVNode;
     }
 
-    private static int createBVTree(NavMeshDataCreateParams params, BVNode[] nodes) {
+    private static int createBVTree(NavMeshDataCreateParams params, BVNode[] BVNodes) {
         // Build tree
         float quantFactor = 1 / params.cs;
-        BVItem[] items = new BVItem[params.polyCount];
+        BVNode[] items = new BVNode[params.polyCount];
         for (int i = 0; i < params.polyCount; i++) {
-            BVItem it = new BVItem();
+            BVNode it = new BVNode();
             items[i] = it;
             it.i = i;
             // Calc polygon bounds. Use detail meshes if available.
@@ -166,55 +149,55 @@ public class NavMeshBuilder {
                 Vector3f bmin = new Vector3f();
                 Vector3f bmax = new Vector3f();
                 int dv = vb * 3;
-                copy(bmin, params.detailVerts, dv);
-                copy(bmax, params.detailVerts, dv);
+                copy(bmin, params.detailVertices, dv);
+                copy(bmax, params.detailVertices, dv);
                 for (int j = 1; j < ndv; j++) {
-                    min(bmin, params.detailVerts, dv + j * 3);
-                    max(bmax, params.detailVerts, dv + j * 3);
+                    min(bmin, params.detailVertices, dv + j * 3);
+                    max(bmax, params.detailVertices, dv + j * 3);
                 }
 
                 // BV-tree uses cs for all dimensions
-                it.bmin[0] = clamp((int) ((bmin.x - params.bmin.x) * quantFactor), 0, 0x7fffffff);
-                it.bmin[1] = clamp((int) ((bmin.y - params.bmin.y) * quantFactor), 0, 0x7fffffff);
-                it.bmin[2] = clamp((int) ((bmin.z - params.bmin.z) * quantFactor), 0, 0x7fffffff);
+                it.minX = clamp((int) ((bmin.x - params.bmin.x) * quantFactor), 0, 0x7fffffff);
+                it.minY = clamp((int) ((bmin.y - params.bmin.y) * quantFactor), 0, 0x7fffffff);
+                it.minZ = clamp((int) ((bmin.z - params.bmin.z) * quantFactor), 0, 0x7fffffff);
 
-                it.bmax[0] = clamp((int) ((bmax.x - params.bmin.x) * quantFactor), 0, 0x7fffffff);
-                it.bmax[1] = clamp((int) ((bmax.y - params.bmin.y) * quantFactor), 0, 0x7fffffff);
-                it.bmax[2] = clamp((int) ((bmax.z - params.bmin.z) * quantFactor), 0, 0x7fffffff);
+                it.maxX = clamp((int) ((bmax.x - params.bmin.x) * quantFactor), 0, 0x7fffffff);
+                it.maxY = clamp((int) ((bmax.y - params.bmin.y) * quantFactor), 0, 0x7fffffff);
+                it.maxZ = clamp((int) ((bmax.z - params.bmin.z) * quantFactor), 0, 0x7fffffff);
             } else {
                 int p = i * params.nvp * 2;
-                it.bmin[0] = it.bmax[0] = params.verts[params.polys[p] * 3];
-                it.bmin[1] = it.bmax[1] = params.verts[params.polys[p] * 3 + 1];
-                it.bmin[2] = it.bmax[2] = params.verts[params.polys[p] * 3 + 2];
+                it.minX = it.maxX = params.vertices[params.polys[p] * 3];
+                it.minY = it.maxY = params.vertices[params.polys[p] * 3 + 1];
+                it.minZ = it.maxZ = params.vertices[params.polys[p] * 3 + 2];
 
                 for (int j = 1; j < params.nvp; ++j) {
                     if (params.polys[p + j] == MESH_NULL_IDX)
                         break;
-                    int x = params.verts[params.polys[p + j] * 3];
-                    int y = params.verts[params.polys[p + j] * 3 + 1];
-                    int z = params.verts[params.polys[p + j] * 3 + 2];
+                    int x = params.vertices[params.polys[p + j] * 3];
+                    int y = params.vertices[params.polys[p + j] * 3 + 1];
+                    int z = params.vertices[params.polys[p + j] * 3 + 2];
 
-                    if (x < it.bmin[0])
-                        it.bmin[0] = x;
-                    if (y < it.bmin[1])
-                        it.bmin[1] = y;
-                    if (z < it.bmin[2])
-                        it.bmin[2] = z;
+                    if (x < it.minX)
+                        it.minX = x;
+                    if (y < it.minY)
+                        it.minY = y;
+                    if (z < it.minZ)
+                        it.minZ = z;
 
-                    if (x > it.bmax[0])
-                        it.bmax[0] = x;
-                    if (y > it.bmax[1])
-                        it.bmax[1] = y;
-                    if (z > it.bmax[2])
-                        it.bmax[2] = z;
+                    if (x > it.maxX)
+                        it.maxX = x;
+                    if (y > it.maxY)
+                        it.maxY = y;
+                    if (z > it.maxZ)
+                        it.maxZ = z;
                 }
                 // Remap y
-                it.bmin[1] = (int) Math.floor(it.bmin[1] * params.ch * quantFactor);
-                it.bmax[1] = (int) Math.ceil(it.bmax[1] * params.ch * quantFactor);
+                it.minY = (int) Math.floor(it.minY * params.ch * quantFactor);
+                it.maxY = (int) Math.ceil(it.maxY * params.ch * quantFactor);
             }
         }
 
-        return subdivide(items, 0, params.polyCount, 0, nodes);
+        return subdivide(items, 0, params.polyCount, 0, BVNodes);
     }
 
     static final int XP = 1;
@@ -261,7 +244,7 @@ public class NavMeshBuilder {
     public static MeshData createNavMeshData(NavMeshDataCreateParams params) {
         if (params.vertCount >= 0xffff)
             return null;
-        if (params.vertCount == 0 || params.verts == null)
+        if (params.vertCount == 0 || params.vertices == null)
             return null;
         if (params.polyCount == 0 || params.polys == null)
             return null;
@@ -282,16 +265,16 @@ public class NavMeshBuilder {
             float hmin = Float.MAX_VALUE;
             float hmax = -Float.MAX_VALUE;
 
-            if (params.detailVerts != null && params.detailVertsCount != 0) {
-                for (int i = 0; i < params.detailVertsCount; ++i) {
-                    float h = params.detailVerts[i * 3 + 1];
+            if (params.detailVertices != null && params.detailVerticesCount != 0) {
+                for (int i = 0; i < params.detailVerticesCount; ++i) {
+                    float h = params.detailVertices[i * 3 + 1];
                     hmin = Math.min(hmin, h);
                     hmax = Math.max(hmax, h);
                 }
             } else {
                 for (int i = 0; i < params.vertCount; ++i) {
                     int iv = i * 3;
-                    float h = params.bmin.y + params.verts[iv + 1] * params.ch;
+                    float h = params.bmin.y + params.vertices[iv + 1] * params.ch;
                     hmin = Math.min(hmin, h);
                     hmax = Math.max(hmax, h);
                 }
@@ -306,8 +289,8 @@ public class NavMeshBuilder {
             bmax.y = hmax;
 
             for (int i = 0; i < params.offMeshConCount; ++i) {
-                VectorPtr p0 = new VectorPtr(params.offMeshConVerts, (i * 2) * 3);
-                VectorPtr p1 = new VectorPtr(params.offMeshConVerts, (i * 2 + 1) * 3);
+                VectorPtr p0 = new VectorPtr(params.offMeshConVertices, (i * 2) * 3);
+                VectorPtr p1 = new VectorPtr(params.offMeshConVertices, (i * 2 + 1) * 3);
 
                 offMeshConClass[i * 2] = classifyOffMeshPoint(p0, bmin, bmax);
                 offMeshConClass[i * 2 + 1] = classifyOffMeshPoint(p1, bmin, bmax);
@@ -376,7 +359,7 @@ public class NavMeshBuilder {
             }
         } else {
             // No input detail mesh, build detail mesh from nav polys.
-            // No extra detail verts.
+            // No extra detail vertices.
             for (int i = 0; i < params.polyCount; ++i) {
                 int p = i * nvp * 2;
                 int nv = 0;
@@ -391,10 +374,10 @@ public class NavMeshBuilder {
 
         int bvTreeSize = params.buildBvTree ? params.polyCount * 2 : 0;
         MeshHeader header = new MeshHeader();
-        float[] navVerts = new float[3 * totVertCount];
+        float[] navVertices = new float[3 * totVertCount];
         Poly[] navPolys = new Poly[totPolyCount];
         PolyDetail[] navDMeshes = new PolyDetail[params.polyCount];
-        float[] navDVerts = new float[3 * uniqueDetailVertCount];
+        float[] navDVertices = new float[3 * uniqueDetailVertCount];
         int[] navDTris = new int[4 * detailTriCount];
         BVNode[] navBvtree = new BVNode[bvTreeSize];
         OffMeshConnection[] offMeshCons = new OffMeshConnection[storedOffMeshConCount];
@@ -422,7 +405,7 @@ public class NavMeshBuilder {
         header.offMeshConCount = storedOffMeshConCount;
         header.bvNodeCount = bvTreeSize;
 
-        int offMeshVertsBase = params.vertCount;
+        int offMeshVerticesBase = params.vertCount;
         int offMeshPolyBase = params.polyCount;
 
         // Store vertices
@@ -430,9 +413,9 @@ public class NavMeshBuilder {
         for (int i = 0; i < params.vertCount; ++i) {
             int iv = i * 3;
             int v = i * 3;
-            navVerts[v] = params.bmin.x + params.verts[iv] * params.cs;
-            navVerts[v + 1] = params.bmin.y + params.verts[iv + 1] * params.ch;
-            navVerts[v + 2] = params.bmin.z + params.verts[iv + 2] * params.cs;
+            navVertices[v] = params.bmin.x + params.vertices[iv] * params.cs;
+            navVertices[v + 1] = params.bmin.y + params.vertices[iv + 1] * params.ch;
+            navVertices[v + 2] = params.bmin.z + params.vertices[iv + 2] * params.cs;
         }
         // Off-mesh link vertices.
         int n = 0;
@@ -440,8 +423,8 @@ public class NavMeshBuilder {
             // Only store connections which start from this tile.
             if (offMeshConClass[i * 2] == 0xff) {
                 int linkv = i * 2 * 3;
-                int v = (offMeshVertsBase + n * 2) * 3;
-                System.arraycopy(params.offMeshConVerts, linkv, navVerts, v, 6);
+                int v = (offMeshVerticesBase + n * 2) * 3;
+                System.arraycopy(params.offMeshConVertices, linkv, navVertices, v, 6);
                 n++;
             }
         }
@@ -459,7 +442,7 @@ public class NavMeshBuilder {
             for (int j = 0; j < nvp; ++j) {
                 if (params.polys[src + j] == MESH_NULL_IDX)
                     break;
-                p.verts[j] = params.polys[src + j];
+                p.vertices[j] = params.polys[src + j];
                 if ((params.polys[src + nvp + j] & 0x8000) != 0) {
                     // Border or portal edge.
                     int dir = params.polys[src + nvp + j] & 0xf;
@@ -490,8 +473,8 @@ public class NavMeshBuilder {
                 Poly p = new Poly(offMeshPolyBase + n, nvp);
                 navPolys[offMeshPolyBase + n] = p;
                 p.vertCount = 2;
-                p.verts[0] = offMeshVertsBase + n * 2;
-                p.verts[1] = offMeshVertsBase + n * 2 + 1;
+                p.vertices[0] = offMeshVerticesBase + n * 2;
+                p.vertices[1] = offMeshVerticesBase + n * 2 + 1;
                 p.flags = params.offMeshConFlags[i];
                 p.setArea(params.offMeshConAreas[i]);
                 p.setType(Poly.DT_POLYTYPE_OFFMESH_CONNECTION);
@@ -516,10 +499,10 @@ public class NavMeshBuilder {
                 dtl.vertCount = (ndv - nv);
                 dtl.triBase = params.detailMeshes[i * 4 + 2];
                 dtl.triCount = params.detailMeshes[i * 4 + 3];
-                // Copy vertices except the first 'nv' verts which are equal to
-                // nav poly verts.
+                // Copy vertices except the first 'nv' vertices which are equal to
+                // nav poly vertices.
                 if (ndv - nv != 0) {
-                    System.arraycopy(params.detailVerts, (vb + nv) * 3, navDVerts, vbase * 3, 3 * (ndv - nv));
+                    System.arraycopy(params.detailVertices, (vb + nv) * 3, navDVertices, vbase * 3, 3 * (ndv - nv));
                     vbase += ndv - nv;
                 }
             }
@@ -556,7 +539,7 @@ public class NavMeshBuilder {
         // Store and create BVtree.
         // TODO: take detail mesh into account! use byte per bbox extent?
         if (params.buildBvTree) {
-            // Do not set header.bvNodeCount set to make it work look exactly the same as in original Detour
+            // Do not set header.bvBVNodeCount set to make it work look exactly the same as in original Detour
             header.bvNodeCount = createBVTree(params, navBvtree);
         }
 
@@ -570,8 +553,8 @@ public class NavMeshBuilder {
                 con.poly = (offMeshPolyBase + n);
                 // Copy connection end-points.
                 int endPts = i * 2 * 3;
-                copy(con.posA, params.offMeshConVerts, endPts);
-                copy(con.posB, params.offMeshConVerts, endPts + 3);
+                copy(con.posA, params.offMeshConVertices, endPts);
+                copy(con.posB, params.offMeshConVertices, endPts + 3);
                 con.rad = params.offMeshConRad[i];
                 con.flags = params.offMeshConDir[i] != 0 ? NavMesh.DT_OFFMESH_CON_BIDIR : 0;
                 con.side = offMeshConClass[i * 2 + 1];
@@ -583,10 +566,10 @@ public class NavMeshBuilder {
 
         MeshData nmd = new MeshData();
         nmd.header = header;
-        nmd.verts = navVerts;
+        nmd.vertices = navVertices;
         nmd.polys = navPolys;
         nmd.detailMeshes = navDMeshes;
-        nmd.detailVerts = navDVerts;
+        nmd.detailVertices = navDVertices;
         nmd.detailTris = navDTris;
         nmd.bvTree = navBvtree;
         nmd.offMeshCons = offMeshCons;

@@ -281,11 +281,11 @@ public class RecastArea {
 
     }
 
-    static boolean pointInPoly(float[] verts, Vector3f p) {
+    static boolean pointInPoly(float[] vertices, Vector3f p) {
         boolean c = false;
         int i, j;
-        for (i = 0, j = verts.length - 3; i < verts.length; j = i, i += 3) {
-            if (((verts[i + 2] > p.z) != (verts[j + 2] > p.z)) && (p.x < (verts[j] - verts[i]) * (p.z - verts[i + 2]) / (verts[j + 2] - verts[i + 2]) + verts[i]))
+        for (i = 0, j = vertices.length - 3; i < vertices.length; j = i, i += 3) {
+            if (((vertices[i + 2] > p.z) != (vertices[j + 2] > p.z)) && (p.x < (vertices[j] - vertices[i]) * (p.z - vertices[i + 2]) / (vertices[j + 2] - vertices[i + 2]) + vertices[i]))
                 c = !c;
         }
         return c;
@@ -299,16 +299,16 @@ public class RecastArea {
     /// projected onto the xz-plane at @p hmin, then extruded to @p hmax.
     ///
     /// @see rcCompactHeightfield, rcMedianFilterWalkableArea
-    public static void markConvexPolyArea(Telemetry ctx, float[] verts, float hmin, float hmax, AreaModification areaMod,
+    public static void markConvexPolyArea(Telemetry ctx, float[] vertices, float hmin, float hmax, AreaModification areaMod,
                                           CompactHeightfield chf) {
         ctx.startTimer("MARK_CONVEXPOLY_AREA");
 
         Vector3f bmin = new Vector3f(), bmax = new Vector3f();
-        RecastVectors.copy(bmin, verts, 0);
-        RecastVectors.copy(bmax, verts, 0);
-        for (int i = 3; i < verts.length; i += 3) {
-            RecastVectors.min(bmin, verts, i);
-            RecastVectors.max(bmax, verts, i);
+        RecastVectors.copy(bmin, vertices, 0);
+        RecastVectors.copy(bmax, vertices, 0);
+        for (int i = 3; i < vertices.length; i += 3) {
+            RecastVectors.min(bmin, vertices, i);
+            RecastVectors.max(bmax, vertices, i);
         }
         bmin.y = hmin;
         bmax.y = hmax;
@@ -338,7 +338,7 @@ public class RecastArea {
                         p.y = 0;
                         p.z = chf.bmin.z + (z + 0.5f) * chf.cs;
 
-                        if (pointInPoly(verts, p)) {
+                        if (pointInPoly(vertices, p)) {
                             chf.areas[i] = areaMod.apply(chf.areas[i]);
                         }
                     }
