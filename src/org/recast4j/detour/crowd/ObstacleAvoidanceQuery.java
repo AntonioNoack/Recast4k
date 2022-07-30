@@ -111,15 +111,14 @@ public class ObstacleAvoidanceQuery {
 
     private ObstacleAvoidanceParams m_params;
     private float m_invHorizTime;
-    private float m_vmax;
     private float m_invVmax;
 
     private final int m_maxCircles;
     private final ObstacleCircle[] m_circles;
     private int m_ncircles;
 
-    private final int m_maxSegments;
-    private final ObstacleSegment[] m_segments;
+    private final int maxNumSegments;
+    private final ObstacleSegment[] segments;
     private int m_nsegments;
 
     public ObstacleAvoidanceQuery(int maxCircles, int maxSegments) {
@@ -129,11 +128,11 @@ public class ObstacleAvoidanceQuery {
         for (int i = 0; i < m_maxCircles; i++) {
             m_circles[i] = new ObstacleCircle();
         }
-        m_maxSegments = maxSegments;
+        maxNumSegments = maxSegments;
         m_nsegments = 0;
-        m_segments = new ObstacleSegment[m_maxSegments];
-        for (int i = 0; i < m_maxSegments; i++) {
-            m_segments[i] = new ObstacleSegment();
+        segments = new ObstacleSegment[maxNumSegments];
+        for (int i = 0; i < maxNumSegments; i++) {
+            segments[i] = new ObstacleSegment();
         }
     }
 
@@ -154,9 +153,8 @@ public class ObstacleAvoidanceQuery {
     }
 
     public void addSegment(Vector3f p, Vector3f q) {
-        if (m_nsegments >= m_maxSegments)
-            return;
-        ObstacleSegment seg = m_segments[m_nsegments++];
+        if (m_nsegments >= maxNumSegments) return;
+        ObstacleSegment seg = segments[m_nsegments++];
         copy(seg.p, p);
         copy(seg.q, q);
     }
@@ -174,7 +172,7 @@ public class ObstacleAvoidanceQuery {
     }
 
     public ObstacleSegment getObstacleSegment(int i) {
-        return m_segments[i];
+        return segments[i];
     }
 
     private void prepare(Vector3f pos, Vector3f dvel) {
@@ -203,7 +201,7 @@ public class ObstacleAvoidanceQuery {
         }
 
         for (int i = 0; i < m_nsegments; ++i) {
-            ObstacleSegment seg = m_segments[i];
+            ObstacleSegment seg = segments[i];
 
             // Precalc if the agent is really close to the segment.
             float r = 0.01f;
@@ -306,7 +304,7 @@ public class ObstacleAvoidanceQuery {
         }
 
         for (int i = 0; i < m_nsegments; ++i) {
-            ObstacleSegment seg = m_segments[i];
+            ObstacleSegment seg = segments[i];
             float htmin = 0;
 
             if (seg.touch) {
@@ -358,7 +356,6 @@ public class ObstacleAvoidanceQuery {
         prepare(pos, dvel);
         m_params = params;
         m_invHorizTime = 1.0f / m_params.horizTime;
-        m_vmax = vmax;
         m_invVmax = vmax > 0 ? 1.0f / vmax : Float.MAX_VALUE;
 
         Vector3f nvel = new Vector3f();
@@ -410,7 +407,6 @@ public class ObstacleAvoidanceQuery {
         prepare(pos, dvel);
         m_params = params;
         m_invHorizTime = 1.0f / m_params.horizTime;
-        m_vmax = vmax;
         m_invVmax = vmax > 0 ? 1.0f / vmax : Float.MAX_VALUE;
 
         Vector3f nvel = new Vector3f();

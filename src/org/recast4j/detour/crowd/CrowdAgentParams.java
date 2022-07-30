@@ -31,7 +31,7 @@ public class CrowdAgentParams {
 
     public float pathOptimizationRange; /// < The path visibility optimization range. [Limit: > 0]
 
-    /// How aggresive the agent manager should be at avoiding collisions with this agent. [Limit: >= 0]
+    /// How aggressive the agent manager should be at avoiding collisions with this agent. [Limit: >= 0]
     public float separationWeight;
 
     /// Crowd agent update flags.

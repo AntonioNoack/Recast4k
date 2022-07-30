@@ -26,22 +26,10 @@ import java.util.Map;
 public class CrowdTelemetry {
 
     private static final int TIMING_SAMPLES = 10;
-    private float maxTimeToEnqueueRequest;
-    private float maxTimeToFindPath;
-    private final Map<String, Long> executionTimings = new HashMap<>();
+    public float maxTimeToEnqueueRequest;
+    public float maxTimeToFindPath;
+    public final Map<String, Long> executionTimings = new HashMap<>();
     private final Map<String, List<Long>> executionTimingSamples = new HashMap<>();
-
-    public float maxTimeToEnqueueRequest() {
-        return maxTimeToEnqueueRequest;
-    }
-
-    public float maxTimeToFindPath() {
-        return maxTimeToFindPath;
-    }
-
-    public Map<String, Long> executionTimings() {
-        return executionTimings;
-    }
 
     void start() {
         maxTimeToEnqueueRequest = 0;

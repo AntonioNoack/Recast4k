@@ -262,17 +262,19 @@ public class DetourCommon {
         return acx * abz - abx * acz;
     }
 
-    /// Determines if two axis-aligned bounding boxes overlap.
-    /// @param[in] amin Minimum bounds of box A. [(x, y, z)]
-    /// @param[in] amax Maximum bounds of box A. [(x, y, z)]
-    /// @param[in] bmin Minimum bounds of box B. [(x, y, z)]
-    /// @param[in] bmax Maximum bounds of box B. [(x, y, z)]
-    /// @return True if the two AABB's overlap.
-    /// @see dtOverlapBounds
+    /**
+     * Determines if two axis-aligned bounding boxes overlap.
+     * */
     static boolean overlapQuantBounds(Vector3i amin, Vector3i amax, Vector3i bmin, Vector3i bmax) {
         return amin.x <= bmax.x && amax.x >= bmin.x &&
                 amin.y <= bmax.y && amax.y >= bmin.y &&
                 amin.z <= bmax.z && amax.z >= bmin.z;
+    }
+
+    static boolean overlapQuantBounds(Vector3i amin, Vector3i amax, BVNode n) {
+        return amin.x <= n.maxX && amax.x >= n.minX &&
+                amin.y <= n.maxY && amax.y >= n.minY &&
+                amin.z <= n.maxZ && amax.z >= n.minZ;
     }
 
     /// Determines if two axis-aligned bounding boxes overlap.

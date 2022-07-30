@@ -36,18 +36,18 @@ public class LocalBoundary {
         float pruningDist;
     }
 
-    Vector3f m_center = new Vector3f();
-    List<Segment> m_segs = new ArrayList<>();
+    public Vector3f center = new Vector3f();
+    public List<Segment> segments = new ArrayList<>();
     List<Long> m_polys = new ArrayList<>();
 
     protected LocalBoundary() {
-        m_center.set(Float.MAX_VALUE);
+        center.set(Float.MAX_VALUE);
     }
 
     protected void reset() {
-        m_center.set(Float.MAX_VALUE);
+        center.set(Float.MAX_VALUE);
         m_polys.clear();
-        m_segs.clear();
+        segments.clear();
     }
 
     protected void addSegment(float dist, float[] s) {
@@ -56,25 +56,25 @@ public class LocalBoundary {
         copy(seg.start, s, 0);
         copy(seg.end, s, 3);
         seg.pruningDist = dist;
-        if (m_segs.isEmpty()) {
-            m_segs.add(seg);
-        } else if (dist >= m_segs.get(m_segs.size() - 1).pruningDist) {
-            if (m_segs.size() >= MAX_LOCAL_SEGS) {
+        if (segments.isEmpty()) {
+            segments.add(seg);
+        } else if (dist >= segments.get(segments.size() - 1).pruningDist) {
+            if (segments.size() >= MAX_LOCAL_SEGS) {
                 return;
             }
-            m_segs.add(seg);
+            segments.add(seg);
         } else {
             // Insert inbetween.
             int i;
-            for (i = 0; i < m_segs.size(); ++i) {
-                if (dist <= m_segs.get(i).pruningDist) {
+            for (i = 0; i < segments.size(); ++i) {
+                if (dist <= segments.get(i).pruningDist) {
                     break;
                 }
             }
-            m_segs.add(i, seg);
+            segments.add(i, seg);
         }
-        while (m_segs.size() > MAX_LOCAL_SEGS) {
-            m_segs.remove(m_segs.size() - 1);
+        while (segments.size() > MAX_LOCAL_SEGS) {
+            segments.remove(segments.size() - 1);
         }
     }
 
@@ -83,12 +83,12 @@ public class LocalBoundary {
             reset();
             return;
         }
-        m_center.set(pos);
+        center.set(pos);
         // First query non-overlapping polygons.
         Result<FindLocalNeighbourhoodResult> res = navquery.findLocalNeighbourhood(ref, pos, collisionQueryRange, filter);
         if (res.succeeded()) {
             m_polys = res.result.refs;
-            m_segs.clear();
+            segments.clear();
             // Secondly, store all polygon edges.
             for (Long m_poly : m_polys) {
                 Result<GetPolyWallSegmentsResult> result = navquery.getPolyWallSegments(m_poly, false, filter);
@@ -124,14 +124,14 @@ public class LocalBoundary {
     }
 
     public Vector3f getCenter() {
-        return m_center;
+        return center;
     }
 
     public Segment getSegment(int j) {
-        return m_segs.get(j);
+        return segments.get(j);
     }
 
     public int getSegmentCount() {
-        return m_segs.size();
+        return segments.size();
     }
 }

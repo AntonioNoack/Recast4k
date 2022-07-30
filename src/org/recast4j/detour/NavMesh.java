@@ -52,7 +52,7 @@ public class NavMesh {
     /// The limit is given as a multiple of the character radius
     static float DT_RAY_CAST_LIMIT_PROPORTIONS = 50.0f;
 
-    private final NavMeshParams m_params; /// < Current initialization params. TODO: do not store this info twice.
+    private final NavMeshParams m_params; /// < Current initialization params.
     private final Vector3f m_orig; /// < Origin of the tile (0,0)
     // float m_orig[3]; ///< Origin of the tile (0,0)
     float m_tileWidth, m_tileHeight; /// < Dimensions of each tile.
@@ -64,8 +64,8 @@ public class NavMesh {
     /**
      * The maximum number of vertices per navigation polygon.
      */
-    private final int m_maxVertPerPoly;
-    private int m_tileCount;
+    public final int maxVerticesPerPoly;
+    public int tileCount;
 
     /**
      * The maximum number of tiles supported by the navigation mesh.
@@ -242,10 +242,7 @@ public class NavMesh {
         if (m_tiles[it].salt != salt || m_tiles[it].data == null) {
             return false;
         }
-        if (ip >= m_tiles[it].data.header.polyCount) {
-            return false;
-        }
-        return true;
+        return ip < m_tiles[it].data.header.polyCount;
     }
 
     public NavMeshParams getParams() {
@@ -264,7 +261,7 @@ public class NavMesh {
         m_tileHeight = params.tileHeight;
         // Init tiles
         m_maxTiles = params.maxTiles;
-        m_maxVertPerPoly = maxVerticesPerPoly;
+        this.maxVerticesPerPoly = maxVerticesPerPoly;
         m_tileLutMask = Math.max(1, nextPow2(params.maxTiles)) - 1;
         m_tiles = new MeshTile[m_maxTiles];
         for (int i = 0; i < m_maxTiles; i++) {
@@ -315,7 +312,7 @@ public class NavMesh {
             int end = tile.data.header.bvNodeCount;
             while (nodeIndex < end) {
                 BVNode node = tile.data.bvTree[nodeIndex];
-                boolean overlap = overlapQuantBounds(bmin, bmax, node.bmin, node.bmax);
+                boolean overlap = overlapQuantBounds(bmin, bmax, node);
                 boolean isLeafNode = node.i >= 0;
 
                 if (isLeafNode && overlap) {
@@ -357,6 +354,7 @@ public class NavMesh {
         return polys;
     }
 
+    @SuppressWarnings("unused")
     public long updateTile(MeshData data, int flags) {
         long ref = getTileRefAt(data.header.x, data.header.y, data.header.layer);
         ref = removeTile(ref);
@@ -399,14 +397,14 @@ public class NavMesh {
         }
 
         // Allocate a tile.
-        MeshTile tile = null;
+        MeshTile tile;
         if (lastRef == 0) {
             // Make sure we could allocate a tile.
             if (availableTiles.isEmpty()) {
                 throw new RuntimeException("Could not allocate a tile");
             }
             tile = availableTiles.poll();
-            m_tileCount++;
+            tileCount++;
         } else {
             // Try to relocate the tile to specific index with same salt.
             int tileIndex = decodePolyIdTile(lastRef);
@@ -450,24 +448,22 @@ public class NavMesh {
 
         // Connect with layers in current tile.
         List<MeshTile> neis = getTilesAt(header.x, header.y);
-        for (int j = 0; j < neis.size(); ++j) {
-            if (neis.get(j) == tile) {
-                continue;
-            }
-            connectExtLinks(tile, neis.get(j), -1);
-            connectExtLinks(neis.get(j), tile, -1);
-            connectExtOffMeshLinks(tile, neis.get(j), -1);
-            connectExtOffMeshLinks(neis.get(j), tile, -1);
+        for (MeshTile meshTile : neis) {
+            if (meshTile == tile) continue;
+            connectExtLinks(tile, meshTile, -1);
+            connectExtLinks(meshTile, tile, -1);
+            connectExtOffMeshLinks(tile, meshTile, -1);
+            connectExtOffMeshLinks(meshTile, tile, -1);
         }
 
         // Connect with neighbour tiles.
         for (int i = 0; i < 8; ++i) {
             neis = getNeighbourTilesAt(header.x, header.y, i);
-            for (int j = 0; j < neis.size(); ++j) {
-                connectExtLinks(tile, neis.get(j), i);
-                connectExtLinks(neis.get(j), tile, oppositeTile(i));
-                connectExtOffMeshLinks(tile, neis.get(j), i);
-                connectExtOffMeshLinks(neis.get(j), tile, oppositeTile(i));
+            for (MeshTile nei : neis) {
+                connectExtLinks(tile, nei, i);
+                connectExtLinks(nei, tile, oppositeTile(i));
+                connectExtOffMeshLinks(tile, nei, i);
+                connectExtOffMeshLinks(nei, tile, oppositeTile(i));
             }
         }
 
@@ -534,7 +530,7 @@ public class NavMesh {
 
         // Add to free list.
         availableTiles.addFirst(tile);
-        m_tileCount--;
+        tileCount--;
         return getTileRef(tile);
     }
 
@@ -870,11 +866,7 @@ public class NavMesh {
 
         // Check for overlap at endpoints.
         float thr = (py * 2) * (py * 2);
-        if (dmin * dmin <= thr || dmax * dmax <= thr) {
-            return true;
-        }
-
-        return false;
+        return dmin * dmin <= thr || dmax * dmax <= thr;
     }
 
     /**
@@ -1020,7 +1012,7 @@ public class NavMesh {
 
         int ip = poly.index;
 
-        float[] vertices = new float[m_maxVertPerPoly * 3];
+        float[] vertices = new float[maxVerticesPerPoly * 3];
         int nv = poly.vertCount;
         for (int i = 0; i < nv; ++i) {
             System.arraycopy(tile.data.vertices, poly.vertices[i] * 3, vertices, i * 3, 3);
@@ -1208,9 +1200,7 @@ public class NavMesh {
     }
 
     public long getTileRef(MeshTile tile) {
-        if (tile == null) {
-            return 0;
-        }
+        if (tile == null) return 0;
         return encodePolyId(tile.salt, tile.index, 0);
     }
 
@@ -1279,14 +1269,7 @@ public class NavMesh {
 
     }
 
-    public int getMaxVerticesPerPoly() {
-        return m_maxVertPerPoly;
-    }
-
-    public int getTileCount() {
-        return m_tileCount;
-    }
-
+    @SuppressWarnings("unused")
     public Status setPolyFlags(long ref, int flags) {
         if (ref == 0) {
             return Status.FAILURE;
@@ -1312,6 +1295,7 @@ public class NavMesh {
         return Status.SUCCESS;
     }
 
+    @SuppressWarnings("unused")
     public Result<Integer> getPolyFlags(long ref) {
         if (ref == 0) {
             return Result.failure();
@@ -1335,6 +1319,7 @@ public class NavMesh {
         return Result.success(poly.flags);
     }
 
+    @SuppressWarnings("unused")
     public Status setPolyArea(long ref, char area) {
         if (ref == 0) {
             return Status.FAILURE;
@@ -1360,6 +1345,7 @@ public class NavMesh {
         return Status.SUCCESS;
     }
 
+    @SuppressWarnings("unused")
     public Result<Integer> getPolyArea(long ref) {
         if (ref == 0) {
             return Result.failure();

@@ -132,7 +132,7 @@ public class Crowd {
     private final Set<CrowdAgent> activeAgents;
     public final PathQueue pathQueue;
     private final ObstacleAvoidanceParams[] m_obstacleQueryParams = new ObstacleAvoidanceParams[DT_CROWD_MAX_OBSTAVOIDANCE_PARAMS];
-    private final ObstacleAvoidanceQuery m_obstacleQuery;
+    private final ObstacleAvoidanceQuery obstacleAvoidanceQuery;
     public ProximityGrid grid;
     public final Vector3f queryExtends = new Vector3f();
     private final QueryFilter[] m_filters = new QueryFilter[DT_CROWD_MAX_QUERY_FILTER_TYPE];
@@ -152,7 +152,7 @@ public class Crowd {
         this.config = config;
         vSet(queryExtends, config.maxAgentRadius * 2.0f, config.maxAgentRadius * 1.5f, config.maxAgentRadius * 2.0f);
 
-        m_obstacleQuery = new ObstacleAvoidanceQuery(config.maxObstacleAvoidanceCircles, config.maxObstacleAvoidanceSegments);
+        obstacleAvoidanceQuery = new ObstacleAvoidanceQuery(config.maxObstacleAvoidanceCircles, config.maxObstacleAvoidanceSegments);
 
         for (int i = 0; i < DT_CROWD_MAX_QUERY_FILTER_TYPE; i++) {
             m_filters[i] = queryFilterFactory.apply(i);
@@ -171,25 +171,24 @@ public class Crowd {
         navQuery = new NavMeshQuery(nav);
     }
 
+    @SuppressWarnings("unused")
     public void setNavMesh(NavMesh nav) {
         navMesh = nav;
         navQuery = new NavMeshQuery(nav);
     }
 
-    /// Sets the shared avoidance configuration for the specified index.
-    /// @param[in] idx The index. [Limits: 0 <= value <
-    /// #DT_CROWD_MAX_OBSTAVOIDANCE_PARAMS]
-    /// @param[in] params The new configuration.
+    /**
+     * Sets the shared avoidance configuration for the specified index.
+     * */
+    @SuppressWarnings("unused")
     public void setObstacleAvoidanceParams(int idx, ObstacleAvoidanceParams params) {
         if (idx >= 0 && idx < DT_CROWD_MAX_OBSTAVOIDANCE_PARAMS) {
             m_obstacleQueryParams[idx] = new ObstacleAvoidanceParams(params);
         }
     }
 
-    /// Gets the shared avoidance configuration for the specified index.
-    /// @param[in] idx The index of the configuration to retreive.
-    /// [Limits: 0 <= value < #DT_CROWD_MAX_OBSTAVOIDANCE_PARAMS]
-    /// @return The requested configuration.
+    /** Gets the shared avoidance configuration for the specified index. */
+    @SuppressWarnings("unused")
     public ObstacleAvoidanceParams getObstacleAvoidanceParams(int idx) {
         if (idx >= 0 && idx < DT_CROWD_MAX_OBSTAVOIDANCE_PARAMS) {
             return m_obstacleQueryParams[idx];
@@ -197,9 +196,7 @@ public class Crowd {
         return null;
     }
 
-    /// Updates the specified agent's configuration.
-    /// @param[in] idx The agent index. [Limits: 0 <= value < #getAgentCount()]
-    /// @param[in] params The new agent configuration.
+    /** Updates the specified agent's configuration. */
     public void updateAgentParameters(CrowdAgent agent, CrowdAgentParams params) {
         agent.params = params;
     }
@@ -386,7 +383,7 @@ public class Crowd {
 
             boolean replan = false;
 
-            // First check that the current location is valid.
+            // First check, that the current location is valid.
             Vector3f agentPos = new Vector3f();
             long agentRef = ag.corridor.getFirstPoly();
             copy(agentPos, ag.npos);
@@ -460,7 +457,7 @@ public class Crowd {
             // If the end of the path is near and it is not the requested
             // location, replan.
             if (ag.targetState == MoveRequestState.DT_CROWDAGENT_TARGET_VALID) {
-                if (ag.targetReplanTime > config.targetReplanDelay && ag.corridor.getPathCount() < config.checkLookAhead
+                if (ag.targetReplanTime > config.targetReplanDelay && ag.corridor.path.size() < config.checkLookAhead
                         && ag.corridor.getLastPoly() != ag.targetRef) {
                     replan = true;
                 }
@@ -493,7 +490,7 @@ public class Crowd {
             }
 
             if (ag.targetState == MoveRequestState.DT_CROWDAGENT_TARGET_REQUESTING) {
-                List<Long> path = ag.corridor.getPath();
+                List<Long> path = ag.corridor.path;
                 if (path.isEmpty()) {
                     throw new IllegalArgumentException("Empty path");
                 }
@@ -557,7 +554,7 @@ public class Crowd {
 
         while (!queue.isEmpty()) {
             CrowdAgent ag = queue.poll();
-            ag.targetPathQueryResult = pathQueue.request(ag.corridor.getLastPoly(), ag.targetRef, ag.corridor.getTarget(),
+            ag.targetPathQueryResult = pathQueue.request(ag.corridor.getLastPoly(), ag.targetRef, ag.corridor.target,
                     ag.targetPos, m_filters[ag.params.queryFilterType]);
             if (ag.targetPathQueryResult != null) {
                 ag.targetState = MoveRequestState.DT_CROWDAGENT_TARGET_WAITING_FOR_PATH;
@@ -594,7 +591,7 @@ public class Crowd {
                     }
                     ag.targetReplanTime = 0;
                 } else if (status != null && status.isSuccess()) {
-                    List<Long> path = ag.corridor.getPath();
+                    List<Long> path = ag.corridor.path;
                     if (path.isEmpty()) {
                         throw new IllegalArgumentException("Empty path");
                     }
@@ -604,7 +601,7 @@ public class Crowd {
 
                     boolean valid = true;
                     List<Long> res = ag.targetPathQueryResult.path;
-                    if (status.isFailed() || res.isEmpty()) {
+                    if (res.isEmpty()) {
                         valid = false;
                     }
 
@@ -726,7 +723,7 @@ public class Crowd {
             // Update the collision boundary after certain distance has been passed or
             // if it has become invalid.
             float updateThr = ag.params.collisionQueryRange * 0.25f;
-            if (vDist2DSqr(ag.npos, ag.boundary.getCenter()) > sqr(updateThr)
+            if (vDist2DSqr(ag.npos, ag.boundary.center) > sqr(updateThr)
                     || !ag.boundary.isValid(navQuery, m_filters[ag.params.queryFilterType])) {
                 ag.boundary.update(ag.corridor.getFirstPoly(), ag.npos, ag.params.collisionQueryRange, navQuery,
                         m_filters[ag.params.queryFilterType]);
@@ -789,7 +786,7 @@ public class Crowd {
 
                 // Copy data for debug purposes.
                 if (debugAgent == ag) {
-                    debug.optStart.set(ag.corridor.getPos());
+                    debug.optStart.set(ag.corridor.pos);
                     debug.optEnd.set(target);
                 }
             } else {
@@ -828,7 +825,7 @@ public class Crowd {
                     anim.polyRef = refs[1];
                     anim.active = true;
                     anim.t = 0.0f;
-                    anim.tmax = (vDist2D(anim.startPos, anim.endPos) / ag.params.maxSpeed) * 0.5f;
+                    anim.tMax = (vDist2D(anim.startPos, anim.endPos) / ag.params.maxSpeed) * 0.5f;
 
                     ag.state = CrowdAgentState.DT_CROWDAGENT_STATE_OFFMESH;
                     ag.corners.clear();
@@ -925,21 +922,19 @@ public class Crowd {
             }
 
             if ((ag.params.updateFlags & CrowdAgentParams.DT_CROWD_OBSTACLE_AVOIDANCE) != 0) {
-                m_obstacleQuery.reset();
+                obstacleAvoidanceQuery.reset();
 
                 // Add neighbours as obstacles.
                 for (int j = 0; j < ag.neis.size(); ++j) {
                     CrowdAgent nei = ag.neis.get(j).agent;
-                    m_obstacleQuery.addCircle(nei.npos, nei.params.radius, nei.vel, nei.dvel);
+                    obstacleAvoidanceQuery.addCircle(nei.npos, nei.params.radius, nei.vel, nei.dvel);
                 }
 
                 // Append neighbour segments as obstacles.
-                for (int j = 0; j < ag.boundary.getSegmentCount(); ++j) {
-                    LocalBoundary.Segment s = ag.boundary.getSegment(j);
-                    if (triArea2D(ag.npos, s.start, s.end) < 0.0f) {
-                        continue;
-                    }
-                    m_obstacleQuery.addSegment(s.start, s.end);
+                for (int j = 0; j < ag.boundary.segments.size(); ++j) {
+                    LocalBoundary.Segment s = ag.boundary.segments.get(j);
+                    if (triArea2D(ag.npos, s.start, s.end) < 0.0f) continue;
+                    obstacleAvoidanceQuery.addSegment(s.start, s.end);
                 }
 
                 ObstacleAvoidanceDebugData vod = null;
@@ -950,7 +945,7 @@ public class Crowd {
                 // Sample new safe velocity.
 
                 ObstacleAvoidanceParams params = m_obstacleQueryParams[ag.params.obstacleAvoidanceType];
-                Pair<Integer, Vector3f> nsnvel = m_obstacleQuery.sampleVelocityAdaptive(ag.npos, ag.params.radius, ag.desiredSpeed, ag.vel, ag.dvel, params, vod);
+                Pair<Integer, Vector3f> nsnvel = obstacleAvoidanceQuery.sampleVelocityAdaptive(ag.npos, ag.params.radius, ag.desiredSpeed, ag.vel, ag.dvel, params, vod);
                 ag.nvel = nsnvel.second;
                 m_velocitySampleCount += nsnvel.first;
             } else {
@@ -1042,7 +1037,7 @@ public class Crowd {
             // Move along navmesh.
             ag.corridor.movePosition(ag.npos, navQuery, m_filters[ag.params.queryFilterType]);
             // Get valid constrained position back.
-            copy(ag.npos, ag.corridor.getPos());
+            copy(ag.npos, ag.corridor.pos);
 
             // If not using path, truncate the corridor to just one poly.
             if (ag.targetState == MoveRequestState.DT_CROWDAGENT_TARGET_NONE
@@ -1064,7 +1059,7 @@ public class Crowd {
             }
 
             anim.t += dt;
-            if (anim.t > anim.tmax) {
+            if (anim.t > anim.tMax) {
                 // Reset animation
                 anim.active = false;
                 // Prepare agent for walking.
@@ -1073,8 +1068,8 @@ public class Crowd {
             }
 
             // Update position
-            float ta = anim.tmax * 0.15f;
-            float tb = anim.tmax;
+            float ta = anim.tMax * 0.15f;
+            float tb = anim.tMax;
             if (anim.t < ta) {
                 float u = tween(anim.t, 0.0f, ta);
                 ag.npos = vLerp(anim.initPos, anim.startPos, u);
@@ -1094,12 +1089,14 @@ public class Crowd {
         return clamp((t - t0) / (t1 - t0), 0.0f, 1.0f);
     }
 
-    /// Provides neighbor data for agents managed by the crowd.
-    /// @ingroup crowd
-    /// @see dtCrowdAgent::neis, dtCrowd
+    /**
+     * Provides neighbor data for agents managed by the crowd.
+     * */
     public static class CrowdNeighbour {
-        public final CrowdAgent agent; /// < The index of the neighbor in the crowd.
-        final float dist; /// < The distance between the current agent and the neighbor.
+        /** The index of the neighbor in the crowd. */
+        public final CrowdAgent agent;
+        /** The distance between the current agent and the neighbor. */
+        final float dist;
 
         public CrowdNeighbour(CrowdAgent agent, float dist) {
             this.agent = agent;

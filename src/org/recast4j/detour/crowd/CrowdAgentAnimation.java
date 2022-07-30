@@ -27,6 +27,6 @@ public class CrowdAgentAnimation {
     public Vector3f startPos = new Vector3f();
     public Vector3f endPos = new Vector3f();
     public long polyRef;
-    public float t, tmax;
+    public float t, tMax;
 
 }

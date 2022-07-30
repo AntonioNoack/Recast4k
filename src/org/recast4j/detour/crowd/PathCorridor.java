@@ -65,9 +65,20 @@ import static org.recast4j.detour.DetourCommon.*;
  */
 public class PathCorridor {
 
-    private final Vector3f m_pos = new Vector3f();
-    private final Vector3f m_target = new Vector3f();
-    private List<Long> m_path;
+    /**
+     * Gets the current position within the corridor. (In the first polygon.)
+     */
+    public final Vector3f pos = new Vector3f();
+
+    /**
+     * Gets the current target within the corridor. (In the last polygon.)
+     */
+    public final Vector3f target = new Vector3f();
+
+    /**
+     * The corridor's path.
+     */
+    public List<Long> path;
 
     protected List<Long> mergeCorridorStartMoved(List<Long> path, List<Long> visited) {
         int furthestPath = -1;
@@ -172,7 +183,7 @@ public class PathCorridor {
      * Allocates the corridor's path buffer.
      */
     public PathCorridor() {
-        m_path = new ArrayList<>();
+        path = new ArrayList<>();
     }
 
     /**
@@ -182,10 +193,10 @@ public class PathCorridor {
      * @param pos The new position in the corridor. [(x, y, z)]
      */
     public void reset(long ref, Vector3f pos) {
-        m_path.clear();
-        m_path.add(ref);
-        m_pos.set(pos);
-        m_target.set(pos);
+        path.clear();
+        path.add(ref);
+        this.pos.set(pos);
+        target.set(pos);
     }
 
     private static final float MIN_TARGET_DIST = sqr(0.01f);
@@ -208,14 +219,14 @@ public class PathCorridor {
      */
     public List<StraightPathItem> findCorners(int maxCorners, NavMeshQuery navquery, QueryFilter filter) {
         List<StraightPathItem> path = new ArrayList<>();
-        Result<List<StraightPathItem>> result = navquery.findStraightPath(m_pos, m_target, m_path, maxCorners, 0);
+        Result<List<StraightPathItem>> result = navquery.findStraightPath(pos, target, this.path, maxCorners, 0);
         if (result.succeeded()) {
             path = result.result;
             // Prune points in the beginning of the path which are too close.
             int start = 0;
             for (StraightPathItem spi : path) {
                 if ((spi.getFlags() & NavMeshQuery.DT_STRAIGHTPATH_OFFMESH_CONNECTION) != 0
-                        || vDist2DSqr(spi.getPos(), m_pos) > MIN_TARGET_DIST) {
+                        || vDist2DSqr(spi.getPos(), pos) > MIN_TARGET_DIST) {
                     break;
                 }
                 start++;
@@ -261,7 +272,7 @@ public class PathCorridor {
     public void optimizePathVisibility(Vector3f next, float pathOptimizationRange, NavMeshQuery navquery,
                                        QueryFilter filter) {
         // Clamp the ray to max distance.
-        float dist = vDist2D(m_pos, next);
+        float dist = vDist2D(pos, next);
 
         // If too close to the goal, do not try to optimize.
         if (dist < 0.01f) {
@@ -273,13 +284,13 @@ public class PathCorridor {
         dist = Math.min(dist + 0.01f, pathOptimizationRange);
 
         // Adjust ray length.
-        Vector3f delta = vSub(next, m_pos);
-        Vector3f goal = vMad(m_pos, delta, pathOptimizationRange / dist);
+        Vector3f delta = vSub(next, pos);
+        Vector3f goal = vMad(pos, delta, pathOptimizationRange / dist);
 
-        Result<RaycastHit> rc = navquery.raycast(m_path.get(0), m_pos, goal, filter, 0, 0);
+        Result<RaycastHit> rc = navquery.raycast(path.get(0), pos, goal, filter, 0, 0);
         if (rc.succeeded()) {
             if (rc.result.path.size() > 1 && rc.result.t > 0.99f) {
-                m_path = mergeCorridorStartShortcut(m_path, rc.result.path);
+                path = mergeCorridorStartShortcut(path, rc.result.path);
             }
         }
     }
@@ -298,16 +309,16 @@ public class PathCorridor {
      * @param filter   The filter to apply to the operation.
      */
     boolean optimizePathTopology(NavMeshQuery navquery, QueryFilter filter, int maxIterations) {
-        if (m_path.size() < 3) {
+        if (path.size() < 3) {
             return false;
         }
 
-        navquery.initSlicedFindPath(m_path.get(0), m_path.get(m_path.size() - 1), m_pos, m_target, filter, 0);
+        navquery.initSlicedFindPath(path.get(0), path.get(path.size() - 1), pos, target, filter, 0);
         navquery.updateSlicedFindPath(maxIterations);
-        Result<List<Long>> fpr = navquery.finalizeSlicedFindPathPartial(m_path);
+        Result<List<Long>> fpr = navquery.finalizeSlicedFindPathPartial(path);
 
         if (fpr.succeeded() && fpr.result.size() > 0) {
-            m_path = mergeCorridorStartShortcut(m_path, fpr.result);
+            path = mergeCorridorStartShortcut(path, fpr.result);
             return true;
         }
 
@@ -317,27 +328,27 @@ public class PathCorridor {
     public boolean moveOverOffmeshConnection(long offMeshConRef, long[] refs, Vector3f start, Vector3f end,
                                              NavMeshQuery navquery) {
         // Advance the path up to and over the off-mesh connection.
-        long prevRef = 0, polyRef = m_path.get(0);
+        long prevRef = 0, polyRef = path.get(0);
         int npos = 0;
-        while (npos < m_path.size() && polyRef != offMeshConRef) {
+        while (npos < path.size() && polyRef != offMeshConRef) {
             prevRef = polyRef;
-            polyRef = m_path.get(npos);
+            polyRef = path.get(npos);
             npos++;
         }
-        if (npos == m_path.size()) {
+        if (npos == path.size()) {
             // Could not find offMeshConRef
             return false;
         }
 
         // Prune path
-        m_path = m_path.subList(npos, m_path.size());
+        path = path.subList(npos, path.size());
         refs[0] = prevRef;
         refs[1] = polyRef;
 
         NavMesh nav = navquery.getAttachedNavMesh();
         Result<Pair<Vector3f, Vector3f>> startEnd = nav.getOffMeshConnectionPolyEndPoints(refs[0], refs[1]);
         if (startEnd.succeeded()) {
-            copy(m_pos, startEnd.result.second);
+            copy(pos, startEnd.result.second);
             copy(start, startEnd.result.first);
             copy(end, startEnd.result.second);
             return true;
@@ -365,15 +376,16 @@ public class PathCorridor {
      * @param navquery The query object used to build the corridor.
      * @param filter   The filter to apply to the operation.
      */
+    @SuppressWarnings("unused")
     public boolean movePosition(Vector3f npos, NavMeshQuery navquery, QueryFilter filter) {
         // Move along navmesh and update new position.
-        Result<MoveAlongSurfaceResult> masResult = navquery.moveAlongSurface(m_path.get(0), m_pos, npos, filter);
+        Result<MoveAlongSurfaceResult> masResult = navquery.moveAlongSurface(path.get(0), pos, npos, filter);
         if (masResult.succeeded()) {
-            m_path = mergeCorridorStartMoved(m_path, masResult.result.getVisited());
+            path = mergeCorridorStartMoved(path, masResult.result.getVisited());
             // Adjust the position to stay on top of the navmesh.
-            copy(m_pos, masResult.result.getResultPos());
-            Result<Float> hr = navquery.getPolyHeight(m_path.get(0), masResult.result.getResultPos());
-            if (hr.succeeded()) m_pos.y = hr.result;
+            copy(pos, masResult.result.getResultPos());
+            Result<Float> hr = navquery.getPolyHeight(path.get(0), masResult.result.getResultPos());
+            if (hr.succeeded()) pos.y = hr.result;
             return true;
         }
         return false;
@@ -393,18 +405,19 @@ public class PathCorridor {
      * @param navquery The query object used to build the corridor.
      * @param filter   The filter to apply to the operation.
      */
-    public boolean moveTargetPosition(Vector3f npos, NavMeshQuery navquery, QueryFilter filter) {
+    @SuppressWarnings("unused")
+    public boolean moveTargetPosition(Vector3f npos, NavMeshQuery navquery, QueryFilter filter, boolean adjustPositionToTopOfNavMesh) {
         // Move along navmesh and update new position.
-        Result<MoveAlongSurfaceResult> masResult = navquery.moveAlongSurface(m_path.get(m_path.size() - 1), m_target, npos, filter);
+        Result<MoveAlongSurfaceResult> masResult = navquery.moveAlongSurface(path.get(path.size() - 1), target, npos, filter);
         if (masResult.succeeded()) {
-            m_path = mergeCorridorEndMoved(m_path, masResult.result.getVisited());
-            // TODO: should we do that?
-            // Adjust the position to stay on top of the navmesh.
-            /*
-             * float h = m_target[1]; navquery->getPolyHeight(m_path[m_npath-1],
-             * result, &h); result[1] = h;
-             */
-            m_target.set(masResult.result.getResultPos());
+            path = mergeCorridorEndMoved(path, masResult.result.getVisited());
+            Vector3f resultPos = masResult.result.getResultPos();
+            if(adjustPositionToTopOfNavMesh) {
+                float h =target.y;
+                navquery.getPolyHeight(path.get(path.size()-1), npos);
+                resultPos.y = h;
+            }
+            target.set(resultPos);
             return true;
         }
         return false;
@@ -420,46 +433,47 @@ public class PathCorridor {
      */
 
     public void setCorridor(Vector3f target, List<Long> path) {
-        m_target.set(target);
-        m_path = new ArrayList<>(path);
+        this.target.set(target);
+        this.path = new ArrayList<>(path);
     }
 
     public void fixPathStart(long safeRef, Vector3f safePos) {
-        m_pos.set(safePos);
-        if (m_path.size() < 3 && m_path.size() > 0) {
-            Long p = m_path.get(m_path.size() - 1);
-            m_path.clear();
-            m_path.add(safeRef);
-            m_path.add(0L);
-            m_path.add(p);
+        pos.set(safePos);
+        if (path.size() < 3 && path.size() > 0) {
+            Long p = path.get(path.size() - 1);
+            path.clear();
+            path.add(safeRef);
+            path.add(0L);
+            path.add(p);
         } else {
-            m_path.clear();
-            m_path.add(safeRef);
-            m_path.add(0L);
+            path.clear();
+            path.add(safeRef);
+            path.add(0L);
         }
 
     }
 
+    @SuppressWarnings("unused")
     public void trimInvalidPath(long safeRef, Vector3f safePos, NavMeshQuery navquery, QueryFilter filter) {
         // Keep valid path as far as possible.
         int n = 0;
-        while (n < m_path.size() && navquery.isValidPolyRef(m_path.get(n), filter)) {
+        while (n < path.size() && navquery.isValidPolyRef(path.get(n), filter)) {
             n++;
         }
 
         if (n == 0) {
             // The first polyref is bad, use current safe values.
-            copy(m_pos, safePos);
-            m_path.clear();
-            m_path.add(safeRef);
-        } else if (n < m_path.size()) {
-            m_path = m_path.subList(0, n);
+            copy(pos, safePos);
+            path.clear();
+            path.add(safeRef);
+        } else if (n < path.size()) {
+            path = path.subList(0, n);
             // The path is partially usable.
         }
         // Clamp target pos to last poly
-        Result<Vector3f> result = navquery.closestPointOnPolyBoundary(m_path.get(m_path.size() - 1), m_target);
+        Result<Vector3f> result = navquery.closestPointOnPolyBoundary(path.get(path.size() - 1), target);
         if (result.succeeded()) {
-            m_target.set(result.result);
+            target.set(result.result);
         }
     }
 
@@ -471,13 +485,12 @@ public class PathCorridor {
      * @param maxLookAhead The number of polygons from the beginning of the corridor to search.
      * @param navquery     The query object used to build the corridor.
      * @param filter       The filter to apply to the operation.
-     * @return
      */
     boolean isValid(int maxLookAhead, NavMeshQuery navquery, QueryFilter filter) {
         // Check that all polygons still pass query filter.
-        int n = Math.min(m_path.size(), maxLookAhead);
+        int n = Math.min(path.size(), maxLookAhead);
         for (int i = 0; i < n; ++i) {
-            if (!navquery.isValidPolyRef(m_path.get(i), filter)) {
+            if (!navquery.isValidPolyRef(path.get(i), filter)) {
                 return false;
             }
         }
@@ -486,30 +499,12 @@ public class PathCorridor {
     }
 
     /**
-     * Gets the current position within the corridor. (In the first polygon.)
-     *
-     * @return The current position within the corridor.
-     */
-    public Vector3f getPos() {
-        return m_pos;
-    }
-
-    /**
-     * Gets the current target within the corridor. (In the last polygon.)
-     *
-     * @return The current target within the corridor.
-     */
-    public Vector3f getTarget() {
-        return m_target;
-    }
-
-    /**
      * The polygon reference id of the first polygon in the corridor, the polygon containing the position.
      *
      * @return The polygon reference id of the first polygon in the corridor. (Or zero if there is no path.)
      */
     public long getFirstPoly() {
-        return m_path.isEmpty() ? 0 : m_path.get(0);
+        return path.isEmpty() ? 0 : path.get(0);
     }
 
     /**
@@ -518,22 +513,7 @@ public class PathCorridor {
      * @return The polygon reference id of the last polygon in the corridor. (Or zero if there is no path.)
      */
     public long getLastPoly() {
-        return m_path.isEmpty() ? 0 : m_path.get(m_path.size() - 1);
+        return path.isEmpty() ? 0 : path.get(path.size() - 1);
     }
 
-    /**
-     * The corridor's path.
-     */
-    public List<Long> getPath() {
-        return m_path;
-    }
-
-    /**
-     * The number of polygons in the current corridor path.
-     *
-     * @return The number of polygons in the current corridor path.
-     */
-    public int getPathCount() {
-        return m_path.size();
-    }
 }

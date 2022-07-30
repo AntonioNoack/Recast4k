@@ -529,7 +529,7 @@ public class NavMeshQuery {
             int end = tile.data.header.bvNodeCount;
             while (nodeIndex < end) {
                 BVNode node = tile.data.bvTree[nodeIndex];
-                boolean overlap = overlapQuantBounds(bmin, bmax, node.bmin, node.bmax);
+                boolean overlap = overlapQuantBounds(bmin, bmax, node);
                 boolean isLeafNode = node.i >= 0;
 
                 if (isLeafNode && overlap) {
