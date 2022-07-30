@@ -112,19 +112,16 @@ public class Crowd {
     /// This value is used for sizing the crowd agent corner buffers.
     /// Due to the behavior of the crowd manager, the actual number of useful
     /// corners will be one less than this number.
-    /// @ingroup crowd
-    static final int DT_CROWDAGENT_MAX_CORNERS = 4;
+        static final int DT_CROWDAGENT_MAX_CORNERS = 4;
 
     /// The maximum number of crowd avoidance configurations supported by the
     /// crowd manager.
-    /// @ingroup crowd
-    /// @see dtObstacleAvoidanceParams, dtCrowd::setObstacleAvoidanceParams(), dtCrowd::getObstacleAvoidanceParams(),
+        /// @see dtObstacleAvoidanceParams, dtCrowd::setObstacleAvoidanceParams(), dtCrowd::getObstacleAvoidanceParams(),
     /// dtCrowdAgentParams::obstacleAvoidanceType
     static final int DT_CROWD_MAX_OBSTAVOIDANCE_PARAMS = 8;
 
     /// The maximum number of query filter types supported by the crowd manager.
-    /// @ingroup crowd
-    /// @see dtQueryFilter, dtCrowd::getFilter() dtCrowd::getEditableFilter(),
+        /// @see dtQueryFilter, dtCrowd::getFilter() dtCrowd::getEditableFilter(),
     /// dtCrowdAgentParams::queryFilterType
     static final int DT_CROWD_MAX_QUERY_FILTER_TYPE = 16;
 

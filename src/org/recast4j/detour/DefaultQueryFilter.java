@@ -20,8 +20,6 @@ package org.recast4j.detour;
 
 import org.joml.Vector3f;
 
-import static org.recast4j.detour.DetourCommon.vDist;
-
 /**
  * <b>The Default Implementation</b>
  *

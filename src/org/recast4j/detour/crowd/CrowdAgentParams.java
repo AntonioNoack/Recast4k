@@ -18,32 +18,34 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.crowd;
 
-/// Configuration parameters for a crowd agent.
-/// @ingroup crowd
+/** Configuration parameters for a crowd agent. */
 public class CrowdAgentParams {
     public float radius; /// < Agent radius. [Limit: >= 0]
     public float height; /// < Agent height. [Limit: > 0]
-    public float maxAcceleration; /// < Maximum allowed acceleration. [Limit: >= 0]
-    public float maxSpeed; /// < Maximum allowed speed. [Limit: >= 0]
 
-    /// Defines how close a collision element must be before it is considered for steering behaviors. [Limits: > 0]
+    /** Maximum allowed acceleration. >= 0 */
+    public float maxAcceleration;
+
+    /** Maximum allowed speed. >= 0 */
+    public float maxSpeed;
+
+    /** Defines how close a collision element must be before it is considered for steering behaviors. > 0 */
     public float collisionQueryRange;
 
-    public float pathOptimizationRange; /// < The path visibility optimization range. [Limit: > 0]
+    /** The path visibility optimization range. > 0 */
+    public float pathOptimizationRange;
 
-    /// How aggressive the agent manager should be at avoiding collisions with this agent. [Limit: >= 0]
+    /** How aggressive the agent manager should be at avoiding collisions with this agent. >= 0 */
     public float separationWeight;
 
-    /// Crowd agent update flags.
+    /** Crowd agent update flags. */
     public static final int DT_CROWD_ANTICIPATE_TURNS = 1;
     public static final int DT_CROWD_OBSTACLE_AVOIDANCE = 2;
     public static final int DT_CROWD_SEPARATION = 4;
-    public static final int DT_CROWD_OPTIMIZE_VIS = 8; /// < Use #dtPathCorridor::optimizePathVisibility() to optimize
-                                                       /// the agent path.
-    public static final int DT_CROWD_OPTIMIZE_TOPO = 16; /// < Use dtPathCorridor::optimizePathTopology() to optimize
-                                                         /// the agent path.
+    public static final int DT_CROWD_OPTIMIZE_VIS = 8; /// < Use #dtPathCorridor::optimizePathVisibility() to optimize the agent path.
+    public static final int DT_CROWD_OPTIMIZE_TOPO = 16; /// < Use dtPathCorridor::optimizePathTopology() to optimize the agent path.
 
-    /// Flags that impact steering behavior. (See: #UpdateFlags)
+    /** Flags that impact steering behavior. (See: #UpdateFlags) */
     public int updateFlags;
 
     /// The index of the avoidance configuration to use for the agent.

@@ -146,8 +146,8 @@ public class NavMeshQuery {
         }
 
         // Randomly pick point on polygon.
-        float[] vertices = new float[3 * m_nav.getMaxVerticesPerPoly()];
-        float[] areas = new float[m_nav.getMaxVerticesPerPoly()];
+        float[] vertices = new float[3 * m_nav.maxVerticesPerPoly];
+        float[] areas = new float[m_nav.maxVerticesPerPoly];
         System.arraycopy(tile.data.vertices, poly.vertices[0] * 3, vertices, 0, 3);
         for (int j = 1; j < poly.vertCount; ++j) {
             System.arraycopy(tile.data.vertices, poly.vertices[j] * 3, vertices, j * 3, 3);
@@ -413,9 +413,9 @@ public class NavMeshQuery {
             return Result.invalidParam();
         }
         // Collect vertices.
-        float[] vertices = new float[m_nav.getMaxVerticesPerPoly() * 3];
-        float[] edged = new float[m_nav.getMaxVerticesPerPoly()];
-        float[] edget = new float[m_nav.getMaxVerticesPerPoly()];
+        float[] vertices = new float[m_nav.maxVerticesPerPoly * 3];
+        float[] edged = new float[m_nav.maxVerticesPerPoly];
+        float[] edget = new float[m_nav.maxVerticesPerPoly];
         int nv = poly.vertCount;
         for (int i = 0; i < nv; ++i) {
             System.arraycopy(tile.data.vertices, poly.vertices[i] * 3, vertices, i * 3, 3);
@@ -1548,7 +1548,7 @@ public class NavMeshQuery {
         Vector3f searchPos = vLerp(startPos, endPos, 0.5f);
         float searchRadSqr = sqr(startPos.distance(endPos) * 0.5f + 0.001f);
 
-        float[] vertices = new float[m_nav.getMaxVerticesPerPoly() * 3];
+        float[] vertices = new float[m_nav.maxVerticesPerPoly * 3];
 
         while (!stack.isEmpty()) {
             // Pop front.
@@ -1857,7 +1857,7 @@ public class NavMeshQuery {
 
         RaycastHit hit = new RaycastHit();
 
-        float[] vertices = new float[m_nav.getMaxVerticesPerPoly() * 3 + 3];
+        float[] vertices = new float[m_nav.maxVerticesPerPoly * 3 + 3];
 
         Vector3f curPos = new Vector3f(), lastPos = new Vector3f();
 
@@ -2448,8 +2448,8 @@ public class NavMeshQuery {
 
         float radiusSqr = sqr(radius);
 
-        float[] pa = new float[m_nav.getMaxVerticesPerPoly() * 3];
-        float[] pb = new float[m_nav.getMaxVerticesPerPoly() * 3];
+        float[] pa = new float[m_nav.maxVerticesPerPoly * 3];
+        float[] pb = new float[m_nav.maxVerticesPerPoly * 3];
 
         while (!stack.isEmpty()) {
             // Pop front.

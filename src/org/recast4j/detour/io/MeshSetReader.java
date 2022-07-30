@@ -110,7 +110,7 @@ public class MeshSetReader {
             if (cCompatibility && !is32Bit) {
                 bb.getInt(); // C struct padding
             }
-            MeshData data = meshReader.read(bb, mesh.getMaxVerticesPerPoly(), is32Bit);
+            MeshData data = meshReader.read(bb, mesh.maxVerticesPerPoly, is32Bit);
             mesh.addTile(data, i, tileHeader.tileRef);
         }
     }

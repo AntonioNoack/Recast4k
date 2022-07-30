@@ -376,15 +376,15 @@ public class PathCorridor {
      * @param navquery The query object used to build the corridor.
      * @param filter   The filter to apply to the operation.
      */
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused", "UnusedReturnValue"})
     public boolean movePosition(Vector3f npos, NavMeshQuery navquery, QueryFilter filter) {
         // Move along navmesh and update new position.
         Result<MoveAlongSurfaceResult> masResult = navquery.moveAlongSurface(path.get(0), pos, npos, filter);
         if (masResult.succeeded()) {
-            path = mergeCorridorStartMoved(path, masResult.result.getVisited());
+            path = mergeCorridorStartMoved(path, masResult.result.visited);
             // Adjust the position to stay on top of the navmesh.
-            copy(pos, masResult.result.getResultPos());
-            Result<Float> hr = navquery.getPolyHeight(path.get(0), masResult.result.getResultPos());
+            copy(pos, masResult.result.resultPos);
+            Result<Float> hr = navquery.getPolyHeight(path.get(0), masResult.result.resultPos);
             if (hr.succeeded()) pos.y = hr.result;
             return true;
         }
@@ -410,8 +410,8 @@ public class PathCorridor {
         // Move along navmesh and update new position.
         Result<MoveAlongSurfaceResult> masResult = navquery.moveAlongSurface(path.get(path.size() - 1), target, npos, filter);
         if (masResult.succeeded()) {
-            path = mergeCorridorEndMoved(path, masResult.result.getVisited());
-            Vector3f resultPos = masResult.result.getResultPos();
+            path = mergeCorridorEndMoved(path, masResult.result.visited);
+            Vector3f resultPos = masResult.result.resultPos;
             if(adjustPositionToTopOfNavMesh) {
                 float h =target.y;
                 navquery.getPolyHeight(path.get(path.size()-1), npos);

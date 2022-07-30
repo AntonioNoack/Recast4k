@@ -25,25 +25,17 @@ import java.util.List;
 public class MoveAlongSurfaceResult {
 
     /**
-     * The result position of the mover. [(x, y, z)]
+     * The result position of the mover.
      */
-    private final Vector3f resultPos;
+    public final Vector3f resultPos;
     /**
      * The reference ids of the polygons visited during the move.
      */
-    private final List<Long> visited;
+    public final List<Long> visited;
 
     public MoveAlongSurfaceResult(Vector3f resultPos, List<Long> visited) {
         this.resultPos = resultPos;
         this.visited = visited;
-    }
-
-    public Vector3f getResultPos() {
-        return resultPos;
-    }
-
-    public List<Long> getVisited() {
-        return visited;
     }
 
 }

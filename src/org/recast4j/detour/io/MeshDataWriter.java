@@ -95,8 +95,12 @@ public class MeshDataWriter extends DetourWriter {
 
     private void writeBVTree(OutputStream stream, MeshData data, ByteOrder order) throws IOException {
         for (int i = 0; i < data.header.bvNodeCount; i++) {
-            write(stream, data.bvTree[i].bmin, order);
-            write(stream, data.bvTree[i].bmax, order);
+            write(stream, data.bvTree[i].minX, order);
+            write(stream, data.bvTree[i].minY, order);
+            write(stream, data.bvTree[i].minZ, order);
+            write(stream, data.bvTree[i].maxX, order);
+            write(stream, data.bvTree[i].maxY, order);
+            write(stream, data.bvTree[i].maxZ, order);
             write(stream, data.bvTree[i].i, order);
         }
     }

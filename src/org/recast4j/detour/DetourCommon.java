@@ -109,41 +109,8 @@ public class DetourCommon {
         out.z = Math.max(out.z, in[i + 2]);
     }
 
-    /// Returns the distance between two points.
-    /// @param[in] v1 A point. [(x, y, z)]
-    /// @param[in] v2 A point. [(x, y, z)]
-    /// @return The distance between the two points.
-    public static float vDist(float[] v1, float[] v2) {
-        float dx = v2[0] - v1[0];
-        float dy = v2[1] - v1[1];
-        float dz = v2[2] - v1[2];
-        return (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-    }
-
-    /// Returns the distance between two points.
-    /// @param[in] v1 A point. [(x, y, z)]
-    /// @param[in] v2 A point. [(x, y, z)]
-    /// @return The distance between the two points.
-    static float vDistSqr(float[] v1, float[] v2) {
-        float dx = v2[0] - v1[0];
-        float dy = v2[1] - v1[1];
-        float dz = v2[2] - v1[2];
-        return dx * dx + dy * dy + dz * dz;
-    }
-
     public static float sqr(float a) {
         return a * a;
-    }
-
-    /// Derives the square of the scalar length of the vector. (len * len)
-    /// @param[in] v The vector. [(x, y, z)]
-    /// @return The square of the scalar length of the vector.
-    public static float vLenSqr(float[] v) {
-        return v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
-    }
-
-    public static float vLen(float[] v) {
-        return (float) Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
     }
 
     static float vDist(float[] v1, float[] vertices, int i) {
@@ -184,17 +151,6 @@ public class DetourCommon {
         float dx = vertices[i] - p.x;
         float dz = vertices[i + 2] - p.z;
         return dx * dx + dz * dz;
-    }
-
-    /// Normalizes the vector.
-    /// @param[in,out] v The vector to normalize. [(x, y, z)]
-    public static void normalize(float[] v) {
-        float d = (float) (1.0f / Math.sqrt(sqr(v[0]) + sqr(v[1]) + sqr(v[2])));
-        if (d != 0) {
-            v[0] *= d;
-            v[1] *= d;
-            v[2] *= d;
-        }
     }
 
     private static final float EQUAL_THRESHOLD = sqr(1.0f / 16384.0f);
@@ -265,25 +221,13 @@ public class DetourCommon {
     /**
      * Determines if two axis-aligned bounding boxes overlap.
      * */
-    static boolean overlapQuantBounds(Vector3i amin, Vector3i amax, Vector3i bmin, Vector3i bmax) {
-        return amin.x <= bmax.x && amax.x >= bmin.x &&
-                amin.y <= bmax.y && amax.y >= bmin.y &&
-                amin.z <= bmax.z && amax.z >= bmin.z;
-    }
-
     static boolean overlapQuantBounds(Vector3i amin, Vector3i amax, BVNode n) {
         return amin.x <= n.maxX && amax.x >= n.minX &&
                 amin.y <= n.maxY && amax.y >= n.minY &&
                 amin.z <= n.maxZ && amax.z >= n.minZ;
     }
 
-    /// Determines if two axis-aligned bounding boxes overlap.
-    /// @param[in] amin Minimum bounds of box A. [(x, y, z)]
-    /// @param[in] amax Maximum bounds of box A. [(x, y, z)]
-    /// @param[in] bmin Minimum bounds of box B. [(x, y, z)]
-    /// @param[in] bmax Maximum bounds of box B. [(x, y, z)]
-    /// @return True if the two AABB's overlap.
-    /// @see dtOverlapQuantBounds
+    /** Determines if two axis-aligned bounding boxes overlap. */
     public static boolean overlapBounds(Vector3f amin, Vector3f amax, Vector3f bmin, Vector3f bmax) {
         return !(amin.x > bmax.x) && !(amax.x < bmin.x) &&
                 !(amin.y > bmax.y) && !(amax.y < bmin.y) &&
@@ -595,14 +539,7 @@ public class DetourCommon {
         return Optional.of(new Pair<>(s, t));
     }
 
-    /// Checks that the specified vector's components are all finite.
-    /// @param[in] v A point. [(x, y, z)]
-    /// @return True if all of the point's components are finite, i.e. not NaN
-    /// or any of the infinities.
-    public static boolean isFinite(float[] v) {
-        return Float.isFinite(v[0]) && Float.isFinite(v[1]) && Float.isFinite(v[2]);
-    }
-
+    /** Checks that the specified vector's components are all finite. */
     public static boolean isFinite(Vector3f v) {
         return v.isFinite();
     }

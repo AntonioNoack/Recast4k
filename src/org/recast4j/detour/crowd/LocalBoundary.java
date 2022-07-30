@@ -38,7 +38,7 @@ public class LocalBoundary {
 
     public Vector3f center = new Vector3f();
     public List<Segment> segments = new ArrayList<>();
-    List<Long> m_polys = new ArrayList<>();
+    List<Long> polygons = new ArrayList<>();
 
     protected LocalBoundary() {
         center.set(Float.MAX_VALUE);
@@ -46,7 +46,7 @@ public class LocalBoundary {
 
     protected void reset() {
         center.set(Float.MAX_VALUE);
-        m_polys.clear();
+        polygons.clear();
         segments.clear();
     }
 
@@ -87,10 +87,10 @@ public class LocalBoundary {
         // First query non-overlapping polygons.
         Result<FindLocalNeighbourhoodResult> res = navquery.findLocalNeighbourhood(ref, pos, collisionQueryRange, filter);
         if (res.succeeded()) {
-            m_polys = res.result.refs;
+            polygons = res.result.refs;
             segments.clear();
             // Secondly, store all polygon edges.
-            for (Long m_poly : m_polys) {
+            for (Long m_poly : polygons) {
                 Result<GetPolyWallSegmentsResult> result = navquery.getPolyWallSegments(m_poly, false, filter);
                 if (result.succeeded()) {
                     GetPolyWallSegmentsResult gpws = result.result;
@@ -108,30 +108,18 @@ public class LocalBoundary {
         }
     }
 
-    public boolean isValid(NavMeshQuery navquery, QueryFilter filter) {
-        if (m_polys.isEmpty()) {
+    public boolean isValid(NavMeshQuery navMeshQuery, QueryFilter filter) {
+        if (polygons.isEmpty()) {
             return false;
         }
 
-        // Check that all polygons still pass query filter.
-        for (long ref : m_polys) {
-            if (!navquery.isValidPolyRef(ref, filter)) {
+        // Check, that all polygons still pass query filter.
+        for (long ref : polygons) {
+            if (!navMeshQuery.isValidPolyRef(ref, filter)) {
                 return false;
             }
         }
 
         return true;
-    }
-
-    public Vector3f getCenter() {
-        return center;
-    }
-
-    public Segment getSegment(int j) {
-        return segments.get(j);
-    }
-
-    public int getSegmentCount() {
-        return segments.size();
     }
 }

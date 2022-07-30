@@ -52,12 +52,17 @@ public class NavMesh {
     /// The limit is given as a multiple of the character radius
     static float DT_RAY_CAST_LIMIT_PROPORTIONS = 50.0f;
 
-    private final NavMeshParams m_params; /// < Current initialization params.
-    private final Vector3f m_orig; /// < Origin of the tile (0,0)
-    // float m_orig[3]; ///< Origin of the tile (0,0)
-    float m_tileWidth, m_tileHeight; /// < Dimensions of each tile.
-    int m_maxTiles; /// < Max number of tiles.
-    private final int m_tileLutMask; /// < Tile hash lookup mask.
+    /** Current initialization params. */
+    private final NavMeshParams m_params;
+
+    /** Origin of the tile (0,0) */
+    private final Vector3f origin;
+    /** Dimensions of each tile. */
+    float m_tileWidth, m_tileHeight;
+    /** Max number of tiles. */
+    int m_maxTiles;
+    /** Tile hash lookup mask. */
+    private final int tileLutMask;
     private final Map<Integer, List<MeshTile>> posLookup = new HashMap<>();
     private final LinkedList<MeshTile> availableTiles = new LinkedList<>();
     private final MeshTile[] m_tiles; /// < List of tiles.
@@ -182,17 +187,17 @@ public class NavMesh {
      * @return 2-element int array with (tx,ty) tile location
      */
     public int[] calcTileLoc(Vector3f pos) {
-        int tx = (int) Math.floor((pos.x - m_orig.x) / m_tileWidth);
-        int ty = (int) Math.floor((pos.z - m_orig.z) / m_tileHeight);
+        int tx = (int) Math.floor((pos.x - origin.x) / m_tileWidth);
+        int ty = (int) Math.floor((pos.z - origin.z) / m_tileHeight);
         return new int[]{tx, ty};
     }
 
     public int calcTileLocX(Vector3f pos) {
-       return (int) Math.floor((pos.x - m_orig.x) / m_tileWidth);
+       return (int) Math.floor((pos.x - origin.x) / m_tileWidth);
     }
 
     public int calcTileLocY(Vector3f pos) {
-        return (int) Math.floor((pos.z - m_orig.z) / m_tileHeight);
+        return (int) Math.floor((pos.z - origin.z) / m_tileHeight);
     }
 
     public Result<Pair<MeshTile, Poly>> getTileAndPolyByRef(long ref) {
@@ -256,13 +261,13 @@ public class NavMesh {
 
     public NavMesh(NavMeshParams params, int maxVerticesPerPoly) {
         m_params = params;
-        m_orig = params.orig;
+        origin = params.orig;
         m_tileWidth = params.tileWidth;
         m_tileHeight = params.tileHeight;
         // Init tiles
         m_maxTiles = params.maxTiles;
         this.maxVerticesPerPoly = maxVerticesPerPoly;
-        m_tileLutMask = Math.max(1, nextPow2(params.maxTiles)) - 1;
+        tileLutMask = Math.max(1, nextPow2(params.maxTiles)) - 1;
         m_tiles = new MeshTile[m_maxTiles];
         for (int i = 0; i < m_maxTiles; i++) {
             m_tiles[i] = new MeshTile(i);
@@ -1381,6 +1386,6 @@ public class NavMesh {
     }
 
     private List<MeshTile> getTileListByPos(int x, int z) {
-        return posLookup.computeIfAbsent(computeTileHash(x, z, m_tileLutMask), __ -> new ArrayList<>());
+        return posLookup.computeIfAbsent(computeTileHash(x, z, tileLutMask), __ -> new ArrayList<>());
     }
 }

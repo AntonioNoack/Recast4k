@@ -157,10 +157,14 @@ public class MeshDataReader {
     private BVNode[] readBVTree(ByteBuffer buf, MeshHeader header) {
         BVNode[] nodes = new BVNode[header.bvNodeCount];
         for (int i = 0; i < nodes.length; i++) {
-            nodes[i] = new BVNode();
-            nodes[i].bmin.set(buf.getInt(), buf.getInt(), buf.getInt());
-            nodes[i].bmax.set(buf.getInt(), buf.getInt(), buf.getInt());
-            nodes[i].i = buf.getInt();
+            BVNode n = nodes[i] = new BVNode();
+            n.minX = buf.getInt();
+            n.minY = buf.getInt();
+            n.minZ = buf.getInt();
+            n.maxX = buf.getInt();
+            n.maxY = buf.getInt();
+            n.maxZ = buf.getInt();
+            n.i = buf.getInt();
         }
         return nodes;
     }

@@ -28,12 +28,10 @@ import java.util.List;
 
 import static org.recast4j.detour.DetourCommon.*;
 
-/// Represents an agent managed by a #dtCrowd object.
-/// @ingroup crowd
+/** Represents an agent managed by a #dtCrowd object. */
 public class CrowdAgent {
-
-    /// The type of navigation mesh polygon the agent is currently traversing.
-    /// @ingroup crowd
+    
+    /** The type of navigation mesh polygon the agent is currently traversing. */
     public enum CrowdAgentState {
         DT_CROWDAGENT_STATE_INVALID, /// < The agent is not in a valid state.
         DT_CROWDAGENT_STATE_WALKING, /// < The agent is traversing a normal navigation mesh polygon.
