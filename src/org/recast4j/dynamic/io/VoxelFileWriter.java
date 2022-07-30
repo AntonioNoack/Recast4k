@@ -26,15 +26,13 @@ import java.nio.ByteOrder;
 
 public class VoxelFileWriter extends DetourWriter {
 
-    private final LZ4VoxelTileCompressor compressor = new LZ4VoxelTileCompressor();
-
-    public void write(OutputStream stream, VoxelFile f, boolean compression) throws IOException {
-        write(stream, f, VoxelFile.PREFERRED_BYTE_ORDER, compression);
+    public void write(OutputStream stream, VoxelFile f) throws IOException {
+        write(stream, f, VoxelFile.PREFERRED_BYTE_ORDER);
     }
 
-    public void write(OutputStream stream, VoxelFile f, ByteOrder byteOrder, boolean compression) throws IOException {
+    public void write(OutputStream stream, VoxelFile f, ByteOrder byteOrder) throws IOException {
         write(stream, VoxelFile.MAGIC, byteOrder);
-        write(stream, VoxelFile.VERSION_EXPORTER_RECAST4J | (compression ? VoxelFile.VERSION_COMPRESSION_LZ4 : 0), byteOrder);
+        write(stream, VoxelFile.VERSION_EXPORTER_RECAST4J, byteOrder);
         write(stream, f.walkableRadius, byteOrder);
         write(stream, f.walkableHeight, byteOrder);
         write(stream, f.walkableClimb, byteOrder);
@@ -60,11 +58,11 @@ public class VoxelFileWriter extends DetourWriter {
         write(stream, f.bounds[5], byteOrder);
         write(stream, f.tiles.size(), byteOrder);
         for (VoxelTile t : f.tiles) {
-            writeTile(stream, t, byteOrder, compression);
+            writeTile(stream, t, byteOrder);
         }
     }
 
-    public void writeTile(OutputStream stream, VoxelTile tile, ByteOrder byteOrder, boolean compression) throws IOException {
+    public void writeTile(OutputStream stream, VoxelTile tile, ByteOrder byteOrder) throws IOException {
         write(stream, tile.tileX, byteOrder);
         write(stream, tile.tileZ, byteOrder);
         write(stream, tile.width, byteOrder);
@@ -75,9 +73,6 @@ public class VoxelFileWriter extends DetourWriter {
         write(stream, tile.cellSize, byteOrder);
         write(stream, tile.cellHeight, byteOrder);
         byte[] bytes = tile.spanData;
-        if (compression) {
-            bytes = compressor.compress(bytes);
-        }
         write(stream, bytes.length, byteOrder);
         stream.write(bytes);
     }

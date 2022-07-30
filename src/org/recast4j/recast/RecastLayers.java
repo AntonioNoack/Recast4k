@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.recast4j.detour.DetourCommon.overlapRange;
 import static org.recast4j.recast.RecastCommon.*;
 import static org.recast4j.recast.RecastConstants.RC_NOT_CONNECTED;
 import static org.recast4j.recast.RecastConstants.RC_NULL_AREA;
@@ -62,10 +63,6 @@ public class RecastLayers {
 
     private static boolean contains(List<Integer> a, int v) {
         return a.contains(v);
-    }
-
-    private static boolean overlapRange(int amin, int amax, int bmin, int bmax) {
-        return amin <= bmax && amax >= bmin;
     }
 
     public static HeightfieldLayer[] buildHeightfieldLayers(Telemetry ctx, CompactHeightfield chf, int walkableHeight) {

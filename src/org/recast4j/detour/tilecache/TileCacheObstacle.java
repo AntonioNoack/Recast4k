@@ -18,6 +18,8 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.tilecache;
 
+import org.joml.Vector3f;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,8 +36,8 @@ public class TileCacheObstacle {
     final Vector3f bmax = new Vector3f();
     float radius, height;
     final Vector3f center = new Vector3f();
-    final float[] extents = new Vector3f();
-    final float[] rotAux = new Vector2f(); // { cos(0.5f*angle)*sin(-0.5f*angle); cos(0.5f*angle)*cos(0.5f*angle) - 0.5 }
+    final Vector3f extents = new Vector3f();
+    final float[] rotAux = new float[2]; // { cos(0.5f*angle)*sin(-0.5f*angle); cos(0.5f*angle)*cos(0.5f*angle) - 0.5 }
     List<Long> touched = new ArrayList<>();
     final List<Long> pending = new ArrayList<>();
     int salt;

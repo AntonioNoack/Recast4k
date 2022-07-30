@@ -34,12 +34,8 @@ public class TileCacheLayerHeaderWriter extends DetourWriter {
         write(stream, header.tx, order);
         write(stream, header.ty, order);
         write(stream, header.tlayer, order);
-        for (int j = 0; j < 3; j++) {
-            write(stream, header.bmin[j], order);
-        }
-        for (int j = 0; j < 3; j++) {
-            write(stream, header.bmax[j], order);
-        }
+        write(stream, header.bmin, order);
+        write(stream, header.bmax, order);
         write(stream, (short) header.hmin, order);
         write(stream, (short) header.hmax, order);
         stream.write(header.width);

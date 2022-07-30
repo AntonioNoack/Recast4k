@@ -86,6 +86,16 @@ public class DetourCommon {
         out.set(in[i], in[i + 1], in[i + 2]);
     }
 
+    public static void copy(float[] out, int o, Vector3f in) {
+        out[o] = in.x;
+        out[o + 1] = in.y;
+        out[o + 2] = in.z;
+    }
+
+    public static void copy(Vector3f out, int[] in, int i) {
+        out.set(in[i], in[i + 1], in[i + 2]);
+    }
+
     public static void min(Vector3f out, float[] in, int i) {
         out.x = Math.min(out.x, in[i]);
         out.y = Math.min(out.y, in[i + 1]);
@@ -371,8 +381,16 @@ public class DetourCommon {
         return new float[]{rmin, rmax};
     }
 
-    static boolean overlapRange(float amin, float amax, float bmin, float bmax, float eps) {
+    public static boolean overlapRange(float amin, float amax, float bmin, float bmax, float eps) {
         return !((amin + eps) > bmax) && !((amax - eps) < bmin);
+    }
+
+    public static boolean overlapRange(float amin, float amax, float bmin, float bmax) {
+        return !(amin > bmax) && !(amax < bmin);
+    }
+
+    public static boolean overlapRange(int amin, int amax, int bmin, int bmax) {
+        return amin <= bmax && amax >= bmin;
     }
 
     static float eps = 1e-4f;

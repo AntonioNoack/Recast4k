@@ -18,16 +18,15 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.crowd;
 
-import static org.recast4j.detour.DetourCommon.vCopy;
-
-import java.util.Deque;
-import java.util.LinkedList;
-import java.util.List;
-
+import org.joml.Vector3f;
 import org.recast4j.detour.NavMesh;
 import org.recast4j.detour.NavMeshQuery;
 import org.recast4j.detour.QueryFilter;
 import org.recast4j.detour.Result;
+
+import java.util.Deque;
+import java.util.LinkedList;
+import java.util.List;
 
 public class PathQueue {
 
@@ -75,9 +74,9 @@ public class PathQueue {
             return null;
         }
         PathQuery q = new PathQuery();
-        copy(q.startPos, startPos);
+        q.startPos.set(startPos);
         q.startRef = startRef;
-        copy(q.endPos, endPos);
+        q.endPos.set(endPos);
         q.endRef = endRef;
         q.result.status = null;
         q.filter = filter;

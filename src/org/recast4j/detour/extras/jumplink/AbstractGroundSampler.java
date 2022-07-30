@@ -1,18 +1,18 @@
 package org.recast4j.detour.extras.jumplink;
 
-import static org.recast4j.detour.DetourCommon.vDist2DSqr;
-import static org.recast4j.detour.DetourCommon.vLerp;
+import org.joml.Vector3f;
+import org.recast4j.detour.Tupple2;
 
 import java.util.function.BiFunction;
 
-import org.recast4j.detour.Tupple2;
+import static org.recast4j.detour.DetourCommon.vLerp;
 
 abstract class AbstractGroundSampler implements GroundSampler {
 
     protected void sampleGround(JumpLinkBuilderConfig acfg, EdgeSampler es,
-            BiFunction<float[], Float, Tupple2<Boolean, Float>> heightFunc) {
+                                BiFunction<Vector3f, Float, Tupple2<Boolean, Float>> heightFunc) {
         float cs = acfg.cellSize;
-        float dist = (float) Math.sqrt(vDist2DSqr(es.start.p, es.start.q));
+        float dist = es.start.p.distance(es.start.q);
         int ngsamples = Math.max(2, (int) Math.ceil(dist / cs));
         sampleGroundSegment(heightFunc, es.start, ngsamples);
         for (GroundSegment end : es.end) {
@@ -20,8 +20,8 @@ abstract class AbstractGroundSampler implements GroundSampler {
         }
     }
 
-    protected void sampleGroundSegment(BiFunction<float[], Float, Tupple2<Boolean, Float>> heightFunc, GroundSegment seg,
-            int nsamples) {
+    protected void sampleGroundSegment(BiFunction<Vector3f, Float, Tupple2<Boolean, Float>> heightFunc, GroundSegment seg,
+                                       int nsamples) {
         seg.gsamples = new GroundSample[nsamples];
 
         for (int i = 0; i < nsamples; ++i) {
@@ -29,11 +29,10 @@ abstract class AbstractGroundSampler implements GroundSampler {
 
             GroundSample s = new GroundSample();
             seg.gsamples[i] = s;
-            float[] pt = vLerp(seg.p, seg.q, u);
+            Vector3f pt = vLerp(seg.p, seg.q, u);
             Tupple2<Boolean, Float> height = heightFunc.apply(pt, seg.height);
-            s.p[0] = pt[0];
-            s.p[1] = height.second;
-            s.p[2] = pt[2];
+            s.p.set(pt);
+            s.p.y = height.second;
 
             if (!height.first) {
                 continue;

@@ -30,14 +30,14 @@ public class MeshSetWriter extends DetourWriter {
     private final MeshDataWriter writer = new MeshDataWriter();
     private final NavMeshParamWriter paramWriter = new NavMeshParamWriter();
 
-    public void write(OutputStream stream, NavMesh mesh, ByteOrder order, boolean cCompatibility) throws IOException {
-        writeHeader(stream, mesh, order, cCompatibility);
-        writeTiles(stream, mesh, order, cCompatibility);
+    public void write(OutputStream stream, NavMesh mesh, ByteOrder order) throws IOException {
+        writeHeader(stream, mesh, order);
+        writeTiles(stream, mesh, order);
     }
 
-    private void writeHeader(OutputStream stream, NavMesh mesh, ByteOrder order, boolean cCompatibility) throws IOException {
+    private void writeHeader(OutputStream stream, NavMesh mesh, ByteOrder order) throws IOException {
         write(stream, NavMeshSetHeader.NAVMESHSET_MAGIC, order);
-        write(stream, cCompatibility ? NavMeshSetHeader.NAVMESHSET_VERSION : NavMeshSetHeader.NAVMESHSET_VERSION_RECAST4J, order);
+        write(stream, NavMeshSetHeader.NAVMESHSET_VERSION_RECAST4J, order);
         int numTiles = 0;
         for (int i = 0; i < mesh.getMaxTiles(); ++i) {
             MeshTile tile = mesh.getTile(i);
@@ -48,12 +48,10 @@ public class MeshSetWriter extends DetourWriter {
         }
         write(stream, numTiles, order);
         paramWriter.write(stream, mesh.getParams(), order);
-        if (!cCompatibility) {
-            write(stream, mesh.getMaxVertsPerPoly(), order);
-        }
+        write(stream, mesh.getMaxVertsPerPoly(), order);
     }
 
-    private void writeTiles(OutputStream stream, NavMesh mesh, ByteOrder order, boolean cCompatibility) throws IOException {
+    private void writeTiles(OutputStream stream, NavMesh mesh, ByteOrder order) throws IOException {
         for (int i = 0; i < mesh.getMaxTiles(); ++i) {
             MeshTile tile = mesh.getTile(i);
             if (tile == null || tile.data == null || tile.data.header == null) {
@@ -63,14 +61,11 @@ public class MeshSetWriter extends DetourWriter {
             NavMeshTileHeader tileHeader = new NavMeshTileHeader();
             tileHeader.tileRef = mesh.getTileRef(tile);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            writer.write(baos, tile.data, order, cCompatibility);
+            writer.write(baos, tile.data, order);
             byte[] ba = baos.toByteArray();
             tileHeader.dataSize = ba.length;
             write(stream, tileHeader.tileRef, order);
             write(stream, tileHeader.dataSize, order);
-            if (cCompatibility) {
-                write(stream, 0, order); // C struct padding
-            }
             stream.write(ba);
         }
     }

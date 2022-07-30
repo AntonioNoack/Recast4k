@@ -67,7 +67,7 @@ class JumpSegmentBuilder {
             if (sampleGrid[i][j] == -1) {
                 GroundSample p = es.end.get(j).gsamples[i];
                 sampleGrid[i][j] = region;
-                float h = p.p[1];
+                float h = p.p.y;
                 if (i < sampleGrid.length - 1) {
                     addNeighbour(es, queue, agentClimb, h, i + 1, j);
                 }
@@ -86,7 +86,7 @@ class JumpSegmentBuilder {
 
     private void addNeighbour(EdgeSampler es, Deque<int[]> queue, float agentClimb, float h, int i, int j) {
         GroundSample q = es.end.get(j).gsamples[i];
-        if (q.validTrajectory && Math.abs(q.p[1] - h) < agentClimb) {
+        if (q.validTrajectory && Math.abs(q.p.y - h) < agentClimb) {
             queue.add(new int[] { i, j });
         }
     }

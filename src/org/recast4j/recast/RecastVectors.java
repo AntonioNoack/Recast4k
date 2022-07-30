@@ -22,16 +22,16 @@ import org.joml.Vector3f;
 
 public class RecastVectors {
 
-    public static void min(float[] a, float[] b, int i) {
-        a[0] = Math.min(a[0], b[i]);
-        a[1] = Math.min(a[1], b[i + 1]);
-        a[2] = Math.min(a[2], b[i + 2]);
+    public static void min(Vector3f a, float[] b, int i) {
+        a.x = Math.min(a.x, b[i]);
+        a.y = Math.min(a.y, b[i + 1]);
+        a.z = Math.min(a.z, b[i + 2]);
     }
 
-    public static void max(float[] a, float[] b, int i) {
-        a[0] = Math.max(a[0], b[i]);
-        a[1] = Math.max(a[1], b[i + 1]);
-        a[2] = Math.max(a[2], b[i + 2]);
+    public static void max(Vector3f a, float[] b, int i) {
+        a.x = Math.max(a.x, b[i]);
+        a.y = Math.max(a.y, b[i + 1]);
+        a.z = Math.max(a.z, b[i + 2]);
     }
 
     public static void copy(float[] out, float[] in, int i) {
@@ -52,22 +52,22 @@ public class RecastVectors {
         out[n + 2] = in[m + 2];
     }
 
-    public static void add(float[] e0, float[] a, float[] verts, int i) {
-        e0[0] = a[0] + verts[i];
-        e0[1] = a[1] + verts[i + 1];
-        e0[2] = a[2] + verts[i + 2];
+    public static void add(float[] dst, float[] a, float[] verts, int i) {
+        dst[0] = a[0] + verts[i];
+        dst[1] = a[1] + verts[i + 1];
+        dst[2] = a[2] + verts[i + 2];
     }
 
-    public static void sub(Vector3f e0, float[] verts, int i, int j) {
-        e0.x = verts[i] - verts[j];
-        e0.y = verts[i + 1] - verts[j + 1];
-        e0.z = verts[i + 2] - verts[j + 2];
+    public static void sub(Vector3f dst, float[] verts, int i, int j) {
+        dst.x = verts[i] - verts[j];
+        dst.y = verts[i + 1] - verts[j + 1];
+        dst.z = verts[i + 2] - verts[j + 2];
     }
 
-    public static void sub(float[] e0, float[] i, float[] verts, int j) {
-        e0[0] = i[0] - verts[j];
-        e0[1] = i[1] - verts[j + 1];
-        e0[2] = i[2] - verts[j + 2];
+    public static void sub(float[] dst, float[] i, float[] verts, int j) {
+        dst[0] = i[0] - verts[j];
+        dst[1] = i[1] - verts[j + 1];
+        dst[2] = i[2] - verts[j + 2];
     }
 
     public static void cross(Vector3f dest, Vector3f v1, Vector3f v2) {

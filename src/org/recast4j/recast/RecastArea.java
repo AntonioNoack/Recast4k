@@ -20,10 +20,10 @@ package org.recast4j.recast;
 
 import org.joml.Vector3f;
 
+import java.util.Arrays;
+
 import static org.recast4j.recast.RecastConstants.RC_NOT_CONNECTED;
 import static org.recast4j.recast.RecastConstants.RC_NULL_AREA;
-
-import java.util.Arrays;
 
 public class RecastArea {
 
@@ -247,33 +247,20 @@ public class RecastArea {
     /// The value of spacial parameters are in world units.
     ///
     /// @see rcCompactHeightfield, rcMedianFilterWalkableArea
-    public void markBoxArea(Telemetry ctx, float[] bmin, float[] bmax, AreaModification areaMod, CompactHeightfield chf) {
+    public void markBoxArea(Telemetry ctx, Vector3f bmin, Vector3f bmax, AreaModification areaMod, CompactHeightfield chf) {
         ctx.startTimer("MARK_BOX_AREA");
 
-        int minx = (int) ((bmin[0] - chf.bmin[0]) / chf.cs);
-        int miny = (int) ((bmin[1] - chf.bmin[1]) / chf.ch);
-        int minz = (int) ((bmin[2] - chf.bmin[2]) / chf.cs);
-        int maxx = (int) ((bmax[0] - chf.bmin[0]) / chf.cs);
-        int maxy = (int) ((bmax[1] - chf.bmin[1]) / chf.ch);
-        int maxz = (int) ((bmax[2] - chf.bmin[2]) / chf.cs);
+        int minx = (int) ((bmin.x - chf.bmin.x) / chf.cs);
+        int miny = (int) ((bmin.y - chf.bmin.y) / chf.ch);
+        int minz = (int) ((bmin.z - chf.bmin.z) / chf.cs);
+        int maxx = (int) ((bmax.x - chf.bmin.x) / chf.cs);
+        int maxy = (int) ((bmax.y - chf.bmin.y) / chf.ch);
+        int maxz = (int) ((bmax.z - chf.bmin.z) / chf.cs);
 
-        if (maxx < 0)
-            return;
-        if (minx >= chf.width)
-            return;
-        if (maxz < 0)
-            return;
-        if (minz >= chf.height)
-            return;
-
-        if (minx < 0)
-            minx = 0;
-        if (maxx >= chf.width)
-            maxx = chf.width - 1;
-        if (minz < 0)
-            minz = 0;
-        if (maxz >= chf.height)
-            maxz = chf.height - 1;
+        minx = Math.max(minx, 0);
+        maxx = Math.min(maxx, chf.width - 1);
+        minz = Math.max(minz, 0);
+        maxz = Math.min(maxz, chf.height - 1);
 
         for (int z = minz; z <= maxz; ++z) {
             for (int x = minx; x <= maxx; ++x) {
@@ -311,45 +298,31 @@ public class RecastArea {
     ///
     /// @see rcCompactHeightfield, rcMedianFilterWalkableArea
     public static void markConvexPolyArea(Telemetry ctx, float[] verts, float hmin, float hmax, AreaModification areaMod,
-            CompactHeightfield chf) {
+                                          CompactHeightfield chf) {
         ctx.startTimer("MARK_CONVEXPOLY_AREA");
 
-        float[] bmin = new Vector3f(), bmax = new Vector3f();
+        Vector3f bmin = new Vector3f(), bmax = new Vector3f();
         RecastVectors.copy(bmin, verts, 0);
         RecastVectors.copy(bmax, verts, 0);
         for (int i = 3; i < verts.length; i += 3) {
             RecastVectors.min(bmin, verts, i);
             RecastVectors.max(bmax, verts, i);
         }
-        bmin[1] = hmin;
-        bmax[1] = hmax;
+        bmin.y = hmin;
+        bmax.y = hmax;
 
-        int minx = (int) ((bmin[0] - chf.bmin[0]) / chf.cs);
-        int miny = (int) ((bmin[1] - chf.bmin[1]) / chf.ch);
-        int minz = (int) ((bmin[2] - chf.bmin[2]) / chf.cs);
-        int maxx = (int) ((bmax[0] - chf.bmin[0]) / chf.cs);
-        int maxy = (int) ((bmax[1] - chf.bmin[1]) / chf.ch);
-        int maxz = (int) ((bmax[2] - chf.bmin[2]) / chf.cs);
+        int minx = (int) ((bmin.x - chf.bmin.x) / chf.cs);
+        int miny = (int) ((bmin.y - chf.bmin.y) / chf.ch);
+        int minz = (int) ((bmin.z - chf.bmin.z) / chf.cs);
+        int maxx = (int) ((bmax.x - chf.bmin.x) / chf.cs);
+        int maxy = (int) ((bmax.y - chf.bmin.y) / chf.ch);
+        int maxz = (int) ((bmax.z - chf.bmin.z) / chf.cs);
 
-        if (maxx < 0)
-            return;
-        if (minx >= chf.width)
-            return;
-        if (maxz < 0)
-            return;
-        if (minz >= chf.height)
-            return;
+        minx = Math.max(minx, 0);
+        maxx = Math.min(maxx, chf.width - 1);
+        minz = Math.max(minz, 0);
+        maxz = Math.min(maxz, chf.height - 1);
 
-        if (minx < 0)
-            minx = 0;
-        if (maxx >= chf.width)
-            maxx = chf.width - 1;
-        if (minz < 0)
-            minz = 0;
-        if (maxz >= chf.height)
-            maxz = chf.height - 1;
-
-        // TODO: Optimize.
         for (int z = minz; z <= maxz; ++z) {
             for (int x = minx; x <= maxx; ++x) {
                 CompactCell c = chf.cells[x + z * chf.width];

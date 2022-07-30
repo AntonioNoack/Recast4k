@@ -1,12 +1,16 @@
 package org.recast4j.detour.extras.jumplink;
 
+import org.joml.Vector3f;
+
 public class ClimbTrajectory implements Trajectory {
 
     @Override
-    public float[] apply(Vector3f start, Vector3f end, float u) {
-        return new float[] { lerp(start[0], end[0], Math.min(2f * u, 1f)),
-                lerp(start[1], end[1], Math.max(0f, 2f * u - 1f)),
-                lerp(start[2], end[2], Math.min(2f * u, 1f)) };
+    public Vector3f apply(Vector3f start, Vector3f end, float u) {
+        return new Vector3f(
+                lerp(start.x, end.x, Math.min(2f * u, 1f)),
+                lerp(start.y, end.y, Math.max(0f, 2f * u - 1f)),
+                lerp(start.z, end.z, Math.min(2f * u, 1f))
+        );
     }
 
 }

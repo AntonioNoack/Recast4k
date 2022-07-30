@@ -20,7 +20,6 @@ package org.recast4j.detour;
 
 import java.util.List;
 
-//TODO: (PP) Add comments
 public class FindLocalNeighbourhoodResult {
     private final List<Long> refs;
     private final List<Long> parentRefs;

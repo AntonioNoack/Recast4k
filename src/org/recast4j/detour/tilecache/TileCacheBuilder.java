@@ -18,7 +18,10 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.tilecache;
 
-import static org.recast4j.detour.DetourCommon.sqr;
+import org.joml.Vector3f;
+import org.recast4j.detour.Tupple2;
+import org.recast4j.detour.tilecache.io.TileCacheLayerHeaderReader;
+import org.recast4j.detour.tilecache.io.TileCacheLayerHeaderWriter;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -28,10 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.recast4j.detour.Tupple2;
-import org.recast4j.detour.tilecache.io.TileCacheLayerHeaderReader;
-import org.recast4j.detour.tilecache.io.TileCacheLayerHeaderWriter;
-import org.recast4j.detour.tilecache.io.compress.TileCacheCompressorFactory;
+import static org.recast4j.detour.DetourCommon.sqr;
 
 public class TileCacheBuilder {
 
@@ -39,20 +39,24 @@ public class TileCacheBuilder {
     static final int DT_TILECACHE_WALKABLE_AREA = 63;
     static final int DT_TILECACHE_NULL_IDX = 0xffff;
 
-    private class LayerSweepSpan {
+    private static class LayerSweepSpan {
         int ns; // number samples
         int id; // region id
         int nei; // neighbour id
-    };
+    }
 
-    private class LayerMonotoneRegion {
+    ;
+
+    private static class LayerMonotoneRegion {
         int area;
         List<Integer> neis = new ArrayList<>(16);
         int regId;
         int areaId;
-    };
+    }
 
-    private class TempContour {
+    ;
+
+    private static class TempContour {
         List<Integer> verts;
         int nverts;
         List<Integer> poly;
@@ -71,13 +75,17 @@ public class TileCacheBuilder {
             nverts = 0;
             verts.clear();
         }
-    };
+    }
 
-    private class Edge {
+    ;
+
+    private static class Edge {
         int[] vert = new int[2];
         int[] polyEdge = new int[2];
         int[] poly = new int[2];
-    };
+    }
+
+    ;
 
     private final TileCacheLayerHeaderReader reader = new TileCacheLayerHeaderReader();
 
@@ -87,8 +95,7 @@ public class TileCacheBuilder {
         int h = layer.header.height;
 
         Arrays.fill(layer.regs, (short) 0x00FF);
-        int nsweeps = w;
-        LayerSweepSpan[] sweeps = new LayerSweepSpan[nsweeps];
+        LayerSweepSpan[] sweeps = new LayerSweepSpan[w];
         for (int i = 0; i < sweeps.length; i++) {
             sweeps[i] = new LayerSweepSpan();
         }
@@ -336,12 +343,12 @@ public class TileCacheBuilder {
     }
 
     private int getDirOffsetX(int dir) {
-        int[] offset = new int[] { -1, 0, 1, 0, };
+        int[] offset = new int[]{-1, 0, 1, 0,};
         return offset[dir & 0x03];
     }
 
     private int getDirOffsetY(int dir) {
-        int[] offset = new int[] { 0, 1, 0, -1 };
+        int[] offset = new int[]{0, 1, 0, -1};
         return offset[dir & 0x03];
     }
 
@@ -381,16 +388,16 @@ public class TileCacheBuilder {
                 int px = x;
                 int pz = y;
                 switch (dir) {
-                case 0:
-                    pz++;
-                    break;
-                case 1:
-                    px++;
-                    pz++;
-                    break;
-                case 2:
-                    px++;
-                    break;
+                    case 0:
+                        pz++;
+                        break;
+                    case 1:
+                        px++;
+                        pz++;
+                        break;
+                    case 2:
+                        px++;
+                        break;
                 }
 
                 // Try to merge with previous vertex.
@@ -484,7 +491,7 @@ public class TileCacheBuilder {
 
         // Add points until all raw points are within
         // error tolerance to the simplified shape.
-        for (int i = 0; i < cont.npoly();) {
+        for (int i = 0; i < cont.npoly(); ) {
             int ii = (i + 1) % cont.npoly();
 
             int ai = cont.poly.get(i);
@@ -639,10 +646,10 @@ public class TileCacheBuilder {
                         int v = j * 4;
                         int vn = i * 4;
                         int nei = temp.verts.get(vn + 3); // The neighbour reg
-                                                          // is
-                                                          // stored at segment
-                                                          // vertex of a
-                                                          // segment.
+                        // is
+                        // stored at segment
+                        // vertex of a
+                        // segment.
                         Tupple2<Integer, Boolean> res = getCornerHeight(layer, temp.verts.get(v), temp.verts.get(v + 1),
                                 temp.verts.get(v + 2), walkableClimb);
                         int lh = res.first;
@@ -698,7 +705,7 @@ public class TileCacheBuilder {
     }
 
     private void buildMeshAdjacency(int[] polys, int npolys, int[] verts, int nverts, TileCacheContourSet lcset,
-            int maxVertsPerPoly) {
+                                    int maxVertsPerPoly) {
         // Based on code by Eric Lengyel from:
         // http://www.terathon.com/code/edges.php
 
@@ -873,7 +880,7 @@ public class TileCacheBuilder {
     }
 
     private boolean overlapRangeExl(int amin, int amax, int bmin, int bmax) {
-        return (amin >= bmax || amax <= bmin) ? false : true;
+        return amin < bmax && amax > bmin;
     }
 
     private int prev(int i, int n) {
@@ -1062,7 +1069,7 @@ public class TileCacheBuilder {
         // Append the remaining triangle.
         tris[dst++] = indices[0] & 0x7fff;
         tris[dst++] = indices[1] & 0x7fff;
-        tris[dst++] = indices[2] & 0x7fff;
+        tris[dst] = indices[2] & 0x7fff;
         ntris++;
 
         return ntris;
@@ -1086,7 +1093,7 @@ public class TileCacheBuilder {
 
         // If the merged polygon would be too big, do not merge.
         if (na + nb - 2 > maxVertsPerPoly)
-            return new int[] { -1, 0, 0 };
+            return new int[]{-1, 0, 0};
 
         // Check if the polygons share an edge.
         int ea = -1;
@@ -1118,7 +1125,7 @@ public class TileCacheBuilder {
 
         // No common edge, cannot merge.
         if (ea == -1 || eb == -1)
-            return new int[] { -1, ea, eb };
+            return new int[]{-1, ea, eb};
 
         // Check to see if the merged polygon would be convex.
         int va, vb, vc;
@@ -1127,13 +1134,13 @@ public class TileCacheBuilder {
         vb = polys[pa + ea];
         vc = polys[pb + (eb + 2) % nb];
         if (!uleft(verts, va * 3, vb * 3, vc * 3))
-            return new int[] { -1, ea, eb };
+            return new int[]{-1, ea, eb};
 
         va = polys[pb + (eb + nb - 1) % nb];
         vb = polys[pb + eb];
         vc = polys[pa + (ea + 2) % na];
         if (!uleft(verts, va * 3, vb * 3, vc * 3))
-            return new int[] { -1, ea, eb };
+            return new int[]{-1, ea, eb};
 
         va = polys[pa + ea];
         vb = polys[pa + (ea + 1) % na];
@@ -1141,7 +1148,7 @@ public class TileCacheBuilder {
         int dx = verts[va * 3] - verts[vb * 3];
         int dy = verts[va * 3 + 2] - verts[vb * 3 + 2];
 
-        return new int[] { dx * dx + dy * dy, ea, eb };
+        return new int[]{dx * dx + dy * dy, ea, eb};
     }
 
     private void mergePolys(int[] polys, int pa, int pb, int ea, int eb, int maxVertsPerPoly) {
@@ -1247,28 +1254,16 @@ public class TileCacheBuilder {
             if (edges.get(i * 3 + 2) < 2)
                 numOpenEdges++;
         }
-        if (numOpenEdges > 2)
-            return false;
-
-        return true;
+        return numOpenEdges <= 2;
     }
 
     private void removeVertex(TileCachePolyMesh mesh, int rem, int maxTris) {
         // Count number of polygons to remove.
         int maxVertsPerPoly = mesh.nvp;
-        int numRemovedVerts = 0;
-        for (int i = 0; i < mesh.npolys; ++i) {
-            int p = i * maxVertsPerPoly * 2;
-            int nv = countPolyVerts(mesh.polys, p, maxVertsPerPoly);
-            for (int j = 0; j < nv; ++j) {
-                if (mesh.polys[p + j] == rem)
-                    numRemovedVerts++;
-            }
-        }
 
         int nedges = 0;
         List<Integer> edges = new ArrayList<>();
-        int nhole = 0;
+        int nhole;
         List<Integer> hole = new ArrayList<>();
         List<Integer> harea = new ArrayList<>();
 
@@ -1277,8 +1272,10 @@ public class TileCacheBuilder {
             int nv = countPolyVerts(mesh.polys, p, maxVertsPerPoly);
             boolean hasRem = false;
             for (int j = 0; j < nv; ++j)
-                if (mesh.polys[p + j] == rem)
+                if (mesh.polys[p + j] == rem) {
                     hasRem = true;
+                    break;
+                }
             if (hasRem) {
                 // Collect edges which does not touch the removed vertex.
                 for (int j = 0, k = nv - 1; j < nv; k = j++) {
@@ -1406,7 +1403,7 @@ public class TileCacheBuilder {
 
         // Merge polygons.
         if (maxVertsPerPoly > 3) {
-            for (;;) {
+            for (; ; ) {
                 // Find best polygons to merge.
                 int bestMergeVal = 0;
                 int bestPa = 0, bestPb = 0, bestEa = 0, bestEb = 0;
@@ -1548,7 +1545,7 @@ public class TileCacheBuilder {
 
             // Merge polygons.
             if (maxVertsPerPoly > 3) {
-                for (;;) {
+                for (; ; ) {
                     // Find best polygons to merge.
                     int bestMergeVal = 0;
                     int bestPa = 0, bestPb = 0, bestEa = 0, bestEb = 0;
@@ -1589,8 +1586,7 @@ public class TileCacheBuilder {
             for (int j = 0; j < npolys; ++j) {
                 int p = mesh.npolys * maxVertsPerPoly * 2;
                 int q = j * maxVertsPerPoly;
-                for (int k = 0; k < maxVertsPerPoly; ++k)
-                    mesh.polys[p + k] = polys[q + k];
+                if (maxVertsPerPoly >= 0) System.arraycopy(polys, q, mesh.polys, p, maxVertsPerPoly);
                 mesh.areas[mesh.npolys] = cont.area;
                 mesh.npolys++;
                 if (mesh.npolys > maxTris)
@@ -1607,8 +1603,8 @@ public class TileCacheBuilder {
                 // Remove vertex
                 // Note: mesh.nverts is already decremented inside
                 // removeVertex()!
-                for (int j = i; j < mesh.nverts; ++j)
-                    vflags[j] = vflags[j + 1];
+                if (mesh.nverts - i >= 0)
+                    System.arraycopy(vflags, i + 1, vflags, i, mesh.nverts - i);
                 --i;
             }
         }
@@ -1619,16 +1615,15 @@ public class TileCacheBuilder {
         return mesh;
     }
 
-    public void markCylinderArea(TileCacheLayer layer, float[] orig, float cs, float ch, Vector3f pos, float radius,
-            float height, int areaId) {
-        Vector3f bmin = new Vector3f();
-        Vector3f bmax = new Vector3f();
-        bmin[0] = pos[0] - radius;
-        bmin[1] = pos[1];
-        bmin[2] = pos[2] - radius;
-        bmax[0] = pos[0] + radius;
-        bmax[1] = pos[1] + height;
-        bmax[2] = pos[2] + radius;
+    public void markCylinderArea(TileCacheLayer layer, Vector3f orig, float cs, float ch, Vector3f pos, float radius,
+                                 float height, int areaId) {
+        Vector3f bmin = new Vector3f(pos);
+        Vector3f bmax = new Vector3f(pos);
+        bmin.x -= radius;
+        bmin.z -= radius;
+        bmax.x += radius;
+        bmax.y += height;
+        bmax.z += radius;
         float r2 = sqr(radius / cs + 0.5f);
 
         int w = layer.header.width;
@@ -1636,33 +1631,20 @@ public class TileCacheBuilder {
         float ics = 1.0f / cs;
         float ich = 1.0f / ch;
 
-        float px = (pos[0] - orig[0]) * ics;
-        float pz = (pos[2] - orig[2]) * ics;
+        float px = (pos.x - orig.x) * ics;
+        float pz = (pos.z - orig.z) * ics;
 
-        int minx = (int) Math.floor((bmin[0] - orig[0]) * ics);
-        int miny = (int) Math.floor((bmin[1] - orig[1]) * ich);
-        int minz = (int) Math.floor((bmin[2] - orig[2]) * ics);
-        int maxx = (int) Math.floor((bmax[0] - orig[0]) * ics);
-        int maxy = (int) Math.floor((bmax[1] - orig[1]) * ich);
-        int maxz = (int) Math.floor((bmax[2] - orig[2]) * ics);
+        int minx = (int) Math.floor((bmin.x - orig.x) * ics);
+        int miny = (int) Math.floor((bmin.y - orig.y) * ich);
+        int minz = (int) Math.floor((bmin.z - orig.z) * ics);
+        int maxx = (int) Math.floor((bmax.x - orig.x) * ics);
+        int maxy = (int) Math.floor((bmax.y - orig.y) * ich);
+        int maxz = (int) Math.floor((bmax.z - orig.z) * ics);
 
-        if (maxx < 0)
-            return;
-        if (minx >= w)
-            return;
-        if (maxz < 0)
-            return;
-        if (minz >= h)
-            return;
-
-        if (minx < 0)
-            minx = 0;
-        if (maxx >= w)
-            maxx = w - 1;
-        if (minz < 0)
-            minz = 0;
-        if (maxz >= h)
-            maxz = h - 1;
+        minx = Math.max(minx, 0);
+        maxx = Math.min(maxx, w - 1);
+        minz = Math.max(minz, 0);
+        maxz = Math.min(maxz, h - 1);
 
         for (int z = minz; z <= maxz; ++z) {
             for (int x = minx; x <= maxx; ++x) {
@@ -1678,37 +1660,24 @@ public class TileCacheBuilder {
         }
     }
 
-    public void markBoxArea(TileCacheLayer layer, float[] orig, float cs, float ch, float[] bmin, float[] bmax,
-            int areaId) {
+    public void markBoxArea(TileCacheLayer layer, Vector3f orig, float cs, float ch, Vector3f bmin, Vector3f bmax,
+                            int areaId) {
         int w = layer.header.width;
         int h = layer.header.height;
         float ics = 1.0f / cs;
         float ich = 1.0f / ch;
 
-        int minx = (int) Math.floor((bmin[0] - orig[0]) * ics);
-        int miny = (int) Math.floor((bmin[1] - orig[1]) * ich);
-        int minz = (int) Math.floor((bmin[2] - orig[2]) * ics);
-        int maxx = (int) Math.floor((bmax[0] - orig[0]) * ics);
-        int maxy = (int) Math.floor((bmax[1] - orig[1]) * ich);
-        int maxz = (int) Math.floor((bmax[2] - orig[2]) * ics);
+        int minx = (int) Math.floor((bmin.x - orig.x) * ics);
+        int miny = (int) Math.floor((bmin.y - orig.y) * ich);
+        int minz = (int) Math.floor((bmin.z - orig.z) * ics);
+        int maxx = (int) Math.floor((bmax.x - orig.x) * ics);
+        int maxy = (int) Math.floor((bmax.y - orig.y) * ich);
+        int maxz = (int) Math.floor((bmax.z - orig.z) * ics);
 
-        if (maxx < 0)
-            return;
-        if (minx >= w)
-            return;
-        if (maxz < 0)
-            return;
-        if (minz >= h)
-            return;
-
-        if (minx < 0)
-            minx = 0;
-        if (maxx >= w)
-            maxx = w - 1;
-        if (minz < 0)
-            minz = 0;
-        if (maxz >= h)
-            maxz = h - 1;
+        minx = Math.max(minx, 0);
+        maxx = Math.min(maxx, w - 1);
+        minz = Math.max(minz, 0);
+        maxz = Math.min(maxz, h - 1);
 
         for (int z = minz; z <= maxz; ++z) {
             for (int x = minx; x <= maxx; ++x) {
@@ -1733,7 +1702,7 @@ public class TileCacheBuilder {
                 buffer[gridSize + i] = (byte) layer.areas[i];
                 buffer[gridSize * 2 + i] = (byte) layer.cons[i];
             }
-            baos.write(TileCacheCompressorFactory.get(cCompatibility).compress(buffer));
+            baos.write(buffer);
             return baos.toByteArray();
         } catch (IOException e) {
             throw new RuntimeException(e.getMessage(), e);
@@ -1741,7 +1710,7 @@ public class TileCacheBuilder {
     }
 
     public byte[] compressTileCacheLayer(TileCacheLayerHeader header, int[] heights, int[] areas, int[] cons,
-            ByteOrder order, boolean cCompatibility) {
+                                         ByteOrder order, boolean cCompatibility) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         TileCacheLayerHeaderWriter hw = new TileCacheLayerHeaderWriter();
         try {
@@ -1753,15 +1722,15 @@ public class TileCacheBuilder {
                 buffer[gridSize + i] = (byte) areas[i];
                 buffer[gridSize * 2 + i] = (byte) cons[i];
             }
-            baos.write(TileCacheCompressorFactory.get(cCompatibility).compress(buffer));
+            baos.write(buffer);
             return baos.toByteArray();
         } catch (IOException e) {
             throw new RuntimeException(e.getMessage(), e);
         }
     }
 
-    public TileCacheLayer decompressTileCacheLayer(TileCacheCompressor comp, byte[] compressed, ByteOrder order,
-            boolean cCompatibility) {
+    public TileCacheLayer decompressTileCacheLayer(byte[] compressed, ByteOrder order,
+                                                   boolean cCompatibility) {
         ByteBuffer buf = ByteBuffer.wrap(compressed);
         buf.order(order);
         TileCacheLayer layer = new TileCacheLayer();
@@ -1772,71 +1741,54 @@ public class TileCacheBuilder {
         }
 
         int gridSize = layer.header.width * layer.header.height;
-        byte[] grids = comp.decompress(compressed, buf.position(), compressed.length - buf.position(), gridSize * 3);
         layer.heights = new short[gridSize];
         layer.areas = new short[gridSize];
         layer.cons = new short[gridSize];
         layer.regs = new short[gridSize];
+        int go = buf.position();
         for (int i = 0; i < gridSize; i++) {
-            layer.heights[i] = (short) (grids[i] & 0xFF);
-            layer.areas[i] = (short) (grids[i + gridSize] & 0xFF);
-            layer.cons[i] = (short) (grids[i + gridSize * 2] & 0xFF);
+            layer.heights[i] = (short) (compressed[go + i] & 0xFF);
+            layer.areas[i] = (short) (compressed[go + i + gridSize] & 0xFF);
+            layer.cons[i] = (short) (compressed[go + i + gridSize * 2] & 0xFF);
         }
         return layer;
 
     }
 
-    public void markBoxArea(TileCacheLayer layer, float[] orig, float cs, float ch, Vector3f center, float[] extents,
-            float[] rotAux, int areaId) {
+    public void markBoxArea(TileCacheLayer layer, Vector3f orig, float cs, float ch, Vector3f center, Vector3f extents, float[] rotAux, int areaId) {
         int w = layer.header.width;
         int h = layer.header.height;
         float ics = 1.0f / cs;
         float ich = 1.0f / ch;
 
-        float cx = (center[0] - orig[0]) * ics;
-        float cz = (center[2] - orig[2]) * ics;
+        float cx = (center.x - orig.x) * ics;
+        float cz = (center.z - orig.z) * ics;
 
-        float maxr = 1.41f * Math.max(extents[0], extents[2]);
+        float maxr = 1.41f * Math.max(extents.x, extents.z);
         int minx = (int) Math.floor(cx - maxr * ics);
         int maxx = (int) Math.floor(cx + maxr * ics);
         int minz = (int) Math.floor(cz - maxr * ics);
         int maxz = (int) Math.floor(cz + maxr * ics);
-        int miny = (int) Math.floor((center[1] - extents[1] - orig[1]) * ich);
-        int maxy = (int) Math.floor((center[1] + extents[1] - orig[1]) * ich);
+        int miny = (int) Math.floor((center.y - extents.y - orig.y) * ich);
+        int maxy = (int) Math.floor((center.y + extents.y - orig.y) * ich);
 
-        if (maxx < 0)
-            return;
-        if (minx >= w)
-            return;
-        if (maxz < 0)
-            return;
-        if (minz >= h)
-            return;
+        minx = Math.max(minx, 0);
+        maxx = Math.min(maxx, w - 1);
+        minz = Math.max(minz, 0);
+        maxz = Math.min(maxz, h - 1);
 
-        if (minx < 0)
-            minx = 0;
-        if (maxx >= w)
-            maxx = w - 1;
-        if (minz < 0)
-            minz = 0;
-        if (maxz >= h)
-            maxz = h - 1;
-
-        float xhalf = extents[0] * ics + 0.5f;
-        float zhalf = extents[2] * ics + 0.5f;
+        float xhalf = extents.x * ics + 0.5f;
+        float zhalf = extents.z * ics + 0.5f;
         for (int z = minz; z <= maxz; ++z) {
             for (int x = minx; x <= maxx; ++x) {
                 float x2 = 2.0f * (x - cx);
                 float z2 = 2.0f * (z - cz);
                 float xrot = rotAux[1] * x2 + rotAux[0] * z2;
-                if (xrot > xhalf || xrot < -xhalf)
-                    continue;
+                if (xrot > xhalf || xrot < -xhalf) continue;
                 float zrot = rotAux[1] * z2 - rotAux[0] * x2;
-                if (zrot > zhalf || zrot < -zhalf)
-                    continue;
+                if (zrot > zhalf || zrot < -zhalf) continue;
                 int y = layer.heights[x + z * w];
-                if (y < miny || y > maxy)
-                    continue;
+                if (y < miny || y > maxy) continue;
                 layer.areas[x + z * w] = (short) areaId;
             }
         }

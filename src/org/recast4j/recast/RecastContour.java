@@ -657,8 +657,8 @@ public class RecastContour {
         ContourSet cset = new ContourSet();
 
         ctx.startTimer("CONTOURS");
-        RecastVectors.copy(cset.bmin, chf.bmin, 0);
-        RecastVectors.copy(cset.bmax, chf.bmax, 0);
+        cset.bmin.set(chf.bmin);
+        cset.bmax.set(chf.bmax);
         if (borderSize > 0) {
             // If the heightfield was build with bordersize, remove the offset.
             float pad = borderSize * chf.cs;

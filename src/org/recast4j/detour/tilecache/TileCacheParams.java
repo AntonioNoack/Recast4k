@@ -18,8 +18,10 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.tilecache;
 
+import org.joml.Vector3f;
+
 public class TileCacheParams {
-    public final float[] orig = new Vector3f();
+    public final Vector3f orig = new Vector3f();
     public float cs, ch;
     public int width, height;
     public float walkableHeight;

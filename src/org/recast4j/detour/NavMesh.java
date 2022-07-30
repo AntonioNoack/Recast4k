@@ -906,9 +906,7 @@ public class NavMesh {
                 continue;
             }
             // Make sure the location is on current mesh.
-            tile.data.verts[poly.verts[0] * 3] = nearestPt.x;
-            tile.data.verts[poly.verts[0] * 3 + 1] = nearestPt.y;
-            tile.data.verts[poly.verts[0] * 3 + 2] = nearestPt.z;
+            copy(tile.data.verts, poly.verts[0] * 3, nearestPt);
 
             // Link off-mesh connection to target poly.
             int idx = allocLink(tile);

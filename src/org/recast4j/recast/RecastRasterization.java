@@ -18,16 +18,16 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.recast;
 
+import org.joml.Vector3f;
+
 import static org.recast4j.recast.RecastConstants.SPAN_MAX_HEIGHT;
 
 public class RecastRasterization {
 
-    private static boolean overlapBounds(float[] amin, float[] amax, float[] bmin, float[] bmax) {
-        boolean overlap = true;
-        overlap = (amin[0] > bmax[0] || amax[0] < bmin[0]) ? false : overlap;
-        overlap = (amin[1] > bmax[1] || amax[1] < bmin[1]) ? false : overlap;
-        overlap = (amin[2] > bmax[2] || amax[2] < bmin[2]) ? false : overlap;
-        return overlap;
+    private static boolean overlapBounds(Vector3f amin, Vector3f amax, Vector3f bmin, Vector3f bmax) {
+        return !(amin.x > bmax.x) && !(amax.x < bmin.x) &&
+                !(amin.y > bmax.y) && !(amax.y < bmin.y) &&
+                !(amin.z > bmax.z) && !(amax.z < bmin.z);
     }
 
     /**
@@ -134,15 +134,15 @@ public class RecastRasterization {
                 n++;
             }
         }
-        return new int[] { m, n };
+        return new int[]{m, n};
     }
 
-    private static void rasterizeTri(float[] verts, int v0, int v1, int v2, int area, Heightfield hf, float[] bmin, float[] bmax,
-            float cs, float ics, float ich, int flagMergeThr) {
+    private static void rasterizeTri(float[] verts, int v0, int v1, int v2, int area, Heightfield hf, Vector3f bmin, Vector3f bmax,
+                                     float cs, float ics, float ich, int flagMergeThr) {
         int w = hf.width;
         int h = hf.height;
-        float[] tmin = new Vector3f(), tmax = new Vector3f();
-        float by = bmax[1] - bmin[1];
+        Vector3f tmin = new Vector3f(), tmax = new Vector3f();
+        float by = bmax.y - bmin.y;
 
         // Calculate the bounding box of the triangle.
         RecastVectors.copy(tmin, verts, v0 * 3);
@@ -157,8 +157,8 @@ public class RecastRasterization {
             return;
 
         // Calculate the footprint of the triangle on the grid's y-axis
-        int y0 = (int) ((tmin[2] - bmin[2]) * ics);
-        int y1 = (int) ((tmax[2] - bmin[2]) * ics);
+        int y0 = (int) ((tmin.z - bmin.z) * ics);
+        int y1 = (int) ((tmax.z - bmin.z) * ics);
         // use -1 rather than 0 to cut the polygon properly at the start of the tile
         y0 = RecastCommon.clamp(y0, -1, h - 1);
         y1 = RecastCommon.clamp(y1, 0, h - 1);
@@ -177,7 +177,7 @@ public class RecastRasterization {
 
         for (int y = y0; y <= y1; ++y) {
             // Clip polygon to row. Store the remaining polygon as well
-            float cz = bmin[2] + y * cs;
+            float cz = bmin.z + y * cs;
             int[] nvrowin = dividePoly(buf, in, nvIn, inrow, p1, cz + cs, 2);
             nvrow = nvrowin[0];
             nvIn = nvrowin[1];
@@ -199,8 +199,8 @@ public class RecastRasterization {
                 minX = Math.min(minX, v);
                 maxX = Math.max(maxX, v);
             }
-            int x0 = (int) ((minX - bmin[0]) * ics);
-            int x1 = (int) ((maxX - bmin[0]) * ics);
+            int x0 = (int) ((minX - bmin.x) * ics);
+            int x1 = (int) ((maxX - bmin.x) * ics);
             if (x1 < 0 || x0 >= w) {
                 continue;
             }
@@ -210,7 +210,7 @@ public class RecastRasterization {
             int nv, nv2 = nvrow;
             for (int x = x0; x <= x1; ++x) {
                 // Clip polygon to column. store the remaining polygon as well
-                float cx = bmin[0] + x * cs;
+                float cx = bmin.x + x * cs;
                 int[] nvnv2 = dividePoly(buf, inrow, nv2, p1, p2, cx + cs, 0);
                 nv = nvnv2[0];
                 nv2 = nvnv2[1];
@@ -231,8 +231,8 @@ public class RecastRasterization {
                     smin = Math.min(smin, buf[p1 + i * 3 + 1]);
                     smax = Math.max(smax, buf[p1 + i * 3 + 1]);
                 }
-                smin -= bmin[1];
-                smax -= bmin[1];
+                smin -= bmin.y;
+                smax -= bmin.y;
                 // Skip the span if it is outside the heightfield bbox
                 if (smax < 0.0f)
                     continue;
@@ -259,7 +259,7 @@ public class RecastRasterization {
      * @see Heightfield
      */
     public static void rasterizeTriangle(Heightfield solid, float[] verts, int v0, int v1, int v2, int area, int flagMergeThr,
-            Telemetry ctx) {
+                                         Telemetry ctx) {
 
         ctx.startTimer("RASTERIZE_TRIANGLES");
 
@@ -276,7 +276,7 @@ public class RecastRasterization {
      * @see Heightfield
      */
     public static void rasterizeTriangles(Heightfield solid, float[] verts, int[] tris, int[] areas, int nt, int flagMergeThr,
-            Telemetry ctx) {
+                                          Telemetry ctx) {
 
         ctx.startTimer("RASTERIZE_TRIANGLES");
 
@@ -300,7 +300,7 @@ public class RecastRasterization {
      * @see Heightfield
      */
     public static void rasterizeTriangles(Heightfield solid, float[] verts, int[] areas, int nt, int flagMergeThr,
-            Telemetry ctx) {
+                                          Telemetry ctx) {
         ctx.startTimer("RASTERIZE_TRIANGLES");
 
         float ics = 1.0f / solid.cs;

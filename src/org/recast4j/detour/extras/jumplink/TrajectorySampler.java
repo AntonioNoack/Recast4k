@@ -1,7 +1,9 @@
 package org.recast4j.detour.extras.jumplink;
 
+import static org.recast4j.detour.DetourCommon.overlapRange;
 import static org.recast4j.detour.DetourCommon.vDist2D;
 
+import org.joml.Vector3f;
 import org.recast4j.recast.Heightfield;
 import org.recast4j.recast.Span;
 
@@ -28,12 +30,12 @@ class TrajectorySampler {
 
     private boolean sampleTrajectory(JumpLinkBuilderConfig acfg, Heightfield solid, Vector3f pa, Vector3f pb, Trajectory tra) {
         float cs = Math.min(acfg.cellSize, acfg.cellHeight);
-        float d = vDist2D(pa, pb) + Math.abs(pa[1] - pb[1]);
+        float d = vDist2D(pa, pb) + Math.abs(pa.y - pb.y);
         int nsamples = Math.max(2, (int) Math.ceil(d / cs));
         for (int i = 0; i < nsamples; ++i) {
             float u = (float) i / (float) (nsamples - 1);
-            float[] p = tra.apply(pa, pb, u);
-            if (checkHeightfieldCollision(solid, p[0], p[1] + acfg.groundTolerance, p[1] + acfg.agentHeight, p[2])) {
+            Vector3f p = tra.apply(pa, pb, u);
+            if (checkHeightfieldCollision(solid, p.x, p.y + acfg.groundTolerance, p.y + acfg.agentHeight, p.z)) {
                 return false;
             }
         }
@@ -45,9 +47,9 @@ class TrajectorySampler {
         int h = solid.height;
         float cs = solid.cs;
         float ch = solid.ch;
-        float[] orig = solid.bmin;
-        int ix = (int) Math.floor((x - orig[0]) / cs);
-        int iz = (int) Math.floor((z - orig[2]) / cs);
+        Vector3f orig = solid.bmin;
+        int ix = (int) Math.floor((x - orig.x) / cs);
+        int iz = (int) Math.floor((z - orig.z) / cs);
 
         if (ix < 0 || iz < 0 || ix > w || iz > h) {
             return false;
@@ -59,8 +61,8 @@ class TrajectorySampler {
         }
 
         while (s != null) {
-            float symin = orig[1] + s.smin * ch;
-            float symax = orig[1] + s.smax * ch;
+            float symin = orig.y + s.smin * ch;
+            float symax = orig.y + s.smax * ch;
             if (overlapRange(ymin, ymax, symin, symax)) {
                 return true;
             }
@@ -68,10 +70,6 @@ class TrajectorySampler {
         }
 
         return false;
-    }
-
-    private boolean overlapRange(float amin, float amax, float bmin, float bmax) {
-        return (amin > bmax || amax < bmin) ? false : true;
     }
 
 }

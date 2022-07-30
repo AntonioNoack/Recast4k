@@ -18,6 +18,8 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour;
 
+import org.joml.Vector3f;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,7 +30,7 @@ public class RaycastHit {
     /** The hit parameter. (Float.MAX_VALUE if no wall hit.) */
     public float t;
     /** hitNormal The normal of the nearest wall hit. [(x, y, z)] */
-    public final float[] hitNormal = new Vector3f();
+    public final Vector3f hitNormal = new Vector3f();
     /** Visited polygons. */
     public final List<Long> path = new ArrayList<>();
     /** The cost of the path until hit. */

@@ -18,17 +18,15 @@ freely, subject to the following restrictions:
 
 package org.recast4j.dynamic.io;
 
+import org.joml.Vector3f;
+import org.recast4j.detour.io.IOUtils;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-import org.joml.Vector3f;
-import org.recast4j.detour.io.IOUtils;
-
 public class VoxelFileReader {
-
-    private final LZ4VoxelTileCompressor compressor = new LZ4VoxelTileCompressor();
 
     public VoxelFile read(InputStream stream) throws IOException {
         ByteBuffer buf = IOUtils.toByteBuffer(stream);
@@ -43,7 +41,6 @@ public class VoxelFileReader {
         }
         file.version = buf.getInt();
         boolean isExportedFromAstar = (file.version & VoxelFile.VERSION_EXPORTER_MASK) == 0;
-        boolean compression = (file.version & VoxelFile.VERSION_COMPRESSION_MASK) == VoxelFile.VERSION_COMPRESSION_LZ4;
         file.walkableRadius = buf.getFloat();
         file.walkableHeight = buf.getFloat();
         file.walkableClimb = buf.getFloat();
@@ -68,9 +65,7 @@ public class VoxelFileReader {
         file.useTiles = buf.get() != 0;
         file.tileSizeX = buf.getInt();
         file.tileSizeZ = buf.getInt();
-        file.rotation[0] = buf.getFloat();
-        file.rotation[1] = buf.getFloat();
-        file.rotation[2] = buf.getFloat();
+        file.rotation.set(buf.getFloat(), buf.getFloat(), buf.getFloat());
         file.bounds[0] = buf.getFloat();
         file.bounds[1] = buf.getFloat();
         file.bounds[2] = buf.getFloat();
@@ -93,14 +88,8 @@ public class VoxelFileReader {
             int width = buf.getInt();
             int depth = buf.getInt();
             int borderSize = buf.getInt();
-            Vector3f boundsMin = new Vector3f();
-            boundsMin[0] = buf.getFloat();
-            boundsMin[1] = buf.getFloat();
-            boundsMin[2] = buf.getFloat();
-            Vector3f boundsMax = new Vector3f();
-            boundsMax[0] = buf.getFloat();
-            boundsMax[1] = buf.getFloat();
-            boundsMax[2] = buf.getFloat();
+            Vector3f boundsMin = new Vector3f(buf.getFloat(), buf.getFloat(), buf.getFloat());
+            Vector3f boundsMax = new Vector3f(buf.getFloat(), buf.getFloat(), buf.getFloat());
             if (isExportedFromAstar) {
                 // bounds are local
                 boundsMin.x += file.bounds[0];
@@ -116,9 +105,6 @@ public class VoxelFileReader {
             int position = buf.position();
             byte[] bytes = new byte[voxelSize];
             buf.get(bytes);
-            if (compression) {
-                bytes = compressor.decompress(bytes);
-            }
             ByteBuffer data = ByteBuffer.wrap(bytes);
             data.order(buf.order());
             file.addTile(new VoxelTile(tileX, tileZ, width, depth, boundsMin, boundsMax, cellSize, cellHeight, borderSize, data));

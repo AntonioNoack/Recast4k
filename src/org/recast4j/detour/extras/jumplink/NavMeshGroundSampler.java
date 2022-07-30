@@ -3,6 +3,7 @@ package org.recast4j.detour.extras.jumplink;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.joml.Vector3f;
 import org.recast4j.detour.MeshTile;
 import org.recast4j.detour.NavMesh;
 import org.recast4j.detour.NavMeshBuilder;
@@ -27,7 +28,7 @@ class NavMeshGroundSampler extends AbstractGroundSampler {
 
         @Override
         public float getCost(Vector3f pa, Vector3f pb, long prevRef, MeshTile prevTile, Poly prevPoly, long curRef,
-                MeshTile curTile, Poly curPoly, long nextRef, MeshTile nextTile, Poly nextPoly) {
+                             MeshTile curTile, Poly curPoly, long nextRef, MeshTile nextTile, Poly nextPoly) {
             return 0;
         }
 
@@ -64,12 +65,12 @@ class NavMeshGroundSampler extends AbstractGroundSampler {
         return new NavMeshQuery(new NavMesh(NavMeshBuilder.createNavMeshData(params), params.nvp, 0));
     }
 
-    private Tupple2<Boolean, Float> getNavMeshHeight(NavMeshQuery navMeshQuery, float[] pt, float cs,
+    private Tupple2<Boolean, Float> getNavMeshHeight(NavMeshQuery navMeshQuery, Vector3f pt, float cs,
             float heightRange) {
-        Vector3f halfExtents = new float[] { cs, heightRange, cs };
-        float maxHeight = pt[1] + heightRange;
+        Vector3f halfExtents = new Vector3f(cs, heightRange, cs);
+        float maxHeight = pt.y + heightRange;
         AtomicBoolean found = new AtomicBoolean();
-        AtomicReference<Float> minHeight = new AtomicReference<>(pt[1]);
+        AtomicReference<Float> minHeight = new AtomicReference<>(pt.y);
         navMeshQuery.queryPolygons(pt, halfExtents, filter, (tile, poly, ref) -> {
             Result<Float> h = navMeshQuery.getPolyHeight(ref, pt);
             if (h.succeeded()) {
@@ -83,7 +84,7 @@ class NavMeshGroundSampler extends AbstractGroundSampler {
         if (found.get()) {
             return new Tupple2<>(true, minHeight.get());
         }
-        return new Tupple2<>(false, pt[1]);
+        return new Tupple2<>(false, pt.y);
     }
 
 }

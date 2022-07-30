@@ -27,10 +27,6 @@ public class VectorPtr {
     private final float[] array;
     private final int index;
 
-    public VectorPtr(float[] array) {
-        this(array, 0);
-    }
-
     public VectorPtr(float[] array, int index) {
         this.array = array;
         this.index = index;

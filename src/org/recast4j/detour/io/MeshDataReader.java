@@ -17,21 +17,14 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.io;
 
+import org.recast4j.detour.*;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-import org.recast4j.detour.BVNode;
-import org.recast4j.detour.MeshData;
-import org.recast4j.detour.MeshHeader;
-import org.recast4j.detour.OffMeshConnection;
-import org.recast4j.detour.Poly;
-import org.recast4j.detour.PolyDetail;
-
 public class MeshDataReader {
-
-    final static int DT_POLY_DETAIL_SIZE = 10;
 
     public MeshData read(InputStream stream, int maxVertPerPoly) throws IOException {
         ByteBuffer buf = IOUtils.toByteBuffer(stream);
@@ -87,12 +80,8 @@ public class MeshDataReader {
         header.walkableHeight = buf.getFloat();
         header.walkableRadius = buf.getFloat();
         header.walkableClimb = buf.getFloat();
-        for (int j = 0; j < 3; j++) {
-            header.bmin[j] = buf.getFloat();
-        }
-        for (int j = 0; j < 3; j++) {
-            header.bmax[j] = buf.getFloat();
-        }
+        header.bmin.set(buf.getFloat(), buf.getFloat(), buf.getFloat());
+        header.bmax.set(buf.getFloat(), buf.getFloat(), buf.getFloat());
         header.bvQuantFactor = buf.getFloat();
         data.verts = readVerts(buf, header.vertCount);
         data.polys = readPolys(buf, header, maxVertPerPoly);
@@ -169,21 +158,8 @@ public class MeshDataReader {
         BVNode[] nodes = new BVNode[header.bvNodeCount];
         for (int i = 0; i < nodes.length; i++) {
             nodes[i] = new BVNode();
-            if (header.version < MeshHeader.DT_NAVMESH_VERSION_RECAST4J_32BIT_BVTREE) {
-                for (int j = 0; j < 3; j++) {
-                    nodes[i].bmin[j] = buf.getShort() & 0xFFFF;
-                }
-                for (int j = 0; j < 3; j++) {
-                    nodes[i].bmax[j] = buf.getShort() & 0xFFFF;
-                }
-            } else {
-                for (int j = 0; j < 3; j++) {
-                    nodes[i].bmin[j] = buf.getInt();
-                }
-                for (int j = 0; j < 3; j++) {
-                    nodes[i].bmax[j] = buf.getInt();
-                }
-            }
+            nodes[i].bmin.set(buf.getInt(), buf.getInt(), buf.getInt());
+            nodes[i].bmax.set(buf.getInt(), buf.getInt(), buf.getInt());
             nodes[i].i = buf.getInt();
         }
         return nodes;
@@ -193,9 +169,8 @@ public class MeshDataReader {
         OffMeshConnection[] cons = new OffMeshConnection[header.offMeshConCount];
         for (int i = 0; i < cons.length; i++) {
             cons[i] = new OffMeshConnection();
-            for (int j = 0; j < 6; j++) {
-                cons[i].pos[j] = buf.getFloat();
-            }
+            cons[i].posA.set(buf.getFloat(), buf.getFloat(), buf.getFloat());
+            cons[i].posB.set(buf.getFloat(), buf.getFloat(), buf.getFloat());
             cons[i].rad = buf.getFloat();
             cons[i].poly = buf.getShort() & 0xFFFF;
             cons[i].flags = buf.get() & 0xFF;

@@ -18,6 +18,8 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.tilecache;
 
+import org.joml.Vector3f;
+
 public class TileCacheLayerHeader {
 
     public static final int DT_TILECACHE_MAGIC = 'D' << 24 | 'T' << 16 | 'L' << 8 | 'R'; /// < 'DTLR';

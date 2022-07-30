@@ -403,20 +403,9 @@ public class ObstacleAvoidanceQuery {
         v[2] *= d;
     }
 
-    // vector normalization that ignores the y-component.
-    float[] dtRotate2D(float[] v, float ang) {
-        float[] dest = new Vector3f();
-        float c = (float) Math.cos(ang);
-        float s = (float) Math.sin(ang);
-        dest[0] = v[0] * c - v[2] * s;
-        dest[2] = v[0] * s + v[2] * c;
-        dest[1] = v[1];
-        return dest;
-    }
-
     static final float DT_PI = 3.14159265f;
 
-    public Tupple2<Integer, float[]> sampleVelocityAdaptive(Vector3f pos, float rad, float vmax, Vector3f vel,
+    public Tupple2<Integer, Vector3f> sampleVelocityAdaptive(Vector3f pos, float rad, float vmax, Vector3f vel,
                                                             Vector3f dvel, ObstacleAvoidanceParams params, ObstacleAvoidanceDebugData debug) {
         prepare(pos, dvel);
         m_params = params;
@@ -445,10 +434,10 @@ public class ObstacleAvoidanceQuery {
         // desired direction
         float[] ddir = {dvel.x, dvel.y, dvel.z, 0f, 0f, 0f};
         dtNormalize2D(ddir);
-        float[] rotated = dtRotate2D(ddir, da * 0.5f); // rotated by da/2
-        ddir[3] = rotated[0];
-        ddir[4] = rotated[1];
-        ddir[5] = rotated[2];
+        Vector3f rotated = new Vector3f(ddir).rotateY(da * 0.5f); // rotated by da/2
+        ddir[3] = rotated.x;
+        ddir[4] = rotated.y;
+        ddir[5] = rotated.z;
 
         int npat = 1;
         for (int j = 0; j < nr; ++j) {

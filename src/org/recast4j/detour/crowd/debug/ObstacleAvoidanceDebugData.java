@@ -18,7 +18,10 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.crowd.debug;
 
+import org.joml.Vector3f;
+
 import static org.recast4j.detour.DetourCommon.clamp;
+import static org.recast4j.detour.DetourCommon.copy;
 
 public class ObstacleAvoidanceDebugData {
     int m_nsamples;
@@ -68,12 +71,9 @@ public class ObstacleAvoidanceDebugData {
         normalizeArray(m_tpen, m_nsamples);
     }
 
-    public void addSample(float[] vel, float ssize, float pen, float vpen, float vcpen, float spen, float tpen) {
-        if (m_nsamples >= m_maxSamples)
-            return;
-        m_vel[m_nsamples * 3] = vel[0];
-        m_vel[m_nsamples * 3 + 1] = vel[1];
-        m_vel[m_nsamples * 3 + 2] = vel[2];
+    public void addSample(Vector3f vel, float ssize, float pen, float vpen, float vcpen, float spen, float tpen) {
+        if (m_nsamples >= m_maxSamples) return;
+        copy(m_vel, m_nsamples * 3, vel);
         m_ssize[m_nsamples] = ssize;
         m_pen[m_nsamples] = pen;
         m_vpen[m_nsamples] = vpen;
@@ -87,11 +87,9 @@ public class ObstacleAvoidanceDebugData {
         return m_nsamples;
     }
 
-    public float[] getSampleVelocity(int i) {
-        float[] vel = new Vector3f();
-        vel[0] = m_vel[i * 3];
-        vel[1] = m_vel[i * 3 + 1];
-        vel[2] = m_vel[i * 3 + 2];
+    public Vector3f getSampleVelocity(int i) {
+        Vector3f vel = new Vector3f();
+        copy(vel, m_vel, i*3);
         return vel;
     }
 

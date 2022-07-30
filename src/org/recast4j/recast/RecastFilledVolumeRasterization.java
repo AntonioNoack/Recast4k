@@ -45,9 +45,9 @@ public class RecastFilledVolumeRasterization {
                                         Telemetry ctx) {
         ctx.startTimer("RASTERIZE_CAPSULE");
         float[] bounds = {Math.min(start.x, end.x) - radius, Math.min(start.y, end.y) - radius,
-                Math.min(start[2], end[2]) - radius, Math.max(start.x, end.x) + radius, Math.max(start.y, end.y) + radius,
-                Math.max(start[2], end[2]) + radius};
-        float[] axis = {end.x - start.x, end.y - start.y, end[2] - start[2]};
+                Math.min(start.z, end.z) - radius, Math.max(start.x, end.x) + radius, Math.max(start.y, end.y) + radius,
+                Math.max(start.z, end.z) + radius};
+        Vector3f axis = new Vector3f(end).sub(start);
         rasterizationFilledShape(hf, bounds, area, flagMergeThr,
                 rectangle -> intersectCapsule(rectangle, start, end, axis, radius * radius));
         ctx.stopTimer("RASTERIZE_CAPSULE");
@@ -57,9 +57,9 @@ public class RecastFilledVolumeRasterization {
                                          Telemetry ctx) {
         ctx.startTimer("RASTERIZE_CYLINDER");
         float[] bounds = {Math.min(start.x, end.x) - radius, Math.min(start.y, end.y) - radius,
-                Math.min(start[2], end[2]) - radius, Math.max(start.x, end.x) + radius, Math.max(start.y, end.y) + radius,
-                Math.max(start[2], end[2]) + radius};
-        float[] axis = {end.x - start.x, end.y - start.y, end[2] - start[2]};
+                Math.min(start.z, end.z) - radius, Math.max(start.x, end.x) + radius, Math.max(start.y, end.y) + radius,
+                Math.max(start.z, end.z) + radius};
+        Vector3f axis = new Vector3f(end).sub(start);
         rasterizationFilledShape(hf, bounds, area, flagMergeThr,
                 rectangle -> intersectCylinder(rectangle, start, end, axis, radius * radius));
         ctx.stopTimer("RASTERIZE_CYLINDER");
@@ -125,13 +125,13 @@ public class RecastFilledVolumeRasterization {
             int a = triangles[i] * 3;
             int b = triangles[i + 1] * 3;
             int c = triangles[i + 2] * 3;
-            float[] ab = {vertices[b] - vertices[a], vertices[b + 1] - vertices[a + 1], vertices[b + 2] - vertices[a + 2]};
-            float[] ac = {vertices[c] - vertices[a], vertices[c + 1] - vertices[a + 1], vertices[c + 2] - vertices[a + 2]};
-            float[] bc = {vertices[c] - vertices[b], vertices[c + 1] - vertices[b + 1], vertices[c + 2] - vertices[b + 2]};
-            float[] ca = {vertices[a] - vertices[c], vertices[a + 1] - vertices[c + 1], vertices[a + 2] - vertices[c + 2]};
+            Vector3f ab = new Vector3f(vertices[b] - vertices[a], vertices[b + 1] - vertices[a + 1], vertices[b + 2] - vertices[a + 2]);
+            Vector3f ac = new Vector3f(vertices[c] - vertices[a], vertices[c + 1] - vertices[a + 1], vertices[c + 2] - vertices[a + 2]);
+            Vector3f bc = new Vector3f(vertices[c] - vertices[b], vertices[c + 1] - vertices[b + 1], vertices[c + 2] - vertices[b + 2]);
+            Vector3f ca = new Vector3f(vertices[a] - vertices[c], vertices[a + 1] - vertices[c + 1], vertices[a + 2] - vertices[c + 2]);
             plane(planes, i, ab, ac, vertices, a);
-            plane(planes, i + 1, planes[i], bc, vertices, b);
-            plane(planes, i + 2, planes[i], ca, vertices, c);
+            plane(planes, i + 1, new Vector3f(planes[i]), bc, vertices, b);
+            plane(planes, i + 2, new Vector3f(planes[i]), ca, vertices, c);
 
             float s = 1.0f / (vertices[a] * planes[i + 1][0] + vertices[a + 1] * planes[i + 1][1]
                     + vertices[a + 2] * planes[i + 1][2] - planes[i + 1][3]);
@@ -158,8 +158,8 @@ public class RecastFilledVolumeRasterization {
         ctx.stopTimer("RASTERIZE_CONVEX");
     }
 
-    private static void plane(float[][] planes, int p, float[] v1, float[] v2, float[] vertices, int vert) {
-        RecastVectors.cross(planes[p], v1, v2);
+    private static void plane(float[][] planes, int p, Vector3f v1, Vector3f v2, float[] vertices, int vert) {
+        RecastVectors.cross(new Vector3f(planes[p]), v1, v2);
         planes[p][3] = planes[p][0] * vertices[vert] + planes[p][1] * vertices[vert + 1] + planes[p][2] * vertices[vert + 2];
     }
 
@@ -243,15 +243,15 @@ public class RecastFilledVolumeRasterization {
     }
 
     private static float[] intersectCylinder(float[] rectangle, Vector3f start, Vector3f end, Vector3f axis, float radiusSqr) {
-        float[] s = rayCylinderIntersection(new float[]{clamp(start[0], rectangle[0], rectangle[2]), rectangle[4],
-                clamp(start[2], rectangle[1], rectangle[3])}, start, axis, radiusSqr);
-        s = rayCylinderIntersection(new float[]{clamp(end[0], rectangle[0], rectangle[2]), rectangle[4],
-                clamp(end[2], rectangle[1], rectangle[3])}, start, axis, radiusSqr);
-        float axisLen2dSqr = axis[0] * axis[0] + axis[2] * axis[2];
+        float[] s = rayCylinderIntersection(new Vector3f(clamp(start.x, rectangle[0], rectangle[2]), rectangle[4],
+                clamp(start.z, rectangle[1], rectangle[3])), start, axis, radiusSqr);
+        s = rayCylinderIntersection(new Vector3f(clamp(end.x, rectangle[0], rectangle[2]), rectangle[4],
+                clamp(end.z, rectangle[1], rectangle[3])), start, axis, radiusSqr);
+        float axisLen2dSqr = axis.x * axis.x + axis.z * axis.z;
         if (axisLen2dSqr > EPSILON) {
             s = slabsCylinderIntersection(rectangle, start, end, axis, radiusSqr, s);
         }
-        if (axis[1] * axis[1] > EPSILON) {
+        if (axis.y * axis.y > EPSILON) {
             float[][] rectangleOnStartPlane = new float[4][3];
             float[][] rectangleOnEndPlane = new float[4][3];
             float ds = axis.dot(start);
@@ -335,11 +335,11 @@ public class RecastFilledVolumeRasterization {
         return rayCylinderIntersection(zSlabRayIntersection(rectangle, start, axis, z), start, axis, radiusSqr);
     }
 
-    private static float[] zSlabRayIntersection(float[] rectangle, Vector3f start, Vector3f direction, float z) {
+    private static Vector3f zSlabRayIntersection(float[] rectangle, Vector3f start, Vector3f direction, float z) {
         // 2d intersection of plane and segment
         float t = (z - start.z) / direction.z;
         float x = clamp(start.x + t * direction.x, rectangle[0], rectangle[2]);
-        return new float[]{x, rectangle[4], z};
+        return new Vector3f(x, rectangle[4], z);
     }
 
     // Based on Christer Ericsons's "Real-Time Collision Detection"
@@ -427,7 +427,8 @@ public class RecastFilledVolumeRasterization {
             point.z = ((i & 2) == 0) ? rectangle[1] : rectangle[3];
             for (int j = 0; j < 6; j++) {
                 if (Math.abs(planes[j][1]) > EPSILON) {
-                    float dotNormalPoint = dot(planes[j], point);
+                    float[] plane = planes[j];
+                    float dotNormalPoint = point.dot(plane[0], plane[1], plane[2]);
                     float t = (planes[j][3] - dotNormalPoint) / planes[j][1];
                     float y = point.y + t;
                     boolean valid = true;
@@ -619,10 +620,10 @@ public class RecastFilledVolumeRasterization {
         return Math.max(Math.min(max, v), min);
     }
 
-    private static boolean overlapBounds(float[] amin, float[] amax, float[] bounds) {
-        return !(amin[0] > bounds[3]) && !(amax[0] < bounds[0]) &&
-                !(amin[1] > bounds[4]) &&
-                !(amin[2] > bounds[5]) && !(amax[2] < bounds[2]);
+    private static boolean overlapBounds(Vector3f amin, Vector3f amax, float[] bounds) {
+        return !(amin.x > bounds[3]) && !(amax.x < bounds[0]) &&
+                !(amin.y > bounds[4]) &&
+                !(amin.z > bounds[5]) && !(amax.z < bounds[2]);
     }
 
 }

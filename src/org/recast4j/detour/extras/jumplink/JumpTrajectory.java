@@ -1,5 +1,7 @@
 package org.recast4j.detour.extras.jumplink;
 
+import org.joml.Vector3f;
+
 public class JumpTrajectory implements Trajectory {
 
     private final float jumpHeight;
@@ -9,9 +11,12 @@ public class JumpTrajectory implements Trajectory {
     }
 
     @Override
-    public float[] apply(Vector3f start, Vector3f end, float u) {
-        return new float[] { lerp(start[0], end[0], u), interpolateHeight(start[1], end[1], u),
-                lerp(start[2], end[2], u) };
+    public Vector3f apply(Vector3f start, Vector3f end, float u) {
+        return new Vector3f(
+                lerp(start.x, end.x, u),
+                interpolateHeight(start.y, end.y, u),
+                lerp(start.z, end.z, u)
+        );
     }
 
     private float interpolateHeight(float ys, float ye, float u) {

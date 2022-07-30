@@ -27,7 +27,6 @@ import org.joml.Vector3f;
 public class OffMeshConnection {
     /** The endpoints of the connection. [(ax, ay, az, bx, by, bz)] */
     public Vector3f posA, posB;
-    private float[] pos = new float[6];
     /** The radius of the endpoints. [Limit: >= 0] */
     public float rad;
     /** The polygon reference of the connection within the tile. */

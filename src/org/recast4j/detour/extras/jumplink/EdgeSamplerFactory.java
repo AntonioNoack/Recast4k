@@ -1,21 +1,19 @@
 package org.recast4j.detour.extras.jumplink;
 
+import org.joml.Vector3f;
+
 class EdgeSamplerFactory {
 
     EdgeSampler get(JumpLinkBuilderConfig acfg, JumpLinkType type, Edge edge) {
-        EdgeSampler es = null;
         switch (type) {
-        case EDGE_JUMP:
-            es = initEdgeJumpSampler(acfg, edge);
-            break;
-        case EDGE_CLIMB_DOWN:
-            es = initClimbDownSampler(acfg, edge);
-            break;
-        case EDGE_JUMP_OVER:
-        default:
-            throw new IllegalArgumentException("Unsupported jump type " + type);
+            case EDGE_JUMP:
+                return initEdgeJumpSampler(acfg, edge);
+            case EDGE_CLIMB_DOWN:
+                return initClimbDownSampler(acfg, edge);
+            case EDGE_JUMP_OVER:
+            default:
+                throw new IllegalArgumentException("Unsupported jump type " + type);
         }
-        return es;
     }
 
 
@@ -23,8 +21,8 @@ class EdgeSamplerFactory {
 
         EdgeSampler es = new EdgeSampler(edge, new JumpTrajectory(acfg.jumpHeight));
         es.start.height = acfg.agentClimb * 2;
-        float[] offset = new Vector3f();
-        trans2d(offset, es.az, es.ay, new float[] { acfg.startDistance, -acfg.agentClimb });
+        Vector3f offset = new Vector3f();
+        trans2d(offset, es.az, es.ay, acfg.startDistance, -acfg.agentClimb);
         vadd(es.start.p, edge.sp, offset);
         vadd(es.start.q, edge.sq, offset);
 
@@ -35,7 +33,7 @@ class EdgeSamplerFactory {
         for (int j = 0; j < nsamples; ++j) {
             float v = (float) j / (float) (nsamples - 1);
             float ox = 2 * acfg.agentRadius + dx * v;
-            trans2d(offset, es.az, es.ay, new float[] { ox, acfg.minHeight });
+            trans2d(offset, es.az, es.ay, ox, acfg.minHeight);
             GroundSegment end = new GroundSegment();
             end.height = acfg.heightRange;
             vadd(end.p, edge.sp, offset);
@@ -48,12 +46,12 @@ class EdgeSamplerFactory {
     private EdgeSampler initClimbDownSampler(JumpLinkBuilderConfig acfg, Edge edge) {
         EdgeSampler es = new EdgeSampler(edge, new ClimbTrajectory());
         es.start.height = acfg.agentClimb * 2;
-        float[] offset = new Vector3f();
-        trans2d(offset, es.az, es.ay, new float[] { acfg.startDistance, -acfg.agentClimb });
+        Vector3f offset = new Vector3f();
+        trans2d(offset, es.az, es.ay, acfg.startDistance, -acfg.agentClimb);
         vadd(es.start.p, edge.sp, offset);
         vadd(es.start.q, edge.sq, offset);
 
-        trans2d(offset, es.az, es.ay, new float[] { acfg.endDistance, acfg.minHeight });
+        trans2d(offset, es.az, es.ay, acfg.endDistance, acfg.minHeight);
         GroundSegment end = new GroundSegment();
         end.height = acfg.heightRange;
         vadd(end.p, edge.sp, offset);
@@ -62,16 +60,14 @@ class EdgeSamplerFactory {
         return es;
     }
 
-    private void vadd(float[] dest, float[] v1, float[] v2) {
-        dest[0] = v1[0] + v2[0];
-        dest[1] = v1[1] + v2[1];
-        dest[2] = v1[2] + v2[2];
+    private void vadd(Vector3f dest, Vector3f v1, Vector3f v2) {
+        dest.set(v1).add(v2);
     }
 
-    private void trans2d(float[] dst, float[] ax, float[] ay, float[] pt) {
-        dst[0] = ax[0] * pt[0] + ay[0] * pt[1];
-        dst[1] = ax[1] * pt[0] + ay[1] * pt[1];
-        dst[2] = ax[2] * pt[0] + ay[2] * pt[1];
+    private void trans2d(Vector3f dst, Vector3f ax, Vector3f ay, float pt0, float pt1) {
+        dst.x = ax.x * pt0 + ay.x * pt1;
+        dst.y = ax.y * pt0 + ay.y * pt1;
+        dst.z = ax.z * pt0 + ay.z * pt1;
     }
 
 }

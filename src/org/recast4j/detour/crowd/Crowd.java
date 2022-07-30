@@ -105,7 +105,7 @@ import static org.recast4j.detour.DetourCommon.*;
  * movement. There is a limit of 256 polygons in the path corridor. So it is not meant to provide automatic pathfinding
  * services over long distances.
  *
- * @see dtAllocCrowd(), dtFreeCrowd(), init(), dtCrowdAgent
+ * see dtAllocCrowd(), dtFreeCrowd(), init(), dtCrowdAgent
  */
 public class Crowd {
 
@@ -135,7 +135,7 @@ public class Crowd {
     private final ObstacleAvoidanceParams[] m_obstacleQueryParams = new ObstacleAvoidanceParams[DT_CROWD_MAX_OBSTAVOIDANCE_PARAMS];
     private final ObstacleAvoidanceQuery m_obstacleQuery;
     private ProximityGrid m_grid;
-    private final float[] m_ext = new Vector3f();
+    private final Vector3f m_ext = new Vector3f();
     private final QueryFilter[] m_filters = new QueryFilter[DT_CROWD_MAX_QUERY_FILTER_TYPE];
     private NavMeshQuery navQuery;
     private NavMesh navMesh;
@@ -207,10 +207,8 @@ public class Crowd {
     /**
      * Adds a new agent to the crowd.
      *
-     * @param pos
-     *            The requested position of the agent. [(x, y, z)]
-     * @param params
-     *            The configutation of the agent.
+     * @param pos    The requested position of the agent. [(x, y, z)]
+     * @param params The configutation of the agent.
      * @return The newly created agent object
      */
     public CrowdAgent addAgent(Vector3f pos, CrowdAgentParams params) {
@@ -251,17 +249,15 @@ public class Crowd {
     /**
      * Removes the agent from the crowd.
      *
-     * @param agent
-     *            Agent to be removed
+     * @param agent Agent to be removed
      */
     public void removeAgent(CrowdAgent agent) {
         m_agents.remove(agent);
     }
 
-    private boolean requestMoveTargetReplan(CrowdAgent ag, long ref, Vector3f pos) {
+    private void requestMoveTargetReplan(CrowdAgent ag, long ref, Vector3f pos) {
         ag.setTarget(ref, pos);
         ag.targetReplan = true;
-        return true;
     }
 
     /// Submits a new move request for the specified agent.
@@ -276,10 +272,7 @@ public class Crowd {
     ///
     /// The request will be processed during the next #update().
     public boolean requestMoveTarget(CrowdAgent agent, long ref, Vector3f pos) {
-        if (ref == 0) {
-            return false;
-        }
-
+        if (ref == 0) return false;
         // Initialize request.
         agent.setTarget(ref, pos);
         agent.targetReplan = false;
@@ -290,14 +283,13 @@ public class Crowd {
     /// @param[in] idx The agent index. [Limits: 0 <= value < #getAgentCount()]
     /// @param[in] vel The movement velocity. [(x, y, z)]
     /// @return True if the request was successfully submitted.
-    public boolean requestMoveVelocity(CrowdAgent agent, float[] vel) {
+    public boolean requestMoveVelocity(CrowdAgent agent, Vector3f vel) {
         // Initialize request.
         agent.targetRef = 0;
-        copy(agent.targetPos, vel);
+        agent.targetPos.set(vel);
         agent.targetPathQueryResult = null;
         agent.targetReplan = false;
         agent.targetState = MoveRequestState.DT_CROWDAGENT_TARGET_VELOCITY;
-
         return true;
     }
 
@@ -324,7 +316,7 @@ public class Crowd {
         return new ArrayList<>(m_agents);
     }
 
-    public float[] getQueryExtents() {
+    public Vector3f getQueryExtents() {
         return m_ext;
     }
 
@@ -410,7 +402,7 @@ public class Crowd {
             boolean replan = false;
 
             // First check that the current location is valid.
-            float[] agentPos = new Vector3f();
+            Vector3f agentPos = new Vector3f();
             long agentRef = ag.corridor.getFirstPoly();
             copy(agentPos, ag.npos);
             if (!navQuery.isValidPolyRef(agentRef, m_filters[ag.params.queryFilterType])) {
@@ -420,7 +412,7 @@ public class Crowd {
                         m_filters[ag.params.queryFilterType]);
                 agentRef = nearestPoly.succeeded() ? nearestPoly.result.getNearestRef() : 0L;
                 if (nearestPoly.succeeded()) {
-                    copy(agentPos, nearestPoly.result.getNearestPos());
+                    agentPos.set(nearestPoly.result.getNearestPos());
                 }
 
                 if (agentRef == 0) {
@@ -452,8 +444,7 @@ public class Crowd {
             }
 
             // Try to recover move request position.
-            if (ag.targetState != MoveRequestState.DT_CROWDAGENT_TARGET_NONE
-                    && ag.targetState != MoveRequestState.DT_CROWDAGENT_TARGET_FAILED) {
+            if (ag.targetState != MoveRequestState.DT_CROWDAGENT_TARGET_FAILED) {
                 if (!navQuery.isValidPolyRef(ag.targetRef, m_filters[ag.params.queryFilterType])) {
                     // Current target is not valid, try to reposition.
                     Result<FindNearestPolyResult> fnp = navQuery.findNearestPoly(ag.targetPos, m_ext,
@@ -536,7 +527,7 @@ public class Crowd {
                     pathFound = navQuery.finalizeSlicedFindPath();
                 }
                 List<Long> reqPath = pathFound.result;
-                float[] reqPos = new Vector3f();
+                Vector3f reqPos = new Vector3f();
                 if (pathFound.succeeded() && reqPath.size() > 0) {
                     // In progress or succeed.
                     if (reqPath.get(reqPath.size() - 1) != ag.targetRef) {
@@ -733,9 +724,9 @@ public class Crowd {
         telemetry.start("buildProximityGrid");
         m_grid = new ProximityGrid(config.maxAgentRadius * 3);
         for (CrowdAgent ag : agents) {
-            float[] p = ag.npos;
+            Vector3f p = ag.npos;
             float r = ag.params.radius;
-            m_grid.addItem(ag, p[0] - r, p[2] - r, p[0] + r, p[2] + r);
+            m_grid.addItem(ag, p.x - r, p.z - r, p.x + r, p.z + r);
         }
         telemetry.stop("buildProximityGrid");
     }
@@ -959,12 +950,11 @@ public class Crowd {
 
                 // Append neighbour segments as obstacles.
                 for (int j = 0; j < ag.boundary.getSegmentCount(); ++j) {
-                    float[] s = ag.boundary.getSegment(j);
-                    float[] s3 = Arrays.copyOfRange(s, 3, 6);
-                    if (triArea2D(ag.npos, s, s3) < 0.0f) {
+                    LocalBoundary.Segment s = ag.boundary.getSegment(j);
+                    if (triArea2D(ag.npos, s.start, s.end) < 0.0f) {
                         continue;
                     }
-                    m_obstacleQuery.addSegment(s, s3);
+                    m_obstacleQuery.addSegment(s.start, s.end);
                 }
 
                 ObstacleAvoidanceDebugData vod = null;
@@ -973,23 +963,11 @@ public class Crowd {
                 }
 
                 // Sample new safe velocity.
-                boolean adaptive = true;
-                int ns = 0;
 
                 ObstacleAvoidanceParams params = m_obstacleQueryParams[ag.params.obstacleAvoidanceType];
-
-                if (adaptive) {
-                    Tupple2<Integer, Vector3f> nsnvel = m_obstacleQuery.sampleVelocityAdaptive(ag.npos, ag.params.radius,
-                            ag.desiredSpeed, ag.vel, ag.dvel, params, vod);
-                    ns = nsnvel.first;
-                    ag.nvel = nsnvel.second;
-                } else {
-                    Tupple2<Integer, Vector3f> nsnvel = m_obstacleQuery.sampleVelocityGrid(ag.npos, ag.params.radius,
-                            ag.desiredSpeed, ag.vel, ag.dvel, params, vod);
-                    ns = nsnvel.first;
-                    ag.nvel = nsnvel.second;
-                }
-                m_velocitySampleCount += ns;
+                Tupple2<Integer, Vector3f> nsnvel = m_obstacleQuery.sampleVelocityAdaptive(ag.npos, ag.params.radius, ag.desiredSpeed, ag.vel, ag.dvel, params, vod);
+                ag.nvel = nsnvel.second;
+                m_velocitySampleCount += nsnvel.first;
             } else {
                 // If not using velocity planning, new velocity is directly the desired velocity.
                 copy(ag.nvel, ag.dvel);
@@ -1025,10 +1003,10 @@ public class Crowd {
                 for (int j = 0; j < ag.neis.size(); ++j) {
                     CrowdAgent nei = ag.neis.get(j).agent;
                     long idx1 = nei.idx;
-                    float[] diff = vSub(ag.npos, nei.npos);
-                    diff[1] = 0;
+                    Vector3f diff = vSub(ag.npos, nei.npos);
+                    diff.y = 0;
 
-                    float dist = vLenSqr(diff);
+                    float dist = diff.lengthSquared();
                     if (dist > sqr(ag.params.radius + nei.params.radius)) {
                         continue;
                     }
@@ -1037,9 +1015,9 @@ public class Crowd {
                     if (dist < 0.0001f) {
                         // Agents on top of each other, try to choose diverging separation directions.
                         if (idx0 > idx1) {
-                            vSet(diff, -ag.dvel[2], 0, ag.dvel[0]);
+                            vSet(diff, -ag.dvel.z, 0, ag.dvel.x);
                         } else {
-                            vSet(diff, ag.dvel[2], 0, -ag.dvel[0]);
+                            vSet(diff, ag.dvel.z, 0, -ag.dvel.x);
                         }
                         pen = 0.01f;
                     } else {

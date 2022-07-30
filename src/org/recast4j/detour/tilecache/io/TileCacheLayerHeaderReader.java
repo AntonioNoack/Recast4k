@@ -38,12 +38,8 @@ public class TileCacheLayerHeaderReader {
         header.tx = data.getInt();
         header.ty = data.getInt();
         header.tlayer = data.getInt();
-        for (int j = 0; j < 3; j++) {
-            header.bmin[j] = data.getFloat();
-        }
-        for (int j = 0; j < 3; j++) {
-            header.bmax[j] = data.getFloat();
-        }
+        header.bmin.set(data.getFloat(),data.getFloat(),data.getFloat());
+        header.bmax.set(data.getFloat(),data.getFloat(),data.getFloat());
         header.hmin = data.getShort() & 0xFFFF;
         header.hmax = data.getShort() & 0xFFFF;
         header.width = data.get() & 0xFF;

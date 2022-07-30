@@ -20,7 +20,6 @@ package org.recast4j.detour;
 
 import org.joml.Vector3f;
 
-//TODO: (PP) Add comments
 public class StraightPathItem {
     Vector3f pos;
     int flags;

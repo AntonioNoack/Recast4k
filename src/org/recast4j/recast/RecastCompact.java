@@ -20,7 +20,6 @@ package org.recast4j.recast;
 
 import static org.recast4j.recast.RecastConstants.RC_NOT_CONNECTED;
 import static org.recast4j.recast.RecastConstants.RC_NULL_AREA;
-import static org.recast4j.recast.RecastVectors.copy;
 
 public class RecastCompact {
 
@@ -38,7 +37,7 @@ public class RecastCompact {
     /// @see rcAllocCompactHeightfield, rcHeightfield, rcCompactHeightfield, rcConfig
 
     public static CompactHeightfield buildCompactHeightfield(Telemetry ctx, int walkableHeight, int walkableClimb,
-            Heightfield hf) {
+                                                             Heightfield hf) {
 
         ctx.startTimer("BUILD_COMPACTHEIGHTFIELD");
 
@@ -55,9 +54,9 @@ public class RecastCompact {
         chf.walkableHeight = walkableHeight;
         chf.walkableClimb = walkableClimb;
         chf.maxRegions = 0;
-        copy(chf.bmin, hf.bmin);
-        copy(chf.bmax, hf.bmax);
-        chf.bmax[1] += walkableHeight * hf.ch;
+        chf.bmin.set(hf.bmin);
+        chf.bmax.set(hf.bmax);
+        chf.bmax.y += walkableHeight * hf.ch;
         chf.cs = hf.cs;
         chf.ch = hf.ch;
         chf.cells = new CompactCell[w * h];

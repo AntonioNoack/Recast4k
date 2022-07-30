@@ -18,14 +18,12 @@ freely, subject to the following restrictions:
 
 package org.recast4j.detour;
 
-import static org.recast4j.detour.DetourCommon.intersectSegSeg2D;
-import static org.recast4j.detour.DetourCommon.triArea2D;
-import static org.recast4j.detour.DetourCommon.vCopy;
-import static org.recast4j.detour.DetourCommon.vDot2D;
-import static org.recast4j.detour.DetourCommon.vSub;
+import org.joml.Vector3f;
 
 import java.util.Arrays;
 import java.util.Optional;
+
+import static org.recast4j.detour.DetourCommon.*;
 
 /**
  * Convex-convex intersection based on "Computational Geometry in C" by Joseph O'Rourke
@@ -34,11 +32,11 @@ public class ConvexConvexIntersection {
 
     private static final float EPSILON = 0.0001f;
 
-    private static enum InFlag {
+    private enum InFlag {
         Pin, Qin, Unknown;
     }
 
-    private static enum Intersection {
+    private enum Intersection {
         None, Single, Overlap;
     }
 
@@ -48,10 +46,10 @@ public class ConvexConvexIntersection {
         float[] inters = new float[Math.max(m, n) * 3 * 3];
         int ii = 0;
         /* Initialize variables. */
-        float[] a = new Vector3f();
-        float[] b = new Vector3f();
-        float[] a1 = new Vector3f();
-        float[] b1 = new Vector3f();
+        Vector3f a = new Vector3f();
+        Vector3f b = new Vector3f();
+        Vector3f a1 = new Vector3f();
+        Vector3f b1 = new Vector3f();
 
         int aa = 0;
         int ba = 0;
@@ -60,8 +58,8 @@ public class ConvexConvexIntersection {
 
         InFlag f = InFlag.Unknown;
         boolean FirstPoint = true;
-        float[] ip = new Vector3f();
-        float[] iq = new Vector3f();
+        Vector3f ip = new Vector3f();
+        Vector3f iq = new Vector3f();
 
         do {
             copy(a, p, 3 * (ai % n));
@@ -69,10 +67,10 @@ public class ConvexConvexIntersection {
             copy(a1, p, 3 * ((ai + n - 1) % n)); // prev a
             copy(b1, q, 3 * ((bi + m - 1) % m)); // prev b
 
-            float[] A = vSub(a, a1);
-            float[] B = vSub(b, b1);
+            Vector3f A = vSub(a, a1);
+            Vector3f B = vSub(b, b1);
 
-            float cross = B[0] * A[2] - A[0] * B[2];// triArea2D({0, 0}, A, B);
+            float cross = B.x * A.z - A.x * B.z;// triArea2D({0, 0}, A, B);
             float aHB = triArea2D(b1, b, a);
             float bHA = triArea2D(a1, a, b);
             if (Math.abs(cross) < EPSILON) {
@@ -156,18 +154,16 @@ public class ConvexConvexIntersection {
         return Arrays.copyOf(inters, ii);
     }
 
-    private static int addVertex(float[] inters, int ii, float[] p) {
+    private static int addVertex(float[] inters, int ii, Vector3f p) {
         if (ii > 0) {
-            if (inters[ii - 3] == p[0] && inters[ii - 2] == p[1] && inters[ii - 1] == p[2]) {
+            if (inters[ii - 3] == p.x && inters[ii - 2] == p.y && inters[ii - 1] == p.z)
                 return ii;
-            }
-            if (inters[0] == p[0] && inters[1] == p[1] && inters[2] == p[2]) {
+            if (inters[0] == p.x && inters[1] == p.y && inters[2] == p.z)
                 return ii;
-            }
         }
-        inters[ii] = p[0];
-        inters[ii + 1] = p[1];
-        inters[ii + 2] = p[2];
+        inters[ii] = p.x;
+        inters[ii + 1] = p.y;
+        inters[ii + 2] = p.z;
         return ii + 3;
     }
 
@@ -180,60 +176,58 @@ public class ConvexConvexIntersection {
         return inflag;
     }
 
-    private static Intersection segSegInt(float[] a, float[] b, float[] c, float[] d, float[] p, float[] q) {
+    private static Intersection segSegInt(Vector3f a, Vector3f b, Vector3f c, Vector3f d, Vector3f p, Vector3f q) {
         Optional<Tupple2<Float, Float>> isec = intersectSegSeg2D(a, b, c, d);
         if (isec.isPresent()) {
             float s = isec.get().first;
             float t = isec.get().second;
             if (s >= 0.0f && s <= 1.0f && t >= 0.0f && t <= 1.0f) {
-                p[0] = a[0] + (b[0] - a[0]) * s;
-                p[1] = a[1] + (b[1] - a[1]) * s;
-                p[2] = a[2] + (b[2] - a[2]) * s;
+                p.set(a).lerp(b, s);
                 return Intersection.Single;
             }
         }
         return Intersection.None;
     }
 
-    private static Intersection parallelInt(float[] a, float[] b, float[] c, float[] d, float[] p, float[] q) {
+    private static Intersection parallelInt(Vector3f a, Vector3f b, Vector3f c, Vector3f d, Vector3f p, Vector3f q) {
         if (between(a, b, c) && between(a, b, d)) {
-            copy(p, c);
-            copy(q, d);
+            p.set(c);
+            q.set(d);
             return Intersection.Overlap;
         }
         if (between(c, d, a) && between(c, d, b)) {
-            copy(p, a);
-            copy(q, b);
+            p.set(a);
+            q.set(b);
             return Intersection.Overlap;
         }
         if (between(a, b, c) && between(c, d, b)) {
-            copy(p, c);
-            copy(q, b);
+            p.set(c);
+            q.set(b);
             return Intersection.Overlap;
         }
         if (between(a, b, c) && between(c, d, a)) {
-            copy(p, c);
-            copy(q, a);
+            p.set(c);
+            q.set(a);
             return Intersection.Overlap;
         }
         if (between(a, b, d) && between(c, d, b)) {
-            copy(p, d);
-            copy(q, b);
+            p.set(d);
+            q.set(b);
             return Intersection.Overlap;
         }
         if (between(a, b, d) && between(c, d, a)) {
-            copy(p, d);
-            copy(q, a);
+            p.set(d);
+            q.set(a);
             return Intersection.Overlap;
         }
         return Intersection.None;
     }
 
-    private static boolean between(float[] a, float[] b, float[] c) {
-        if (Math.abs(a[0] - b[0]) > Math.abs(a[2] - b[2])) {
-            return ((a[0] <= c[0]) && (c[0] <= b[0])) || ((a[0] >= c[0]) && (c[0] >= b[0]));
+    private static boolean between(Vector3f a, Vector3f b, Vector3f c) {
+        if (Math.abs(a.x - b.x) > Math.abs(a.z - b.z)) {
+            return ((a.x <= c.x) && (c.x <= b.x)) || ((a.x >= c.x) && (c.x >= b.x));
         } else {
-            return ((a[2] <= c[2]) && (c[2] <= b[2])) || ((a[2] >= c[2]) && (c[2] >= b[2]));
+            return ((a.z <= c.z) && (c.z <= b.z)) || ((a.z >= c.z) && (c.z >= b.z));
         }
     }
 }

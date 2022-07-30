@@ -364,7 +364,7 @@ public class PathCorridor {
      * @param navquery The query object used to build the corridor.
      * @param filter   The filter to apply to the operation.
      */
-    public boolean movePosition(float[] npos, NavMeshQuery navquery, QueryFilter filter) {
+    public boolean movePosition(Vector3f npos, NavMeshQuery navquery, QueryFilter filter) {
         // Move along navmesh and update new position.
         Result<MoveAlongSurfaceResult> masResult = navquery.moveAlongSurface(m_path.get(0), m_pos, npos, filter);
         if (masResult.succeeded()) {

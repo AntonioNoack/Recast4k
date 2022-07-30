@@ -61,7 +61,7 @@ public class BoxCollider extends AbstractCollider {
                 telemetry);
     }
 
-    public static float[][] getHalfEdges(float[] up, float[] forward, float[] extent) {
+    /*public static float[][] getHalfEdges(float[] up, float[] forward, float[] extent) {
         float[][] halfEdges = new float[][] { new Vector3f(), new float[] { up[0], up[1], up[2] }, new Vector3f() };
         RecastVectors.normalize(halfEdges[1]);
         RecastVectors.cross(halfEdges[0], up, forward);
@@ -78,6 +78,6 @@ public class BoxCollider extends AbstractCollider {
         halfEdges[2][1] *= extent[2];
         halfEdges[2][2] *= extent[2];
         return halfEdges;
-    }
+    }*/
 
 }

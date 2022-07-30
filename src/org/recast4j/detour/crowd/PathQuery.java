@@ -18,6 +18,7 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.crowd;
 
+import org.joml.Vector3f;
 import org.recast4j.detour.NavMeshQuery;
 import org.recast4j.detour.QueryFilter;
 
@@ -25,7 +26,7 @@ public class PathQuery {
     /// Path find start and end location.
     Vector3f startPos = new Vector3f(), endPos = new Vector3f();
     long startRef, endRef;
-    QueryFilter filter; /// < TODO: This is potentially dangerous!
+    QueryFilter filter;
     final PathQueryResult result = new PathQueryResult();
     NavMeshQuery navQuery;
 

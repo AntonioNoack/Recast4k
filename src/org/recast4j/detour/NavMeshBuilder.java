@@ -38,27 +38,17 @@ public class NavMeshBuilder {
     ;
 
     private static class CompareItemX implements Comparator<BVItem> {
-
         @Override
         public int compare(BVItem a, BVItem b) {
-            if (a.bmin[0] < b.bmin[0])
-                return -1;
-            if (a.bmin[0] > b.bmin[0])
-                return 1;
-            return 0;
+            return Integer.compare(a.bmin[0], b.bmin[0]);
         }
-
     }
 
     private static class CompareItemY implements Comparator<BVItem> {
 
         @Override
         public int compare(BVItem a, BVItem b) {
-            if (a.bmin[1] < b.bmin[1])
-                return -1;
-            if (a.bmin[1] > b.bmin[1])
-                return 1;
-            return 0;
+            return Integer.compare(a.bmin[1], b.bmin[1]);
         }
 
     }
@@ -67,16 +57,12 @@ public class NavMeshBuilder {
 
         @Override
         public int compare(BVItem a, BVItem b) {
-            if (a.bmin[2] < b.bmin[2])
-                return -1;
-            if (a.bmin[2] > b.bmin[2])
-                return 1;
-            return 0;
+            return Integer.compare(a.bmin[2], b.bmin[2]);
         }
 
     }
 
-    private static int[][] calcExtends(BVItem[] items, int nitems, int imin, int imax) {
+    private static int[][] calcExtends(BVItem[] items, int imin, int imax) {
         int[] bmin = new int[3];
         int[] bmax = new int[3];
         bmin[0] = items[imin].bmin[0];
@@ -120,7 +106,7 @@ public class NavMeshBuilder {
         return axis;
     }
 
-    public static int subdivide(BVItem[] items, int nitems, int imin, int imax, int curNode, BVNode[] nodes) {
+    public static int subdivide(BVItem[] items, int imin, int imax, int curNode, BVNode[] nodes) {
         int inum = imax - imin;
         int icur = curNode;
 
@@ -129,23 +115,16 @@ public class NavMeshBuilder {
 
         if (inum == 1) {
             // Leaf
-            node.bmin[0] = items[imin].bmin[0];
-            node.bmin[1] = items[imin].bmin[1];
-            node.bmin[2] = items[imin].bmin[2];
-
-            node.bmax[0] = items[imin].bmax[0];
-            node.bmax[1] = items[imin].bmax[1];
-            node.bmax[2] = items[imin].bmax[2];
-
+            node.bmin.set(items[imin].bmin[0]);
+            node.bmax.set(items[imin].bmax);
             node.i = items[imin].i;
         } else {
             // Split
-            int[][] minmax = calcExtends(items, nitems, imin, imax);
-            node.bmin = minmax[0];
-            node.bmax = minmax[1];
+            int[][] minmax = calcExtends(items, imin, imax);
+            node.bmin.set(minmax[0]);
+            node.bmax.set(minmax[1]);
 
-            int axis = longestAxis(node.bmax[0] - node.bmin[0], node.bmax[1] - node.bmin[1],
-                    node.bmax[2] - node.bmin[2]);
+            int axis = longestAxis(node.bmax.x - node.bmin.x, node.bmax.y - node.bmin.y, node.bmax.z - node.bmin.z);
 
             if (axis == 0) {
                 // Sort along x-axis
@@ -161,9 +140,9 @@ public class NavMeshBuilder {
             int isplit = imin + inum / 2;
 
             // Left
-            curNode = subdivide(items, nitems, imin, isplit, curNode, nodes);
+            curNode = subdivide(items, imin, isplit, curNode, nodes);
             // Right
-            curNode = subdivide(items, nitems, isplit, imax, curNode, nodes);
+            curNode = subdivide(items, isplit, imax, curNode, nodes);
 
             int iescape = curNode - icur;
             // Negative index means escape.
@@ -235,7 +214,7 @@ public class NavMeshBuilder {
             }
         }
 
-        return subdivide(items, params.polyCount, 0, params.polyCount, 0, nodes);
+        return subdivide(items, 0, params.polyCount, 0, nodes);
     }
 
     static final int XP = 1;
@@ -397,8 +376,7 @@ public class NavMeshBuilder {
             }
         } else {
             // No input detail mesh, build detail mesh from nav polys.
-            uniqueDetailVertCount = 0; // No extra detail verts.
-            detailTriCount = 0;
+            // No extra detail verts.
             for (int i = 0; i < params.polyCount; ++i) {
                 int p = i * nvp * 2;
                 int nv = 0;
@@ -492,7 +470,7 @@ public class NavMeshBuilder {
                     else if (dir == 1) // Portal z+
                         p.neis[j] = NavMesh.DT_EXT_LINK | 2;
                     else if (dir == 2) // Portal x+
-                        p.neis[j] = NavMesh.DT_EXT_LINK | 0;
+                        p.neis[j] = NavMesh.DT_EXT_LINK;
                     else if (dir == 3) // Portal z-
                         p.neis[j] = NavMesh.DT_EXT_LINK | 6;
                 } else {
@@ -567,7 +545,7 @@ public class NavMeshBuilder {
                     // Bit for each edge that belongs to poly boundary.
                     navDTris[t + 3] = (1 << 2);
                     if (j == 2)
-                        navDTris[t + 3] |= (1 << 0);
+                        navDTris[t + 3] |= (1);
                     if (j == nv - 1)
                         navDTris[t + 3] |= (1 << 4);
                     tbase++;

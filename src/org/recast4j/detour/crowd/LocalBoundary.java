@@ -24,22 +24,15 @@ import org.recast4j.detour.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.recast4j.detour.DetourCommon.distancePtSegSqr2D;
-import static org.recast4j.detour.DetourCommon.sqr;
+import static org.recast4j.detour.DetourCommon.*;
 
 public class LocalBoundary {
 
     private static final int MAX_LOCAL_SEGS = 8;
 
-    private static class Segment {
-        /**
-         * Segment start/end
-         */
-        float[] s = new float[6];
-        /**
-         * Distance for pruning.
-         */
-        float d;
+    static class Segment {
+        Vector3f start = new Vector3f(), end = new Vector3f();
+        float pruningDist;
     }
 
     Vector3f m_center = new Vector3f();
@@ -59,11 +52,12 @@ public class LocalBoundary {
     protected void addSegment(float dist, float[] s) {
         // Insert neighbour based on the distance.
         Segment seg = new Segment();
-        System.arraycopy(s, 0, seg.s, 0, 6);
-        seg.d = dist;
+        copy(seg.start, s, 0);
+        copy(seg.end, s, 3);
+        seg.pruningDist = dist;
         if (m_segs.isEmpty()) {
             m_segs.add(seg);
-        } else if (dist >= m_segs.get(m_segs.size() - 1).d) {
+        } else if (dist >= m_segs.get(m_segs.size() - 1).pruningDist) {
             if (m_segs.size() >= MAX_LOCAL_SEGS) {
                 return;
             }
@@ -72,7 +66,7 @@ public class LocalBoundary {
             // Insert inbetween.
             int i;
             for (i = 0; i < m_segs.size(); ++i) {
-                if (dist <= m_segs.get(i).d) {
+                if (dist <= m_segs.get(i).pruningDist) {
                     break;
                 }
             }
@@ -132,8 +126,8 @@ public class LocalBoundary {
         return m_center;
     }
 
-    public float[] getSegment(int j) {
-        return m_segs.get(j).s;
+    public Segment getSegment(int j) {
+        return m_segs.get(j);
     }
 
     public int getSegmentCount() {

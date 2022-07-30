@@ -2044,18 +2044,15 @@ public class NavMeshQuery {
 
             if (nextRef == 0) {
                 // No neighbour, we hit a wall.
-
                 // Calculate hit normal.
                 int a = iresult.segMax;
                 int b = iresult.segMax + 1 < nv ? iresult.segMax + 1 : 0;
                 int va = a * 3;
                 int vb = b * 3;
-                float dx = verts[vb] - verts[va];
-                float dz = verts[vb + 2] - verts[va + 2];
-                hit.hitNormal[0] = dz;
-                hit.hitNormal[1] = 0;
-                hit.hitNormal[2] = -dx;
-                normalize(hit.hitNormal);
+                hit.hitNormal.x = verts[vb + 2] - verts[va + 2];
+                hit.hitNormal.y = 0;
+                hit.hitNormal.z = -( verts[vb] - verts[va]);
+                hit.hitNormal.normalize();
                 return Result.success(hit);
             }
 
@@ -2704,8 +2701,8 @@ public class NavMeshQuery {
                     float tmin = ints.get(k).tmin / 255.0f;
                     float tmax = ints.get(k).tmax / 255.0f;
                     float[] seg = new float[6];
-                    System.arraycopy(vLerp(tile.data.verts, vj, vi, tmin), 0, seg, 0, 3);
-                    System.arraycopy(vLerp(tile.data.verts, vj, vi, tmax), 0, seg, 3, 3);
+                    copy(seg, 0, vLerp(tile.data.verts, vj, vi, tmin));
+                    copy(seg, 3, vLerp(tile.data.verts, vj, vi, tmax));
                     segmentVerts.add(seg);
                     segmentRefs.add(ints.get(k).ref);
                 }
@@ -2717,8 +2714,8 @@ public class NavMeshQuery {
                     float tmin = imin / 255.0f;
                     float tmax = imax / 255.0f;
                     float[] seg = new float[6];
-                    System.arraycopy(vLerp(tile.data.verts, vj, vi, tmin), 0, seg, 0, 3);
-                    System.arraycopy(vLerp(tile.data.verts, vj, vi, tmax), 0, seg, 3, 3);
+                    copy(seg, 0, vLerp(tile.data.verts, vj, vi, tmin));
+                    copy(seg, 3, vLerp(tile.data.verts, vj, vi, tmax));
                     segmentVerts.add(seg);
                     segmentRefs.add(0L);
                 }
@@ -2779,7 +2776,7 @@ public class NavMeshQuery {
             bestNode.flags |= Node.DT_NODE_CLOSED;
 
             // Get poly and tile.
-            // The API input has been cheked already, skip checking internal data.
+            // The API input has been checked already, skip checking internal data.
             long bestRef = bestNode.id;
             Tupple2<MeshTile, Poly> tileAndPoly = m_nav.getTileAndPolyByRefUnsafe(bestRef);
             MeshTile bestTile = tileAndPoly.first;

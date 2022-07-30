@@ -18,22 +18,20 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.tilecache;
 
-import static org.recast4j.detour.DetourCommon.ilog2;
-import static org.recast4j.detour.DetourCommon.nextPow2;
-import static org.recast4j.detour.DetourCommon.overlapBounds;
-import static org.recast4j.detour.DetourCommon.vCopy;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-
+import org.joml.Vector3f;
 import org.recast4j.detour.MeshData;
 import org.recast4j.detour.NavMesh;
 import org.recast4j.detour.NavMeshBuilder;
 import org.recast4j.detour.NavMeshDataCreateParams;
 import org.recast4j.detour.tilecache.TileCacheObstacle.TileCacheObstacleType;
 import org.recast4j.detour.tilecache.io.TileCacheLayerHeaderReader;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.recast4j.detour.DetourCommon.*;
 
 public class TileCache {
 
@@ -51,7 +49,6 @@ public class TileCache {
     private final TileCacheParams m_params;
     private final TileCacheStorageParams m_storageParams;
 
-    private final TileCacheCompressor m_tcomp;
     private final TileCacheMeshProcess m_tmproc;
 
     private final List<TileCacheObstacle> m_obstacles = new ArrayList<>();
@@ -102,11 +99,10 @@ public class TileCache {
     }
 
     public TileCache(TileCacheParams params, TileCacheStorageParams storageParams, NavMesh navmesh,
-            TileCacheCompressor tcomp, TileCacheMeshProcess tmprocs) {
+                     TileCacheMeshProcess tmprocs) {
         m_params = params;
         m_storageParams = storageParams;
         m_navmesh = navmesh;
-        m_tcomp = tcomp;
         m_tmproc = tmprocs;
 
         m_tileLutSize = nextPow2(m_params.maxTiles / 4);
@@ -298,7 +294,7 @@ public class TileCache {
         TileCacheObstacle ob = allocObstacle();
         ob.type = TileCacheObstacleType.CYLINDER;
 
-        copy(ob.pos, pos);
+        ob.pos.set(pos);
         ob.radius = radius;
         ob.height = height;
 
@@ -310,8 +306,8 @@ public class TileCache {
         TileCacheObstacle ob = allocObstacle();
         ob.type = TileCacheObstacleType.BOX;
 
-        copy(ob.bmin, bmin);
-        copy(ob.bmax, bmax);
+        ob.bmin.set(bmin);
+        ob.bmax.set(bmax);
 
         return addObstacleRequest(ob).ref;
     }
@@ -320,8 +316,8 @@ public class TileCache {
     public long addBoxObstacle(Vector3f center, float[] extents, float yRadians) {
         TileCacheObstacle ob = allocObstacle();
         ob.type = TileCacheObstacleType.ORIENTED_BOX;
-        copy(ob.center, center);
-        copy(ob.extents, extents);
+        ob.center.set(center);
+        ob.extents.set(extents);
         float coshalf = (float) Math.cos(0.5f * yRadians);
         float sinhalf = (float) Math.sin(-0.5f * yRadians);
         ob.rotAux[0] = coshalf * sinhalf;
@@ -363,21 +359,21 @@ public class TileCache {
         return o;
     }
 
-    List<Long> queryTiles(float[] bmin, float[] bmax) {
+    List<Long> queryTiles(Vector3f bmin, Vector3f bmax) {
         List<Long> results = new ArrayList<>();
         float tw = m_params.width * m_params.cs;
         float th = m_params.height * m_params.cs;
-        int tx0 = (int) Math.floor((bmin[0] - m_params.orig[0]) / tw);
-        int tx1 = (int) Math.floor((bmax[0] - m_params.orig[0]) / tw);
-        int ty0 = (int) Math.floor((bmin[2] - m_params.orig[2]) / th);
-        int ty1 = (int) Math.floor((bmax[2] - m_params.orig[2]) / th);
+        int tx0 = (int) Math.floor((bmin.x - m_params.orig.x) / tw);
+        int tx1 = (int) Math.floor((bmax.x - m_params.orig.x) / tw);
+        int ty0 = (int) Math.floor((bmin.z - m_params.orig.z) / th);
+        int ty1 = (int) Math.floor((bmax.z - m_params.orig.z) / th);
         for (int ty = ty0; ty <= ty1; ++ty) {
             for (int tx = tx0; tx <= tx1; ++tx) {
                 List<Long> tiles = getTilesAt(tx, ty);
                 for (long i : tiles) {
                     CompressedTile tile = m_tiles[decodeTileIdTile(i)];
-                    float[] tbmin = new Vector3f();
-                    float[] tbmax = new Vector3f();
+                    Vector3f tbmin = new Vector3f();
+                    Vector3f tbmax = new Vector3f();
                     calcTightTileBounds(tile.header, tbmin, tbmax);
                     if (overlapBounds(bmin, bmax, tbmin, tbmax)) {
                         results.add(i);
@@ -392,8 +388,8 @@ public class TileCache {
      * Updates the tile cache by rebuilding tiles touched by unfinished obstacle requests.
      *
      * @return Returns true if the tile cache is fully up to date with obstacle requests and tile rebuilds. If the tile
-     *         cache is up to date another (immediate) call to update will have no effect; otherwise another call will
-     *         continue processing obstacle requests and tile rebuilds.
+     * cache is up to date another (immediate) call to update will have no effect; otherwise another call will
+     * continue processing obstacle requests and tile rebuilds.
      */
     public boolean update() {
         if (m_update.isEmpty()) {
@@ -447,8 +443,7 @@ public class TileCache {
             buildNavMeshTile(ref);
 
             // Update obstacle states.
-            for (int i = 0; i < m_obstacles.size(); ++i) {
-                TileCacheObstacle ob = m_obstacles.get(i);
+            for (TileCacheObstacle ob : m_obstacles) {
                 if (ob.state == ObstacleState.DT_OBSTACLE_PROCESSING
                         || ob.state == ObstacleState.DT_OBSTACLE_REMOVING) {
                     // Remove handled tile from pending list.
@@ -493,8 +488,7 @@ public class TileCache {
         TileCacheLayer layer = decompressTile(tile);
 
         // Rasterize obstacles.
-        for (int i = 0; i < m_obstacles.size(); ++i) {
-            TileCacheObstacle ob = m_obstacles.get(i);
+        for (TileCacheObstacle ob : m_obstacles) {
             if (ob.state == ObstacleState.DT_OBSTACLE_EMPTY || ob.state == ObstacleState.DT_OBSTACLE_REMOVING) {
                 continue;
             }
@@ -552,49 +546,44 @@ public class TileCache {
     }
 
     public TileCacheLayer decompressTile(CompressedTile tile) {
-        TileCacheLayer layer = builder.decompressTileCacheLayer(m_tcomp, tile.data, m_storageParams.byteOrder,
+        return builder.decompressTileCacheLayer(tile.data, m_storageParams.byteOrder,
                 m_storageParams.cCompatibility);
-        return layer;
     }
 
-    void calcTightTileBounds(TileCacheLayerHeader header, float[] bmin, float[] bmax) {
+    void calcTightTileBounds(TileCacheLayerHeader header, Vector3f bmin, Vector3f bmax) {
         float cs = m_params.cs;
-        bmin[0] = header.bmin[0] + header.minx * cs;
-        bmin[1] = header.bmin[1];
-        bmin[2] = header.bmin[2] + header.miny * cs;
-        bmax[0] = header.bmin[0] + (header.maxx + 1) * cs;
-        bmax[1] = header.bmax[1];
-        bmax[2] = header.bmin[2] + (header.maxy + 1) * cs;
+        bmin.x = header.bmin.x + header.minx * cs;
+        bmin.y = header.bmin.y;
+        bmin.z = header.bmin.z + header.miny * cs;
+        bmax.x = header.bmin.x + (header.maxx + 1) * cs;
+        bmax.y = header.bmax.y;
+        bmax.z = header.bmin.z + (header.maxy + 1) * cs;
     }
 
-    void getObstacleBounds(TileCacheObstacle ob, float[] bmin, float[] bmax) {
+    void getObstacleBounds(TileCacheObstacle ob, Vector3f bmin, Vector3f bmax) {
         if (ob.type == TileCacheObstacleType.CYLINDER) {
-            bmin[0] = ob.pos[0] - ob.radius;
-            bmin[1] = ob.pos[1];
-            bmin[2] = ob.pos[2] - ob.radius;
-            bmax[0] = ob.pos[0] + ob.radius;
-            bmax[1] = ob.pos[1] + ob.height;
-            bmax[2] = ob.pos[2] + ob.radius;
+            bmin.x = ob.pos.x - ob.radius;
+            bmin.y = ob.pos.y;
+            bmin.z = ob.pos.z - ob.radius;
+            bmax.x = ob.pos.x + ob.radius;
+            bmax.y = ob.pos.y + ob.height;
+            bmax.z = ob.pos.z + ob.radius;
         } else if (ob.type == TileCacheObstacleType.BOX) {
-            copy(bmin, ob.bmin);
-            copy(bmax, ob.bmax);
+            bmin.set(ob.bmin);
+            bmax.set(ob.bmax);
         } else if (ob.type == TileCacheObstacleType.ORIENTED_BOX) {
-            float maxr = 1.41f * Math.max(ob.extents[0], ob.extents[2]);
-            bmin[0] = ob.center[0] - maxr;
-            bmax[0] = ob.center[0] + maxr;
-            bmin[1] = ob.center[1] - ob.extents[1];
-            bmax[1] = ob.center[1] + ob.extents[1];
-            bmin[2] = ob.center[2] - maxr;
-            bmax[2] = ob.center[2] + maxr;
+            float maxr = 1.41f * Math.max(ob.extents.x, ob.extents.z);
+            bmin.x = ob.center.x - maxr;
+            bmax.x = ob.center.x + maxr;
+            bmin.y = ob.center.y - ob.extents.y;
+            bmax.y = ob.center.y + ob.extents.y;
+            bmin.z = ob.center.z - maxr;
+            bmax.z = ob.center.z + maxr;
         }
     }
 
     public TileCacheParams getParams() {
         return m_params;
-    }
-
-    public TileCacheCompressor getCompressor() {
-        return m_tcomp;
     }
 
     public int getTileCount() {

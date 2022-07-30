@@ -1,13 +1,15 @@
 package org.recast4j.detour.extras.jumplink;
 
-import static java.util.stream.Collectors.toList;
-import static org.recast4j.detour.DetourCommon.vDist2DSqr;
+import org.joml.Vector3f;
+import org.recast4j.recast.RecastBuilder.RecastBuilderResult;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.recast4j.recast.RecastBuilder.RecastBuilderResult;
+import static java.util.stream.Collectors.toList;
+import static org.recast4j.detour.DetourCommon.copy;
+import static org.recast4j.detour.DetourCommon.vDist2DSqr;
 
 public class JumpLinkBuilder {
 
@@ -48,11 +50,11 @@ public class JumpLinkBuilder {
     private List<JumpLink> buildJumpLinks(JumpLinkBuilderConfig acfg, EdgeSampler es, JumpSegment[] jumpSegments) {
         List<JumpLink> links = new ArrayList<>();
         for (JumpSegment js : jumpSegments) {
-            float[] sp = es.start.gsamples[js.startSample].p;
-            float[] sq = es.start.gsamples[js.startSample + js.samples - 1].p;
+            Vector3f sp = es.start.gsamples[js.startSample].p;
+            Vector3f sq = es.start.gsamples[js.startSample + js.samples - 1].p;
             GroundSegment end = es.end.get(js.groundSegment);
-            float[] ep = end.gsamples[js.startSample].p;
-            float[] eq = end.gsamples[js.startSample + js.samples - 1].p;
+            Vector3f ep = end.gsamples[js.startSample].p;
+            Vector3f eq = end.gsamples[js.startSample + js.samples - 1].p;
             float d = Math.min(vDist2DSqr(sp, sq), vDist2DSqr(ep, eq));
             if (d >= 4 * acfg.agentRadius * acfg.agentRadius) {
                 JumpLink link = new JumpLink();
@@ -64,15 +66,8 @@ public class JumpLinkBuilder {
                 link.trajectory = es.trajectory;
                 for (int j = 0; j < link.nspine; ++j) {
                     float u = ((float) j) / (link.nspine - 1);
-                    float[] p = es.trajectory.apply(sp, ep, u);
-                    link.spine0[j * 3] = p[0];
-                    link.spine0[j * 3 + 1] = p[1];
-                    link.spine0[j * 3 + 2] = p[2];
-
-                    p = es.trajectory.apply(sq, eq, u);
-                    link.spine1[j * 3] = p[0];
-                    link.spine1[j * 3 + 1] = p[1];
-                    link.spine1[j * 3 + 2] = p[2];
+                    copy(link.spine0, j * 3, es.trajectory.apply(sp, ep, u));
+                    copy(link.spine1, j * 3, es.trajectory.apply(sq, eq, u));
                 }
             }
         }

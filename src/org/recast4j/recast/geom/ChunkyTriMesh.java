@@ -26,41 +26,29 @@ import java.util.List;
 public class ChunkyTriMesh {
 
     private static class BoundsItem {
-        private final float[] bmin = new Vector2f();
-        private final float[] bmax = new Vector2f();
+        private final float[] bmin = new float[2];
+        private final float[] bmax = new float[2];
         private int i;
     }
 
     public static class ChunkyTriMeshNode {
-        private final float[] bmin = new Vector2f();
-        private final float[] bmax = new Vector2f();
+        private final float[] bmin = new float[2];
+        private final float[] bmax = new float[2];
         private int i;
         public int[] tris;
     }
 
-    private class CompareItemX implements Comparator<BoundsItem> {
+    private static class CompareItemX implements Comparator<BoundsItem> {
         @Override
         public int compare(BoundsItem a, BoundsItem b) {
-            if (a.bmin[0] < b.bmin[0]) {
-                return -1;
-            }
-            if (a.bmin[0] > b.bmin[0]) {
-                return 1;
-            }
-            return 0;
+            return Float.compare(a.bmin[0], b.bmin[0]);
         }
     }
 
-    private class CompareItemY implements Comparator<BoundsItem> {
+    private static class CompareItemY implements Comparator<BoundsItem> {
         @Override
         public int compare(BoundsItem a, BoundsItem b) {
-            if (a.bmin[1] < b.bmin[1]) {
-                return -1;
-            }
-            if (a.bmin[1] > b.bmin[1]) {
-                return 1;
-            }
-            return 0;
+            return Float.compare(a.bmin[1], b.bmin[1]);
         }
     }
 
@@ -98,7 +86,7 @@ public class ChunkyTriMesh {
     }
 
     private void subdivide(BoundsItem[] items, int imin, int imax, int trisPerChunk, List<ChunkyTriMeshNode> nodes,
-            int[] inTris) {
+                           int[] inTris) {
         int inum = imax - imin;
 
         ChunkyTriMeshNode node = new ChunkyTriMeshNode();
@@ -196,10 +184,8 @@ public class ChunkyTriMesh {
     }
 
     private boolean checkOverlapRect(float[] amin, float[] amax, float[] bmin, float[] bmax) {
-        boolean overlap = true;
-        overlap = (amin[0] > bmax[0] || amax[0] < bmin[0]) ? false : overlap;
-        overlap = (amin[1] > bmax[1] || amax[1] < bmin[1]) ? false : overlap;
-        return overlap;
+        return !(amin[0] > bmax[0]) && !(amax[0] < bmin[0]) &&
+                !(amin[1] > bmax[1]) && !(amax[1] < bmin[1]);
     }
 
     public List<ChunkyTriMeshNode> getChunksOverlappingRect(float[] bmin, float[] bmax) {

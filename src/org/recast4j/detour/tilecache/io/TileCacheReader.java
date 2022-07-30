@@ -18,20 +18,18 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.tilecache.io;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-
 import org.recast4j.detour.NavMesh;
 import org.recast4j.detour.io.IOUtils;
 import org.recast4j.detour.io.NavMeshParamReader;
 import org.recast4j.detour.tilecache.TileCache;
-import org.recast4j.detour.tilecache.TileCacheCompressor;
 import org.recast4j.detour.tilecache.TileCacheMeshProcess;
 import org.recast4j.detour.tilecache.TileCacheParams;
 import org.recast4j.detour.tilecache.TileCacheStorageParams;
-import org.recast4j.detour.tilecache.io.compress.TileCacheCompressorFactory;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 public class TileCacheReader {
 
@@ -61,11 +59,9 @@ public class TileCacheReader {
         boolean cCompatibility = header.version == TileCacheSetHeader.TILECACHESET_VERSION;
         header.numTiles = bb.getInt();
         header.meshParams = paramReader.read(bb);
-        header.cacheParams = readCacheParams(bb, cCompatibility);
+        header.cacheParams = readCacheParams(bb);
         NavMesh mesh = new NavMesh(header.meshParams, maxVertPerPoly);
-        TileCacheCompressor compressor = TileCacheCompressorFactory.get(cCompatibility);
-        TileCache tc = new TileCache(header.cacheParams, new TileCacheStorageParams(bb.order(), cCompatibility), mesh,
-                compressor, meshProcessor);
+        TileCache tc = new TileCache(header.cacheParams, new TileCacheStorageParams(bb.order(), cCompatibility), mesh, meshProcessor);
         // Read tiles.
         for (int i = 0; i < header.numTiles; ++i) {
             long tileRef = bb.getInt();
@@ -83,11 +79,9 @@ public class TileCacheReader {
         return tc;
     }
 
-    private TileCacheParams readCacheParams(ByteBuffer bb, boolean cCompatibility) {
+    private TileCacheParams readCacheParams(ByteBuffer bb) {
         TileCacheParams params = new TileCacheParams();
-        for (int i = 0; i < 3; i++) {
-            params.orig[i] = bb.getFloat();
-        }
+        params.orig.set(bb.getFloat(), bb.getFloat(), bb.getFloat());
         params.cs = bb.getFloat();
         params.ch = bb.getFloat();
         params.width = bb.getInt();

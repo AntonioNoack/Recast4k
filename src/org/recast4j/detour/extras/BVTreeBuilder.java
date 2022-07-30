@@ -21,9 +21,6 @@ package org.recast4j.detour.extras;
 import static jdk.nashorn.internal.objects.NativeMath.max;
 import static jdk.nashorn.internal.objects.NativeMath.min;
 import static org.recast4j.detour.DetourCommon.clamp;
-import static org.recast4j.detour.DetourCommon.vCopy;
-import static org.recast4j.detour.DetourCommon.vMax;
-import static org.recast4j.detour.DetourCommon.vMin;
 import static org.recast4j.recast.RecastVectors.copy;
 
 import org.joml.Vector3f;
@@ -54,14 +51,14 @@ public class BVTreeBuilder {
                 min(bmin, data.verts, data.polys[i].verts[j] * 3);
                 max(bmax, data.verts, data.polys[i].verts[j] * 3);
             }
-            it.bmin[0] = clamp((int) ((bmin.x - data.header.bmin[0]) * quantFactor), 0, 0x7fffffff);
-            it.bmin[1] = clamp((int) ((bmin.y - data.header.bmin[1]) * quantFactor), 0, 0x7fffffff);
-            it.bmin[2] = clamp((int) ((bmin.z - data.header.bmin[2]) * quantFactor), 0, 0x7fffffff);
-            it.bmax[0] = clamp((int) ((bmax.x - data.header.bmin[0]) * quantFactor), 0, 0x7fffffff);
-            it.bmax[1] = clamp((int) ((bmax.y - data.header.bmin[1]) * quantFactor), 0, 0x7fffffff);
-            it.bmax[2] = clamp((int) ((bmax.z - data.header.bmin[2]) * quantFactor), 0, 0x7fffffff);
+            it.bmin[0] = clamp((int) ((bmin.x - data.header.bmin.x) * quantFactor), 0, 0x7fffffff);
+            it.bmin[1] = clamp((int) ((bmin.y - data.header.bmin.y) * quantFactor), 0, 0x7fffffff);
+            it.bmin[2] = clamp((int) ((bmin.z - data.header.bmin.z) * quantFactor), 0, 0x7fffffff);
+            it.bmax[0] = clamp((int) ((bmax.x - data.header.bmin.x) * quantFactor), 0, 0x7fffffff);
+            it.bmax[1] = clamp((int) ((bmax.y - data.header.bmin.y) * quantFactor), 0, 0x7fffffff);
+            it.bmax[2] = clamp((int) ((bmax.z - data.header.bmin.z) * quantFactor), 0, 0x7fffffff);
         }
-        return NavMeshBuilder.subdivide(items, data.header.polyCount, 0, data.header.polyCount, 0, nodes);
+        return NavMeshBuilder.subdivide(items, 0, data.header.polyCount, 0, nodes);
     }
 
 }

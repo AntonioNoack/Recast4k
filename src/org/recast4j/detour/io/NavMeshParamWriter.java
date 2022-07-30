@@ -9,9 +9,7 @@ import org.recast4j.detour.NavMeshParams;
 public class NavMeshParamWriter extends DetourWriter {
 
 	public void write(OutputStream stream, NavMeshParams params, ByteOrder order) throws IOException {
-		write(stream, params.orig[0], order);
-		write(stream, params.orig[1], order);
-		write(stream, params.orig[2], order);
+		write(stream, params.orig, order);
 		write(stream, params.tileWidth, order);
 		write(stream, params.tileHeight, order);
 		write(stream, params.maxTiles, order);

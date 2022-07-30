@@ -18,12 +18,12 @@ freely, subject to the following restrictions:
 
 package org.recast4j.dynamic;
 
-import static org.recast4j.detour.DetourCommon.vCopy;
+import org.recast4j.recast.Heightfield;
+import org.recast4j.recast.Span;
 
 import java.util.Set;
 
-import org.recast4j.recast.Heightfield;
-import org.recast4j.recast.Span;
+import static org.recast4j.detour.DetourCommon.copy;
 
 public class DynamicTileCheckpoint {
 

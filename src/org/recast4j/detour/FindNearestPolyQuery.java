@@ -2,7 +2,6 @@ package org.recast4j.detour;
 
 import org.joml.Vector3f;
 
-import static org.recast4j.detour.DetourCommon.vLenSqr;
 import static org.recast4j.detour.DetourCommon.vSub;
 
 public class FindNearestPolyQuery implements PolyQuery {
