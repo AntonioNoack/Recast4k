@@ -219,7 +219,7 @@ public class RecastMeshDetail {
         return dx * dx + dz * dz;
     }
 
-    private static float distToTriMesh(Vector3f p, float[] verts, int nverts, List<Integer> tris, int ntris) {
+    private static float distToTriMesh(Vector3f p, float[] verts, List<Integer> tris, int ntris) {
         float dmin = Float.MAX_VALUE;
         for (int i = 0; i < ntris; ++i) {
             int va = tris.get(i * 4) * 3;
@@ -252,8 +252,7 @@ public class RecastMeshDetail {
         return c ? -dmin : dmin;
     }
 
-    private static int getHeight(float fx, float fy, float fz, float cs, float ics, float ch, int radius,
-                                 HeightPatch hp) {
+    private static int getHeight(float fx, float fy, float fz, float ics, float ch, int radius, HeightPatch hp) {
         int ix = (int) Math.floor(fx * ics + 0.01f);
         int iz = (int) Math.floor(fz * ics + 0.01f);
         ix = RecastCommon.clamp(ix - hp.xmin, 0, hp.width - 1);
@@ -334,7 +333,7 @@ public class RecastMeshDetail {
         return EV_UNDEF;
     }
 
-    private static void addEdge(Telemetry ctx, List<Integer> edges, int maxEdges, int s, int t, int l, int r) {
+    private static void addEdge(List<Integer> edges, int maxEdges, int s, int t, int l, int r) {
         if (edges.size() / 4 >= maxEdges) {
             throw new RuntimeException("addEdge: Too many edges (" + edges.size() / 4 + "/" + maxEdges + ").");
         }
@@ -383,7 +382,7 @@ public class RecastMeshDetail {
         return false;
     }
 
-    static int completeFacet(Telemetry ctx, float[] pts, int npts, List<Integer> edges, int maxEdges, int nfaces, int e) {
+    static int completeFacet(float[] pts, int npts, List<Integer> edges, int maxEdges, int nfaces, int e) {
         float EPS = 1e-5f;
 
         int edge = e * 4;
@@ -445,7 +444,7 @@ public class RecastMeshDetail {
             // Add new edge or update face info of old edge.
             e = findEdge(edges, pt, s);
             if (e == EV_UNDEF) {
-                addEdge(ctx, edges, maxEdges, pt, s, nfaces, EV_UNDEF);
+                addEdge(edges, maxEdges, pt, s, nfaces, EV_UNDEF);
             } else {
                 updateLeftFace(edges, e * 4, pt, s, nfaces);
             }
@@ -453,7 +452,7 @@ public class RecastMeshDetail {
             // Add new edge or update face info of old edge.
             e = findEdge(edges, t, pt);
             if (e == EV_UNDEF) {
-                addEdge(ctx, edges, maxEdges, t, pt, nfaces, EV_UNDEF);
+                addEdge(edges, maxEdges, t, pt, nfaces, EV_UNDEF);
             } else {
                 updateLeftFace(edges, e * 4, t, pt, nfaces);
             }
@@ -465,20 +464,20 @@ public class RecastMeshDetail {
         return nfaces;
     }
 
-    private static void delaunayHull(Telemetry ctx, int npts, float[] pts, int nhull, int[] hull, List<Integer> tris) {
+    private static void delaunayHull(int npts, float[] pts, int nhull, int[] hull, List<Integer> tris) {
         int nfaces = 0;
         int maxEdges = npts * 10;
         List<Integer> edges = new ArrayList<>(64);
         for (int i = 0, j = nhull - 1; i < nhull; j = i++) {
-            addEdge(ctx, edges, maxEdges, hull[j], hull[i], EV_HULL, EV_UNDEF);
+            addEdge(edges, maxEdges, hull[j], hull[i], EV_HULL, EV_UNDEF);
         }
         int currentEdge = 0;
         while (currentEdge < edges.size() / 4) {
             if (edges.get(currentEdge * 4 + 2) == EV_UNDEF) {
-                nfaces = completeFacet(ctx, pts, npts, edges, maxEdges, nfaces, currentEdge);
+                nfaces = completeFacet(pts, npts, edges, maxEdges, nfaces, currentEdge);
             }
             if (edges.get(currentEdge * 4 + 3) == EV_UNDEF) {
-                nfaces = completeFacet(ctx, pts, npts, edges, maxEdges, nfaces, currentEdge);
+                nfaces = completeFacet(pts, npts, edges, maxEdges, nfaces, currentEdge);
             }
             currentEdge++;
         }
@@ -554,7 +553,7 @@ public class RecastMeshDetail {
         return (float) Math.sqrt(minDist);
     }
 
-    private static void triangulateHull(int nverts, float[] verts, int nhull, int[] hull, int nin, List<Integer> tris) {
+    private static void triangulateHull(float[] verts, int nhull, int[] hull, int nin, List<Integer> tris) {
         int start = 0, left = 1, right = nhull - 1;
 
         // Start from an ear with shortest perimeter.
@@ -625,17 +624,15 @@ public class RecastMeshDetail {
         return (((i * 0xd8163841) & 0xffff) / 65535.0f * 2.0f) - 1.0f;
     }
 
-    static int buildPolyDetail(Telemetry ctx, float[] in, int nin, float sampleDist, float sampleMaxError,
+    static int buildPolyDetail(float[] in, int nin, float sampleDist, float sampleMaxError,
                                int heightSearchRadius, CompactHeightfield chf, HeightPatch hp, float[] verts, List<Integer> tris) {
 
         List<Integer> samples = new ArrayList<>(512);
 
-        int nverts = 0;
         float[] edge = new float[(MAX_VERTS_PER_EDGE + 1) * 3];
         int[] hull = new int[MAX_VERTS];
         int nhull = 0;
-
-        nverts = nin;
+        int nverts = nin;
 
         for (int i = 0; i < nin; ++i) {
             RecastVectors.copy(verts, i * 3, in, i * 3);
@@ -692,7 +689,7 @@ public class RecastMeshDetail {
                     edge[pos] = in[vj] + dx * u;
                     edge[pos + 1] = in[vj + 1] + dy * u;
                     edge[pos + 2] = in[vj + 2] + dz * u;
-                    edge[pos + 1] = getHeight(edge[pos], edge[pos + 1], edge[pos + 2], cs, ics, chf.ch,
+                    edge[pos + 1] = getHeight(edge[pos], edge[pos + 1], edge[pos + 2], ics, chf.ch,
                             heightSearchRadius, hp) * chf.ch;
                 }
                 // Simplify samples.
@@ -746,7 +743,7 @@ public class RecastMeshDetail {
 
         // If the polygon minimum extent is small (sliver or small triangle), do not try to add internal points.
         if (minExtent < sampleDist * 2) {
-            triangulateHull(nverts, verts, nhull, hull, nin, tris);
+            triangulateHull(verts, nhull, hull, nin, tris);
             return nverts;
         }
 
@@ -754,7 +751,7 @@ public class RecastMeshDetail {
         // We're using the triangulateHull instead of delaunayHull as it tends to
         // create a bit better triangulation for long thin triangles when there
         // are no internal points.
-        triangulateHull(nverts, verts, nhull, hull, nin, tris);
+        triangulateHull(verts, nhull, hull, nin, tris);
 
         if (tris.size() == 0) {
             // Could not triangulate the poly, make sure there is some valid data there.
@@ -783,7 +780,7 @@ public class RecastMeshDetail {
                         continue;
                     }
                     samples.add(x);
-                    samples.add(getHeight(pt.x, pt.y, pt.z, cs, ics, chf.ch, heightSearchRadius, hp));
+                    samples.add(getHeight(pt.x, pt.y, pt.z, ics, chf.ch, heightSearchRadius, hp));
                     samples.add(z);
                     samples.add(0); // Not added
                 }
@@ -813,7 +810,7 @@ public class RecastMeshDetail {
                     pt.x = samples.get(s) * sampleDist + getJitterX(i) * cs * 0.1f;
                     pt.y = samples.get(s + 1) * chf.ch;
                     pt.z = samples.get(s + 2) * sampleDist + getJitterY(i) * cs * 0.1f;
-                    float d = distToTriMesh(pt, verts, nverts, tris, tris.size() / 4);
+                    float d = distToTriMesh(pt, verts, tris, tris.size() / 4);
                     if (d < 0) {
                         continue; // did not hit the mesh.
                     }
@@ -835,7 +832,7 @@ public class RecastMeshDetail {
 
                 // Create new triangulation.
                 // TODO: Incremental add instead of full rebuild.
-                delaunayHull(ctx, nverts, verts, nhull, hull, tris);
+                delaunayHull(nverts, verts, nhull, hull, tris);
             }
         }
 
@@ -1098,11 +1095,9 @@ public class RecastMeshDetail {
     }
 
     static int getTriFlags(float[] verts, int va, int vb, int vc, float[] vpoly, int npoly) {
-        int flags = 0;
-        flags |= getEdgeFlags(verts, va, vb, vpoly, npoly) << 0;
-        flags |= getEdgeFlags(verts, vb, vc, vpoly, npoly) << 2;
-        flags |= getEdgeFlags(verts, vc, va, vpoly, npoly) << 4;
-        return flags;
+        return (getEdgeFlags(verts, va, vb, vpoly, npoly)) |
+                (getEdgeFlags(verts, vb, vc, vpoly, npoly) << 2) |
+                (getEdgeFlags(verts, vc, va, vpoly, npoly) << 4);
     }
 
     /// @par
@@ -1166,8 +1161,6 @@ public class RecastMeshDetail {
         hp.data = new int[maxhw * maxhh];
 
         dmesh.nmeshes = mesh.npolys;
-        dmesh.nverts = 0;
-        dmesh.ntris = 0;
         dmesh.meshes = new int[dmesh.nmeshes * 4];
 
         int vcap = nPolyVerts + nPolyVerts / 2;
@@ -1202,7 +1195,7 @@ public class RecastMeshDetail {
             getHeightData(ctx, chf, mesh.polys, p, npoly, mesh.verts, borderSize, hp, mesh.regs[i]);
 
             // Build detail mesh.
-            int nverts = buildPolyDetail(ctx, poly, npoly, sampleDist, sampleMaxError, heightSearchRadius, chf, hp,
+            int nverts = buildPolyDetail(poly, npoly, sampleDist, sampleMaxError, heightSearchRadius, chf, hp,
                     verts, tris);
 
             // Move detail verts to world space.
@@ -1270,64 +1263,6 @@ public class RecastMeshDetail {
         ctx.stopTimer("POLYMESHDETAIL");
         return dmesh;
 
-    }
-
-    /// @see rcAllocPolyMeshDetail, rcPolyMeshDetail
-    PolyMeshDetail mergePolyMeshDetails(Telemetry ctx, PolyMeshDetail[] meshes, int nmeshes) {
-        PolyMeshDetail mesh = new PolyMeshDetail();
-
-        ctx.startTimer("MERGE_POLYMESHDETAIL");
-
-        int maxVerts = 0;
-        int maxTris = 0;
-        int maxMeshes = 0;
-
-        for (int i = 0; i < nmeshes; ++i) {
-            if (meshes[i] == null) {
-                continue;
-            }
-            maxVerts += meshes[i].nverts;
-            maxTris += meshes[i].ntris;
-            maxMeshes += meshes[i].nmeshes;
-        }
-
-        mesh.nmeshes = 0;
-        mesh.meshes = new int[maxMeshes * 4];
-        mesh.ntris = 0;
-        mesh.tris = new int[maxTris * 4];
-        mesh.nverts = 0;
-        mesh.verts = new float[maxVerts * 3];
-
-        // Merge datas.
-        for (int i = 0; i < nmeshes; ++i) {
-            PolyMeshDetail dm = meshes[i];
-            if (dm == null) {
-                continue;
-            }
-            for (int j = 0; j < dm.nmeshes; ++j) {
-                int dst = mesh.nmeshes * 4;
-                int src = j * 4;
-                mesh.meshes[dst] = mesh.nverts + dm.meshes[src];
-                mesh.meshes[dst + 1] = dm.meshes[src + 1];
-                mesh.meshes[dst + 2] = mesh.ntris + dm.meshes[src + 2];
-                mesh.meshes[dst + 3] = dm.meshes[src + 3];
-                mesh.nmeshes++;
-            }
-
-            for (int k = 0; k < dm.nverts; ++k) {
-                RecastVectors.copy(mesh.verts, mesh.nverts * 3, dm.verts, k * 3);
-                mesh.nverts++;
-            }
-            for (int k = 0; k < dm.ntris; ++k) {
-                mesh.tris[mesh.ntris * 4] = dm.tris[k * 4];
-                mesh.tris[mesh.ntris * 4 + 1] = dm.tris[k * 4 + 1];
-                mesh.tris[mesh.ntris * 4 + 2] = dm.tris[k * 4 + 2];
-                mesh.tris[mesh.ntris * 4 + 3] = dm.tris[k * 4 + 3];
-                mesh.ntris++;
-            }
-        }
-        ctx.stopTimer("MERGE_POLYMESHDETAIL");
-        return mesh;
     }
 
 }

@@ -18,13 +18,11 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.recast;
 
-import static org.recast4j.recast.RecastConstants.RC_BORDER_REG;
-import static org.recast4j.recast.RecastConstants.RC_NOT_CONNECTED;
-import static org.recast4j.recast.RecastConstants.RC_NULL_AREA;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import static org.recast4j.recast.RecastConstants.*;
 
 public class RecastRegion {
 
@@ -231,7 +229,7 @@ public class RecastRegion {
     }
 
     private static boolean floodRegion(int x, int y, int i, int level, int r, CompactHeightfield chf, int[] srcReg,
-            int[] srcDist, List<Integer> stack) {
+                                       int[] srcDist, List<Integer> stack) {
         int w = chf.width;
 
         int area = chf.areas[i];
@@ -322,8 +320,8 @@ public class RecastRegion {
         return count > 0;
     }
 
-    private static int[] expandRegions(int maxIter, int level, CompactHeightfield chf, int[] srcReg, int[] srcDist,
-            List<Integer> stack, boolean fillStack) {
+    private static void expandRegions(int maxIter, int level, CompactHeightfield chf, int[] srcReg, int[] srcDist,
+                                      List<Integer> stack, boolean fillStack) {
         int w = chf.width;
         int h = chf.height;
 
@@ -418,12 +416,11 @@ public class RecastRegion {
             }
         }
 
-        return srcReg;
     }
 
     private static void sortCellsByLevel(int startLevel, CompactHeightfield chf, int[] srcReg, int nbStacks,
-            List<List<Integer>> stacks, int loglevelsPerStack) // the levels per stack (2 in our case) as a bit shift
-    {
+                                         List<List<Integer>> stacks, int loglevelsPerStack) {// the levels per stack (2 in our case) as a bit shift
+
         int w = chf.width;
         int h = chf.height;
         startLevel = startLevel >> loglevelsPerStack;
@@ -493,7 +490,7 @@ public class RecastRegion {
 
     private static void removeAdjacentNeighbours(Region reg) {
         // Remove adjacent duplicates.
-        for (int i = 0; i < reg.connections.size() && reg.connections.size() > 1;) {
+        for (int i = 0; i < reg.connections.size() && reg.connections.size() > 1; ) {
             int ni = (i + 1) % reg.connections.size();
             if (reg.connections.get(i) == reg.connections.get(ni)) {
                 reg.connections.remove(i);
@@ -624,7 +621,7 @@ public class RecastRegion {
     }
 
     private static void walkContour(int x, int y, int i, int dir, CompactHeightfield chf, int[] srcReg,
-            List<Integer> cont) {
+                                    List<Integer> cont) {
         int startDir = dir;
         int starti = i;
 
@@ -682,7 +679,7 @@ public class RecastRegion {
 
         // Remove adjacent duplicates.
         if (cont.size() > 1) {
-            for (int j = 0; j < cont.size();) {
+            for (int j = 0; j < cont.size(); ) {
                 int nj = (j + 1) % cont.size();
                 if (cont.get(j) == cont.get(nj)) {
                     cont.remove(j);
@@ -693,8 +690,8 @@ public class RecastRegion {
         }
     }
 
-    private static int mergeAndFilterRegions(Telemetry ctx, int minRegionArea, int mergeRegionSize, int maxRegionId,
-            CompactHeightfield chf, int[] srcReg, List<Integer> overlaps) {
+    private static int mergeAndFilterRegions(int minRegionArea, int mergeRegionSize, int maxRegionId,
+                                             CompactHeightfield chf, int[] srcReg, List<Integer> overlaps) {
         int w = chf.width;
         int h = chf.height;
 
@@ -778,7 +775,6 @@ public class RecastRegion {
             // Also keep track of the regions connects to a tile border.
             boolean connectsToBorder = false;
             int spanCount = 0;
-            stack.clear();
             trace.clear();
 
             reg.visited = true;
@@ -817,9 +813,9 @@ public class RecastRegion {
             // can potentially remove necessary areas.
             if (spanCount < minRegionArea && !connectsToBorder) {
                 // Kill all visited regions.
-                for (int j = 0; j < trace.size(); ++j) {
-                    regions[trace.get(j)].spanCount = 0;
-                    regions[trace.get(j)].id = 0;
+                for (Integer tr : trace) {
+                    regions[tr].spanCount = 0;
+                    regions[tr].id = 0;
                 }
             }
         }
@@ -941,8 +937,8 @@ public class RecastRegion {
         }
     }
 
-    private static int mergeAndFilterLayerRegions(Telemetry ctx, int minRegionArea, int maxRegionId,
-            CompactHeightfield chf, int[] srcReg, List<Integer> overlaps) {
+    private static int mergeAndFilterLayerRegions(int minRegionArea, int maxRegionId,
+                                                  CompactHeightfield chf, int[] srcReg, List<Integer> overlaps) {
         int w = chf.width;
         int h = chf.height;
 
@@ -1146,8 +1142,7 @@ public class RecastRegion {
         int[] src = new int[chf.spanCount];
         ctx.startTimer("DISTANCEFIELD_DIST");
 
-        int maxDist = calculateDistanceField(chf, src);
-        chf.maxDistance = maxDist;
+        chf.maxDistance = calculateDistanceField(chf, src);
 
         ctx.stopTimer("DISTANCEFIELD_DIST");
 
@@ -1166,7 +1161,7 @@ public class RecastRegion {
     }
 
     private static void paintRectRegion(int minx, int maxx, int miny, int maxy, int regId, CompactHeightfield chf,
-            int[] srcReg) {
+                                        int[] srcReg) {
         int w = chf.width;
         for (int y = miny; y < maxy; ++y) {
             for (int x = minx; x < maxx; ++x) {
@@ -1200,7 +1195,7 @@ public class RecastRegion {
     ///
     /// @see rcCompactHeightfield, rcCompactSpan, rcBuildDistanceField, rcBuildRegionsMonotone, rcConfig
     public static void buildRegionsMonotone(Telemetry ctx, CompactHeightfield chf, int minRegionArea,
-            int mergeRegionArea) {
+                                            int mergeRegionArea) {
         ctx.startTimer("REGIONS");
 
         int w = chf.width;
@@ -1321,7 +1316,7 @@ public class RecastRegion {
 
         // Merge regions and filter out small regions.
         List<Integer> overlaps = new ArrayList<>();
-        chf.maxRegions = mergeAndFilterRegions(ctx, minRegionArea, mergeRegionArea, id, chf, srcReg, overlaps);
+        chf.maxRegions = mergeAndFilterRegions(minRegionArea, mergeRegionArea, id, chf, srcReg, overlaps);
 
         // Monotone partitioning does not generate overlapping regions.
 
@@ -1356,7 +1351,7 @@ public class RecastRegion {
     ///
     /// @see rcCompactHeightfield, rcCompactSpan, rcBuildDistanceField, rcBuildRegionsMonotone, rcConfig
     public static void buildRegions(Telemetry ctx, CompactHeightfield chf, int minRegionArea,
-            int mergeRegionArea) {
+                                    int mergeRegionArea) {
         ctx.startTimer("REGIONS");
 
         int w = chf.width;
@@ -1452,7 +1447,7 @@ public class RecastRegion {
 
         // Merge regions and filter out smalle regions.
         List<Integer> overlaps = new ArrayList<>();
-        chf.maxRegions = mergeAndFilterRegions(ctx, minRegionArea, mergeRegionArea, regionId, chf, srcReg, overlaps);
+        chf.maxRegions = mergeAndFilterRegions(minRegionArea, mergeRegionArea, regionId, chf, srcReg, overlaps);
 
         // If overlapping regions were found during merging, split those regions.
         if (overlaps.size() > 0) {
@@ -1591,7 +1586,7 @@ public class RecastRegion {
 
         // Merge monotone regions to layers and remove small regions.
         List<Integer> overlaps = new ArrayList<>();
-        chf.maxRegions = mergeAndFilterLayerRegions(ctx, minRegionArea, id, chf, srcReg, overlaps);
+        chf.maxRegions = mergeAndFilterLayerRegions(minRegionArea, id, chf, srcReg, overlaps);
 
         ctx.stopTimer("REGIONS_FILTER");
 

@@ -376,23 +376,10 @@ public class RecastArea {
         int maxy = (int) ((bmax.y - chf.bmin.y) / chf.ch);
         int maxz = (int) ((bmax.z - chf.bmin.z) / chf.cs);
 
-        if (maxx < 0)
-            return;
-        if (minx >= chf.width)
-            return;
-        if (maxz < 0)
-            return;
-        if (minz >= chf.height)
-            return;
-
-        if (minx < 0)
-            minx = 0;
-        if (maxx >= chf.width)
-            maxx = chf.width - 1;
-        if (minz < 0)
-            minz = 0;
-        if (maxz >= chf.height)
-            maxz = chf.height - 1;
+        minx = Math.max(minx, 0);
+        minz = Math.max(minz, 0);
+        maxx = Math.min(maxx, chf.width - 1);
+        maxy = Math.min(maxy, chf.height - 1);
 
         for (int z = minz; z <= maxz; ++z) {
             for (int x = minx; x <= maxx; ++x) {

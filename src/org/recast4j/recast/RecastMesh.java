@@ -40,7 +40,6 @@ public class RecastMesh {
 
         int maxEdgeCount = npolys * vertsPerPoly;
         int[] firstEdge = new int[nverts + maxEdgeCount];
-        int nextEdge = nverts;
         int edgeCount = 0;
 
         Edge[] edges = new Edge[maxEdgeCount];
@@ -66,7 +65,7 @@ public class RecastMesh {
                     edge.poly[1] = i;
                     edge.polyEdge[1] = 0;
                     // Insert edge
-                    firstEdge[nextEdge + edgeCount] = firstEdge[v0];
+                    firstEdge[nverts + edgeCount] = firstEdge[v0];
                     firstEdge[v0] = edgeCount;
                     edgeCount++;
                 }
@@ -82,7 +81,7 @@ public class RecastMesh {
                 int v1 = (j + 1 >= vertsPerPoly || polys[t + j + 1] == RC_MESH_NULL_IDX) ? polys[t]
                         : polys[t + j + 1];
                 if (v0 > v1) {
-                    for (int e = firstEdge[v1]; e != RC_MESH_NULL_IDX; e = firstEdge[nextEdge + e]) {
+                    for (int e = firstEdge[v1]; e != RC_MESH_NULL_IDX; e = firstEdge[nverts + e]) {
                         Edge edge = edges[e];
                         if (edge.vert[1] == v0 && edge.poly[0] == edge.poly[1]) {
                             edge.poly[1] = i;
@@ -116,7 +115,7 @@ public class RecastMesh {
     }
 
     private static int[] addVertex(int x, int y, int z, int[] verts, int[] firstVert, int[] nextVert, int nv) {
-        int bucket = computeVertexHash(x, 0, z);
+        int bucket = computeVertexHash(x, 0, z);// todo why is y skipped?
         int i = firstVert[bucket];
 
         while (i != -1) {
@@ -196,11 +195,8 @@ public class RecastMesh {
     static boolean intersect(int[] verts, int a, int b, int c, int d) {
         if (intersectProp(verts, a, b, c, d))
             return true;
-        else if (between(verts, a, b, c) || between(verts, a, b, d) || between(verts, c, d, a)
-                || between(verts, c, d, b))
-            return true;
-        else
-            return false;
+        else return between(verts, a, b, c) || between(verts, a, b, d) || between(verts, c, d, a)
+                || between(verts, c, d, b);
     }
 
     static boolean vequal(int[] verts, int a, int b) {
@@ -334,8 +330,6 @@ public class RecastMesh {
                 // : : : :
                 // We'll try to recover by loosing up the inCone test a bit so that a diagonal
                 // like A-B or C-D can be found and we can continue.
-                minLen = -1;
-                mini = -1;
                 for (int i = 0; i < n; i++) {
                     int i1 = next(i, n);
                     int i2 = next(i1, n);
@@ -370,8 +364,8 @@ public class RecastMesh {
 
             // Removes P[i1] by copying P[i+1]...P[n-1] left one index.
             n--;
-            for (int k = i1; k < n; k++)
-                indices[k] = indices[k + 1];
+            if (n - i1 >= 0)
+                System.arraycopy(indices, i1 + 1, indices, i1, n - i1);
 
             if (i1 >= n)
                 i1 = 0;
@@ -502,7 +496,7 @@ public class RecastMesh {
         arr[an] = v;
     }
 
-    private static boolean canRemoveVertex(Telemetry ctx, PolyMesh mesh, int rem) {
+    private static boolean canRemoveVertex(PolyMesh mesh, int rem) {
         int nvp = mesh.nvp;
 
         // Count number of polygons to remove.
@@ -580,10 +574,7 @@ public class RecastMesh {
             if (edges[i * 3 + 2] < 2)
                 numOpenEdges++;
         }
-        if (numOpenEdges > 2)
-            return false;
-
-        return true;
+        return numOpenEdges <= 2;
     }
 
     private static void removeVertex(Telemetry ctx, PolyMesh mesh, int rem, int maxTris) {
@@ -617,8 +608,10 @@ public class RecastMesh {
             int nv = countPolyVerts(mesh.polys, p, nvp);
             boolean hasRem = false;
             for (int j = 0; j < nv; ++j)
-                if (mesh.polys[p + j] == rem)
+                if (mesh.polys[p + j] == rem) {
                     hasRem = true;
+                    break;
+                }
             if (hasRem) {
                 // Collect edges which does not touch the removed vertex.
                 for (int j = 0, k = nv - 1; j < nv; k = j++) {
@@ -818,8 +811,7 @@ public class RecastMesh {
                 break;
             int p = mesh.npolys * nvp * 2;
             Arrays.fill(mesh.polys, p, p + nvp * 2, RC_MESH_NULL_IDX);
-            for (int j = 0; j < nvp; ++j)
-                mesh.polys[p + j] = polys[i * nvp + j];
+            if (nvp >= 0) System.arraycopy(polys, i * nvp, mesh.polys, p, nvp);
             mesh.regs[mesh.npolys] = pregs[i];
             mesh.areas[mesh.npolys] = pareas[i];
             mesh.npolys++;
@@ -976,7 +968,7 @@ public class RecastMesh {
             for (int j = 0; j < npolys; ++j) {
                 int p = mesh.npolys * nvp * 2;
                 int q = j * nvp;
-                if (nvp >= 0) System.arraycopy(polys, q + 0, mesh.polys, p + 0, nvp);
+                if (nvp >= 0) System.arraycopy(polys, q, mesh.polys, p, nvp);
                 mesh.regs[mesh.npolys] = cont.reg;
                 mesh.areas[mesh.npolys] = cont.area;
                 mesh.npolys++;
@@ -990,7 +982,7 @@ public class RecastMesh {
         // Remove edge vertices.
         for (int i = 0; i < mesh.nverts; ++i) {
             if (vflags[i] != 0) {
-                if (!canRemoveVertex(ctx, mesh, i))
+                if (!canRemoveVertex(mesh, i))
                     continue;
                 removeVertex(ctx, mesh, i, maxTris);
                 // Remove vertex
@@ -1052,6 +1044,7 @@ public class RecastMesh {
     }
 
     /// @see rcAllocPolyMesh, rcPolyMesh
+    @SuppressWarnings("unused")
     public static PolyMesh mergePolyMeshes(Telemetry ctx, PolyMesh[] meshes, int nmeshes) {
 
         if (nmeshes == 0 || meshes == null)
@@ -1172,6 +1165,7 @@ public class RecastMesh {
         return mesh;
     }
 
+    @SuppressWarnings("unused")
     public static PolyMesh copyPolyMesh(PolyMesh src) {
         PolyMesh dst = new PolyMesh();
 

@@ -243,6 +243,7 @@ public class RecastFilledVolumeRasterization {
     }
 
     private static float[] intersectCylinder(float[] rectangle, Vector3f start, Vector3f end, Vector3f axis, float radiusSqr) {
+        // todo why? find in official recast navigation library
         float[] s = rayCylinderIntersection(new Vector3f(clamp(start.x, rectangle[0], rectangle[2]), rectangle[4],
                 clamp(start.z, rectangle[1], rectangle[3])), start, axis, radiusSqr);
         s = rayCylinderIntersection(new Vector3f(clamp(end.x, rectangle[0], rectangle[2]), rectangle[4],

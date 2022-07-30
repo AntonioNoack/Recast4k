@@ -50,20 +50,20 @@ public class RecastBuilder {
     public static class RecastBuilderResult {
         public final int tileX;
         public final int tileZ;
-        private final CompactHeightfield chf;
-        private final ContourSet cs;
+        private final CompactHeightfield compactHeightField;
+        private final ContourSet countourSet;
         private final PolyMesh pmesh;
         private final PolyMeshDetail dmesh;
         private final Heightfield solid;
         private final Telemetry telemetry;
 
-        public RecastBuilderResult(int tileX, int tileZ, Heightfield solid, CompactHeightfield chf, ContourSet cs, PolyMesh pmesh,
+        public RecastBuilderResult(int tileX, int tileZ, Heightfield solid, CompactHeightfield compactHeightField, ContourSet countourSet, PolyMesh pmesh,
                                    PolyMeshDetail dmesh, Telemetry ctx) {
             this.tileX = tileX;
             this.tileZ = tileZ;
             this.solid = solid;
-            this.chf = chf;
-            this.cs = cs;
+            this.compactHeightField = compactHeightField;
+            this.countourSet = countourSet;
             this.pmesh = pmesh;
             this.dmesh = dmesh;
             telemetry = ctx;
@@ -78,11 +78,11 @@ public class RecastBuilder {
         }
 
         public CompactHeightfield getCompactHeightfield() {
-            return chf;
+            return compactHeightField;
         }
 
         public ContourSet getContourSet() {
-            return cs;
+            return countourSet;
         }
 
         public Heightfield getSolidHeightfield() {

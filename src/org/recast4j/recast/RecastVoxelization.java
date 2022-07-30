@@ -20,7 +20,7 @@ package org.recast4j.recast;
 
 import java.util.List;
 
-import org.recast4j.recast.geom.ChunkyTriMesh.ChunkyTriMeshNode;
+import org.recast4j.recast.geom.ChunkyTriMesh.Node1;
 import org.recast4j.recast.geom.InputGeomProvider;
 import org.recast4j.recast.geom.TriMesh;
 
@@ -53,8 +53,8 @@ public class RecastVoxelization {
                 tbmin[1] = builderCfg.bmin.z;
                 tbmax[0] = builderCfg.bmax.x;
                 tbmax[1] = builderCfg.bmax.z;
-                List<ChunkyTriMeshNode> nodes = geom.getChunksOverlappingRect(tbmin, tbmax);
-                for (ChunkyTriMeshNode node : nodes) {
+                List<Node1> nodes = geom.getChunksOverlappingRect(tbmin, tbmax);
+                for (Node1 node : nodes) {
                     int[] tris = node.tris;
                     int ntris = tris.length / 3;
                     int[] m_triareas = Recast.markWalkableTriangles(ctx, cfg.walkableSlopeAngle, verts, tris, ntris,

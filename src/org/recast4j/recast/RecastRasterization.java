@@ -299,6 +299,7 @@ public class RecastRasterization {
      *
      * @see Heightfield
      */
+    @SuppressWarnings("unused")
     public static void rasterizeTriangles(Heightfield solid, float[] verts, int[] areas, int nt, int flagMergeThr,
                                           Telemetry ctx) {
         ctx.startTimer("RASTERIZE_TRIANGLES");

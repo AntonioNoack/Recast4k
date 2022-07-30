@@ -25,59 +25,46 @@ import java.util.List;
 
 public class ChunkyTriMesh {
 
-    private static class BoundsItem {
-        private final float[] bmin = new float[2];
-        private final float[] bmax = new float[2];
-        private int i;
+    private static class Node0 {
+        protected float minX, minY, maxX, maxY;
+        protected int i;
     }
 
-    public static class ChunkyTriMeshNode {
-        private final float[] bmin = new float[2];
-        private final float[] bmax = new float[2];
-        private int i;
+    public static class Node1 extends Node0 {
         public int[] tris;
     }
 
-    private static class CompareItemX implements Comparator<BoundsItem> {
+    private static class CompareItemX implements Comparator<Node0> {
         @Override
-        public int compare(BoundsItem a, BoundsItem b) {
-            return Float.compare(a.bmin[0], b.bmin[0]);
+        public int compare(Node0 a, Node0 b) {
+            return Float.compare(a.minX, b.minX);
         }
     }
 
-    private static class CompareItemY implements Comparator<BoundsItem> {
+    private static class CompareItemY implements Comparator<Node0> {
         @Override
-        public int compare(BoundsItem a, BoundsItem b) {
-            return Float.compare(a.bmin[1], b.bmin[1]);
+        public int compare(Node0 a, Node0 b) {
+            return Float.compare(a.minY, b.minY);
         }
     }
 
-    List<ChunkyTriMeshNode> nodes;
+    List<Node1> nodes;
     int ntris;
     int maxTrisPerChunk;
 
-    private void calcExtends(BoundsItem[] items, int imin, int imax, float[] bmin, float[] bmax) {
-        bmin[0] = items[imin].bmin[0];
-        bmin[1] = items[imin].bmin[1];
+    private void calcExtends(Node0[] items, int imin, int imax, Node1 dst) {
 
-        bmax[0] = items[imin].bmax[0];
-        bmax[1] = items[imin].bmax[1];
+        dst.minX = items[imin].minX;
+        dst.minY = items[imin].minY;
+        dst.maxX = items[imin].maxX;
+        dst.maxY = items[imin].maxY;
 
         for (int i = imin + 1; i < imax; ++i) {
-            BoundsItem it = items[i];
-            if (it.bmin[0] < bmin[0]) {
-                bmin[0] = it.bmin[0];
-            }
-            if (it.bmin[1] < bmin[1]) {
-                bmin[1] = it.bmin[1];
-            }
-
-            if (it.bmax[0] > bmax[0]) {
-                bmax[0] = it.bmax[0];
-            }
-            if (it.bmax[1] > bmax[1]) {
-                bmax[1] = it.bmax[1];
-            }
+            Node0 it = items[i];
+            dst.minX = Math.min(dst.minX, it.minX);
+            dst.minY = Math.min(dst.minY, it.minY);
+            dst.maxX = Math.min(dst.maxX, it.maxX);
+            dst.maxY = Math.min(dst.maxY, it.maxY);
         }
     }
 
@@ -85,16 +72,16 @@ public class ChunkyTriMesh {
         return y > x ? 1 : 0;
     }
 
-    private void subdivide(BoundsItem[] items, int imin, int imax, int trisPerChunk, List<ChunkyTriMeshNode> nodes,
-                           int[] inTris) {
+    private void subdivide(Node0[] items, int imin, int imax, int trisPerChunk, List<Node1> nodes, int[] inTris) {
         int inum = imax - imin;
 
-        ChunkyTriMeshNode node = new ChunkyTriMeshNode();
+        Node1 node = new Node1();
         nodes.add(node);
 
         if (inum <= trisPerChunk) {
+
             // Leaf
-            calcExtends(items, imin, imax, node.bmin, node.bmax);
+            calcExtends(items, imin, imax, node);
 
             // Copy triangles.
             node.i = nodes.size();
@@ -108,10 +95,10 @@ public class ChunkyTriMesh {
                 node.tris[dst++] = inTris[src + 2];
             }
         } else {
-            // Split
-            calcExtends(items, imin, imax, node.bmin, node.bmax);
 
-            int axis = longestAxis(node.bmax[0] - node.bmin[0], node.bmax[1] - node.bmin[1]);
+            // Split
+            calcExtends(items, imin, imax, node);
+            int axis = longestAxis(node.maxX - node.minX, node.maxY - node.minY);
 
             if (axis == 0) {
                 Arrays.sort(items, imin, imax, new CompareItemX());
@@ -140,29 +127,29 @@ public class ChunkyTriMesh {
         this.ntris = ntris;
 
         // Build tree
-        BoundsItem[] items = new BoundsItem[ntris];
+        Node0[] items = new Node0[ntris];
 
         for (int i = 0; i < ntris; i++) {
             int t = i * 3;
-            BoundsItem it = items[i] = new BoundsItem();
+            Node0 it = items[i] = new Node0();
             it.i = i;
             // Calc triangle XZ bounds.
-            it.bmin[0] = it.bmax[0] = verts[tris[t] * 3];
-            it.bmin[1] = it.bmax[1] = verts[tris[t] * 3 + 2];
+            it.minX = it.maxX = verts[tris[t] * 3];
+            it.minY = it.maxY = verts[tris[t] * 3 + 2];
             for (int j = 1; j < 3; ++j) {
                 int v = tris[t + j] * 3;
-                if (verts[v] < it.bmin[0]) {
-                    it.bmin[0] = verts[v];
+                if (verts[v] < it.minX) {
+                    it.minX = verts[v];
                 }
-                if (verts[v + 2] < it.bmin[1]) {
-                    it.bmin[1] = verts[v + 2];
+                if (verts[v + 2] < it.minY) {
+                    it.minY = verts[v + 2];
                 }
 
-                if (verts[v] > it.bmax[0]) {
-                    it.bmax[0] = verts[v];
+                if (verts[v] > it.maxX) {
+                    it.maxX = verts[v];
                 }
-                if (verts[v + 2] > it.bmax[1]) {
-                    it.bmax[1] = verts[v + 2];
+                if (verts[v + 2] > it.maxY) {
+                    it.maxY = verts[v + 2];
                 }
             }
         }
@@ -171,7 +158,7 @@ public class ChunkyTriMesh {
 
         // Calc max tris per node.
         maxTrisPerChunk = 0;
-        for (ChunkyTriMeshNode node : nodes) {
+        for (Node1 node : nodes) {
             boolean isLeaf = node.i >= 0;
             if (!isLeaf) {
                 continue;
@@ -183,18 +170,17 @@ public class ChunkyTriMesh {
 
     }
 
-    private boolean checkOverlapRect(float[] amin, float[] amax, float[] bmin, float[] bmax) {
-        return !(amin[0] > bmax[0]) && !(amax[0] < bmin[0]) &&
-                !(amin[1] > bmax[1]) && !(amax[1] < bmin[1]);
+    private boolean checkOverlapRect(float[] amin, float[] amax, Node1 b) {
+        return !(amin[0] > b.maxX) && !(amax[0] < b.minX) && !(amin[1] > b.maxY) && !(amax[1] < b.minY);
     }
 
-    public List<ChunkyTriMeshNode> getChunksOverlappingRect(float[] bmin, float[] bmax) {
+    public List<Node1> getChunksOverlappingRect(float[] bmin, float[] bmax) {
         // Traverse tree
-        List<ChunkyTriMeshNode> ids = new ArrayList<>();
+        List<Node1> ids = new ArrayList<>();
         int i = 0;
         while (i < nodes.size()) {
-            ChunkyTriMeshNode node = nodes.get(i);
-            boolean overlap = checkOverlapRect(bmin, bmax, node.bmin, node.bmax);
+            Node1 node = nodes.get(i);
+            boolean overlap = checkOverlapRect(bmin, bmax, node);
             boolean isLeafNode = node.i >= 0;
 
             if (isLeafNode && overlap) {

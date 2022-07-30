@@ -20,7 +20,7 @@ package org.recast4j.recast.geom;
 
 import java.util.List;
 
-import org.recast4j.recast.geom.ChunkyTriMesh.ChunkyTriMeshNode;
+import org.recast4j.recast.geom.ChunkyTriMesh.Node1;
 
 public class TriMesh {
 
@@ -42,7 +42,7 @@ public class TriMesh {
         return vertices;
     }
 
-    public List<ChunkyTriMeshNode> getChunksOverlappingRect(float[] bmin, float[] bmax) {
+    public List<Node1> getChunksOverlappingRect(float[] bmin, float[] bmax) {
         return chunkyTriMesh.getChunksOverlappingRect(bmin, bmax);
     }
 

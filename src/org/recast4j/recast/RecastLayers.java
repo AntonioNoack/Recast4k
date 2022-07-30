@@ -32,9 +32,6 @@ import static org.recast4j.recast.RecastConstants.RC_NULL_AREA;
 
 public class RecastLayers {
 
-    static final int RC_MAX_LAYERS = RecastConstants.RC_NOT_CONNECTED;
-    static final int RC_MAX_NEIS = 16;
-
     static class LayerRegion {
         int id;
         int layerId;
@@ -52,8 +49,6 @@ public class RecastLayers {
         }
 
     }
-
-    ;
 
     private static void addUnique(List<Integer> a, int v) {
         if (!a.contains(v)) {
