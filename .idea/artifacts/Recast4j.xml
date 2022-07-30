@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="Recast4j">
+    <output-path>$PROJECT_DIR$/out/artifacts/Recast4j</output-path>
+    <root id="archive" name="Recast4j.jar">
+      <element id="module-output" name="Recast4j" />
+    </root>
+  </artifact>
+</component>
