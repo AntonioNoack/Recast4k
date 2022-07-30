@@ -68,10 +68,9 @@ public class RecastConstants {
     public static int RC_CONTOUR_TESS_AREA_EDGES = 0x02; /// < Tessellate edges between areas during contour
                                                          /// simplification.
 
+    @SuppressWarnings("unused")
     public enum PartitionType {
         WATERSHED, MONOTONE, LAYERS
     }
-
-    public static final int RC_LOG_WARNING = 1;
 
 }

@@ -19,6 +19,7 @@ freely, subject to the following restrictions:
 package org.recast4j.detour.crowd;
 
 import org.joml.Vector3f;
+import org.recast4j.Pair;
 import org.recast4j.detour.*;
 
 import java.util.ArrayList;
@@ -96,7 +97,7 @@ public class LocalBoundary {
                     for (int k = 0; k < gpws.getSegmentRefs().size(); ++k) {
                         float[] s = gpws.getSegmentVerts().get(k);
                         // Skip too distant segments.
-                        Tupple2<Float, Float> distseg = distancePtSegSqr2D(pos, s, 0, 3);
+                        Pair<Float, Float> distseg = distancePtSegSqr2D(pos, s, 0, 3);
                         if (distseg.first > sqr(collisionQueryRange)) {
                             continue;
                         }

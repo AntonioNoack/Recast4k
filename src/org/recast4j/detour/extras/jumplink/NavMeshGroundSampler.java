@@ -12,7 +12,7 @@ import org.recast4j.detour.NavMeshQuery;
 import org.recast4j.detour.Poly;
 import org.recast4j.detour.QueryFilter;
 import org.recast4j.detour.Result;
-import org.recast4j.detour.Tupple2;
+import org.recast4j.Pair;
 import org.recast4j.recast.RecastBuilder.RecastBuilderResult;
 
 class NavMeshGroundSampler extends AbstractGroundSampler {
@@ -65,8 +65,8 @@ class NavMeshGroundSampler extends AbstractGroundSampler {
         return new NavMeshQuery(new NavMesh(NavMeshBuilder.createNavMeshData(params), params.nvp, 0));
     }
 
-    private Tupple2<Boolean, Float> getNavMeshHeight(NavMeshQuery navMeshQuery, Vector3f pt, float cs,
-            float heightRange) {
+    private Pair<Boolean, Float> getNavMeshHeight(NavMeshQuery navMeshQuery, Vector3f pt, float cs,
+                                                  float heightRange) {
         Vector3f halfExtents = new Vector3f(cs, heightRange, cs);
         float maxHeight = pt.y + heightRange;
         AtomicBoolean found = new AtomicBoolean();
@@ -82,9 +82,9 @@ class NavMeshGroundSampler extends AbstractGroundSampler {
             }
         });
         if (found.get()) {
-            return new Tupple2<>(true, minHeight.get());
+            return new Pair<>(true, minHeight.get());
         }
-        return new Tupple2<>(false, pt.y);
+        return new Pair<>(false, pt.y);
     }
 
 }

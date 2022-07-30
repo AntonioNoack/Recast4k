@@ -16,15 +16,15 @@ freely, subject to the following restrictions:
  misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
-package org.recast4j.detour;
+package org.recast4j;
 
-public class Tupple3<T, S, U> {
+public class Triple<T, S, U> {
 
     public final T first;
     public final S second;
     public final U third;
 
-    public Tupple3(T first, S second, U third) {
+    public Triple(T first, S second, U third) {
         this.first = first;
         this.second = second;
         this.third = third;

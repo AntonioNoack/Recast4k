@@ -19,6 +19,7 @@ freely, subject to the following restrictions:
 package org.recast4j.detour;
 
 import org.joml.Vector3f;
+import org.recast4j.Pair;
 
 import java.util.Arrays;
 import java.util.Optional;
@@ -177,7 +178,7 @@ public class ConvexConvexIntersection {
     }
 
     private static Intersection segSegInt(Vector3f a, Vector3f b, Vector3f c, Vector3f d, Vector3f p, Vector3f q) {
-        Optional<Tupple2<Float, Float>> isec = intersectSegSeg2D(a, b, c, d);
+        Optional<Pair<Float, Float>> isec = intersectSegSeg2D(a, b, c, d);
         if (isec.isPresent()) {
             float s = isec.get().first;
             float t = isec.get().second;

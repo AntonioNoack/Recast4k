@@ -45,7 +45,7 @@ public class RecastContour {
         public int vert;
     }
 
-    private static int getCornerHeight(int x, int y, int i, int dir, CompactHeightfield chf, boolean isBorderVertex) {
+    private static int getCornerHeight(int x, int y, int i, int dir, CompactHeightfield chf, boolean[] isBorderVertex) {
         CompactSpan s = chf.spans[i];
         int ch = s.y;
         int dirp = (dir + 1) & 0x3;
@@ -90,11 +90,10 @@ public class RecastContour {
         }
 
         // Check if the vertex is special edge vertex, these vertices will be removed later.
-        for (int j = 0; j < 4; ++j) {
-            int a = j;
-            int b = (j + 1) & 0x3;
-            int c = (j + 2) & 0x3;
-            int d = (j + 3) & 0x3;
+        for (int a = 0; a < 4; a++) {
+            int b = (a + 1) & 0x3;
+            int c = (a + 2) & 0x3;
+            int d = (a + 3) & 0x3;
 
             // The vertex is a border vertex there are two same exterior cells in a row,
             // followed by two interior cells and none of the regions are out of bounds.
@@ -103,7 +102,7 @@ public class RecastContour {
             boolean intsSameArea = (regs[c] >> 16) == (regs[d] >> 16);
             boolean noZeros = regs[a] != 0 && regs[b] != 0 && regs[c] != 0 && regs[d] != 0;
             if (twoSameExts && twoInts && intsSameArea && noZeros) {
-                isBorderVertex = true;
+                isBorderVertex[0] = true;
                 break;
             }
         }
@@ -126,7 +125,7 @@ public class RecastContour {
         while (++iter < 40000) {
             if ((flags[i] & (1 << dir)) != 0) {
                 // Choose the edge corner
-                boolean isBorderVertex = false;
+                boolean[] isBorderVertex = {false};
                 boolean isAreaBorder = false;
                 int px = x;
                 int py = getCornerHeight(x, y, i, dir, chf, isBorderVertex);
@@ -153,7 +152,7 @@ public class RecastContour {
                     if (area != chf.areas[ai])
                         isAreaBorder = true;
                 }
-                if (isBorderVertex)
+                if (isBorderVertex[0])
                     r |= RC_BORDER_VERTEX;
                 if (isAreaBorder)
                     r |= RC_AREA_BORDER;
@@ -355,11 +354,9 @@ public class RecastContour {
                 int ci = (ai + 1) % pn;
 
                 // Tessellate only outer edges or edges between areas.
-                boolean tess = false;
+                boolean tess = (buildFlags & RC_CONTOUR_TESS_WALL_EDGES) != 0
+                        && (points.get(ci * 4 + 3) & RC_CONTOUR_REG_MASK) == 0;
                 // Wall edges.
-                if ((buildFlags & RC_CONTOUR_TESS_WALL_EDGES) != 0
-                        && (points.get(ci * 4 + 3) & RC_CONTOUR_REG_MASK) == 0)
-                    tess = true;
                 // Edges between areas.
                 if ((buildFlags & RC_CONTOUR_TESS_AREA_EDGES) != 0 && (points.get(ci * 4 + 3) & RC_AREA_BORDER) != 0)
                     tess = true;

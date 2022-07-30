@@ -19,6 +19,7 @@ freely, subject to the following restrictions:
 package org.recast4j.detour;
 
 import org.joml.Vector3f;
+import org.recast4j.Pair;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,8 +29,9 @@ import static org.recast4j.detour.DetourCommon.*;
 
 public class LegacyNavMeshQuery extends NavMeshQuery {
 
-    private static float H_SCALE = 0.999f; // Search heuristic scale.
+    private static final float H_SCALE = 0.999f; // Search heuristic scale.
 
+    @SuppressWarnings("unused")
     public LegacyNavMeshQuery(NavMesh nav) {
         super(nav);
     }
@@ -87,7 +89,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
             // Get current poly and tile.
             // The API input has been cheked already, skip checking internal data.
             long bestRef = bestNode.id;
-            Tupple2<MeshTile, Poly> tileAndPoly = m_nav.getTileAndPolyByRefUnsafe(bestRef);
+            Pair<MeshTile, Poly> tileAndPoly = m_nav.getTileAndPolyByRefUnsafe(bestRef);
             MeshTile bestTile = tileAndPoly.first;
             Poly bestPoly = tileAndPoly.second;
 
@@ -240,7 +242,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
             // The API input has been cheked already, skip checking internal
             // data.
             long bestRef = bestNode.id;
-            Result<Tupple2<MeshTile, Poly>> tileAndPoly = m_nav.getTileAndPolyByRef(bestRef);
+            Result<Pair<MeshTile, Poly>> tileAndPoly = m_nav.getTileAndPolyByRef(bestRef);
             if (tileAndPoly.failed()) {
                 m_query.status = Status.FAILURE;
                 // The polygon has disappeared during the sliced query, fail.
@@ -292,7 +294,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
                 // Get neighbour poly and tile.
                 // The API input has been cheked already, skip checking internal
                 // data.
-                Tupple2<MeshTile, Poly> tileAndPolyUns = m_nav.getTileAndPolyByRefUnsafe(neighbourRef);
+                Pair<MeshTile, Poly> tileAndPolyUns = m_nav.getTileAndPolyByRefUnsafe(neighbourRef);
                 MeshTile neighbourTile = tileAndPolyUns.first;
                 Poly neighbourPoly = tileAndPolyUns.second;
 
@@ -583,7 +585,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
             // Get poly and tile.
             // The API input has been cheked already, skip checking internal data.
             long bestRef = bestNode.id;
-            Tupple2<MeshTile, Poly> tileAndPoly = m_nav.getTileAndPolyByRefUnsafe(bestRef);
+            Pair<MeshTile, Poly> tileAndPoly = m_nav.getTileAndPolyByRefUnsafe(bestRef);
             MeshTile bestTile = tileAndPoly.first;
             Poly bestPoly = tileAndPoly.second;
 
@@ -603,7 +605,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
                         Link link = bestTile.links.get(k);
                         if (link.edge == j) {
                             if (link.ref != 0) {
-                                Tupple2<MeshTile, Poly> linkTileAndPoly = m_nav.getTileAndPolyByRefUnsafe(link.ref);
+                                Pair<MeshTile, Poly> linkTileAndPoly = m_nav.getTileAndPolyByRefUnsafe(link.ref);
                                 MeshTile neiTile = linkTileAndPoly.first;
                                 Poly neiPoly = linkTileAndPoly.second;
                                 if (filter.passFilter(link.ref, neiTile, neiPoly)) {
@@ -628,7 +630,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
                 // Calc distance to the edge.
                 int vj = bestPoly.verts[j] * 3;
                 int vi = bestPoly.verts[i] * 3;
-                Tupple2<Float, Float> distseg = distancePtSegSqr2D(centerPos, bestTile.data.verts, vj, vi);
+                Pair<Float, Float> distseg = distancePtSegSqr2D(centerPos, bestTile.data.verts, vj, vi);
                 float distSqr = distseg.first;
                 float tseg = distseg.second;
 
@@ -656,7 +658,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
                 }
 
                 // Expand to neighbour.
-                Tupple2<MeshTile, Poly> neighbourTileAndPoly = m_nav.getTileAndPolyByRefUnsafe(neighbourRef);
+                Pair<MeshTile, Poly> neighbourTileAndPoly = m_nav.getTileAndPolyByRefUnsafe(neighbourRef);
                 MeshTile neighbourTile = neighbourTileAndPoly.first;
                 Poly neighbourPoly = neighbourTileAndPoly.second;
 
@@ -668,7 +670,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
                 // Calc distance to the edge.
                 int va = bestPoly.verts[link.edge] * 3;
                 int vb = bestPoly.verts[(link.edge + 1) % bestPoly.vertCount] * 3;
-                Tupple2<Float, Float> distseg = distancePtSegSqr2D(centerPos, bestTile.data.verts, va, vb);
+                Pair<Float, Float> distseg = distancePtSegSqr2D(centerPos, bestTile.data.verts, va, vb);
                 float distSqr = distseg.first;
                 // If the circle is not touching the next polygon, skip it.
                 if (distSqr > radiusSqr) {

@@ -46,6 +46,7 @@ public class RecastBuilderConfig {
      **/
     public final Vector3f bmax = new Vector3f();
 
+    @SuppressWarnings("unused")
     public RecastBuilderConfig(RecastConfig cfg, Vector3f bmin, Vector3f bmax) {
         this(cfg, bmin, bmax, 0, 0);
     }

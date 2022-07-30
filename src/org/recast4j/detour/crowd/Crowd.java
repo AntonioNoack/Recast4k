@@ -19,6 +19,7 @@ freely, subject to the following restrictions:
 package org.recast4j.detour.crowd;
 
 import org.joml.Vector3f;
+import org.recast4j.Pair;
 import org.recast4j.detour.*;
 import org.recast4j.detour.crowd.CrowdAgent.CrowdAgentState;
 import org.recast4j.detour.crowd.CrowdAgent.MoveRequestState;
@@ -965,7 +966,7 @@ public class Crowd {
                 // Sample new safe velocity.
 
                 ObstacleAvoidanceParams params = m_obstacleQueryParams[ag.params.obstacleAvoidanceType];
-                Tupple2<Integer, Vector3f> nsnvel = m_obstacleQuery.sampleVelocityAdaptive(ag.npos, ag.params.radius, ag.desiredSpeed, ag.vel, ag.dvel, params, vod);
+                Pair<Integer, Vector3f> nsnvel = m_obstacleQuery.sampleVelocityAdaptive(ag.npos, ag.params.radius, ag.desiredSpeed, ag.vel, ag.dvel, params, vod);
                 ag.nvel = nsnvel.second;
                 m_velocitySampleCount += nsnvel.first;
             } else {

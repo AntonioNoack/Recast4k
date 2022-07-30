@@ -20,6 +20,8 @@ package org.recast4j.detour;
 
 import org.joml.Vector3f;
 import org.joml.Vector3i;
+import org.recast4j.Pair;
+import org.recast4j.Triple;
 
 import java.util.*;
 
@@ -193,7 +195,7 @@ public class NavMesh {
         return (int) Math.floor((pos.z - m_orig.z) / m_tileHeight);
     }
 
-    public Result<Tupple2<MeshTile, Poly>> getTileAndPolyByRef(long ref) {
+    public Result<Pair<MeshTile, Poly>> getTileAndPolyByRef(long ref) {
         if (ref == 0) {
             return Result.invalidParam("ref = 0");
         }
@@ -210,7 +212,7 @@ public class NavMesh {
         if (ip >= m_tiles[it].data.header.polyCount) {
             return Result.invalidParam("poly > polyCount");
         }
-        return Result.success(new Tupple2<>(m_tiles[it], m_tiles[it].data.polys[ip]));
+        return Result.success(new Pair<>(m_tiles[it], m_tiles[it].data.polys[ip]));
     }
 
     /// @par
@@ -219,11 +221,11 @@ public class NavMesh {
     /// reference is valid. This function is faster than #getTileAndPolyByRef,
     /// but
     /// it does not validate the reference.
-    Tupple2<MeshTile, Poly> getTileAndPolyByRefUnsafe(long ref) {
+    Pair<MeshTile, Poly> getTileAndPolyByRefUnsafe(long ref) {
         int[] saltitip = decodePolyId(ref);
         int it = saltitip[1];
         int ip = saltitip[2];
-        return new Tupple2<>(m_tiles[it], m_tiles[it].data.polys[ip]);
+        return new Pair<>(m_tiles[it], m_tiles[it].data.polys[ip]);
     }
 
     boolean isValidPolyRef(long ref) {
@@ -631,7 +633,7 @@ public class NavMesh {
                 // Create new links
                 int va = poly.verts[j] * 3;
                 int vb = poly.verts[(j + 1) % nv] * 3;
-                Tupple3<long[], float[], Integer> connectedPolys = findConnectingPolys(tile.data.verts, va, vb, target,
+                Triple<long[], float[], Integer> connectedPolys = findConnectingPolys(tile.data.verts, va, vb, target,
                         oppositeTile(dir), 4);
                 long[] nei = connectedPolys.first;
                 float[] neia = connectedPolys.second;
@@ -748,9 +750,9 @@ public class NavMesh {
         }
     }
 
-    Tupple3<long[], float[], Integer> findConnectingPolys(float[] verts, int va, int vb, MeshTile tile, int side, int maxcon) {
+    Triple<long[], float[], Integer> findConnectingPolys(float[] verts, int va, int vb, MeshTile tile, int side, int maxcon) {
         if (tile == null) {
-            return new Tupple3<>(null, null, 0);
+            return new Triple<>(null, null, 0);
         }
         long[] con = new long[maxcon];
         float[] conarea = new float[maxcon * 2];
@@ -799,7 +801,7 @@ public class NavMesh {
                 break;
             }
         }
-        return new Tupple3<>(con, conarea, n);
+        return new Triple<>(con, conarea, n);
     }
 
     static float getSlabCoord(float[] verts, int va, int side) {
@@ -976,7 +978,7 @@ public class NavMesh {
                         continue;
                     }
 
-                    Tupple2<Float, Float> dt = distancePtSegSqr2D(pos, v[j], v[k]);
+                    Pair<Float, Float> dt = distancePtSegSqr2D(pos, v[j], v[k]);
                     float d = dt.first;
                     float t = dt.second;
                     if (d < dmin) {
@@ -994,7 +996,7 @@ public class NavMesh {
                 int k = (j + 1) % poly.vertCount;
                 copy(v0, tile.data.verts, poly.verts[j] * 3);
                 copy(v1, tile.data.verts, poly.verts[k] * 3);
-                Tupple2<Float, Float> dt = distancePtSegSqr2D(pos, v0, v1);
+                Pair<Float, Float> dt = distancePtSegSqr2D(pos, v0, v1);
                 float d = dt.first;
                 float t = dt.second;
                 if (d < dmin) {
@@ -1070,7 +1072,7 @@ public class NavMesh {
     }
 
     ClosestPointOnPolyResult closestPointOnPoly(long ref, Vector3f pos) {
-        Tupple2<MeshTile, Poly> tileAndPoly = getTileAndPolyByRefUnsafe(ref);
+        Pair<MeshTile, Poly> tileAndPoly = getTileAndPolyByRefUnsafe(ref);
         MeshTile tile = tileAndPoly.first;
         Poly poly = tileAndPoly.second;
         Vector3f closest = new Vector3f(pos);
@@ -1086,7 +1088,7 @@ public class NavMesh {
             Vector3f v0 = new Vector3f(tile.data.verts[i], tile.data.verts[i + 1], tile.data.verts[i + 2]);
             i = poly.verts[1] * 3;
             Vector3f v1 = new Vector3f(tile.data.verts[i], tile.data.verts[i + 1], tile.data.verts[i + 2]);
-            Tupple2<Float, Float> dt = distancePtSegSqr2D(pos, v0, v1);
+            Pair<Float, Float> dt = distancePtSegSqr2D(pos, v0, v1);
             return new ClosestPointOnPolyResult(false, vLerp(v0, v1, dt.second));
         }
         // Outside poly that is not an offmesh connection.
@@ -1229,7 +1231,7 @@ public class NavMesh {
     /// normal polygon at one of its endpoints. This is the polygon identified
     /// by
     /// the prevRef parameter.
-    public Result<Tupple2<Vector3f, Vector3f>> getOffMeshConnectionPolyEndPoints(long prevRef, long polyRef) {
+    public Result<Pair<Vector3f, Vector3f>> getOffMeshConnectionPolyEndPoints(long prevRef, long polyRef) {
         if (polyRef == 0) {
             return Result.invalidParam("polyRef = 0");
         }
@@ -1273,7 +1275,7 @@ public class NavMesh {
         Vector3f endPos = new Vector3f();
         copy(startPos, tile.data.verts, poly.verts[idx0] * 3);
         copy(endPos, tile.data.verts, poly.verts[idx1] * 3);
-        return Result.success(new Tupple2<>(startPos, endPos));
+        return Result.success(new Pair<>(startPos, endPos));
 
     }
 

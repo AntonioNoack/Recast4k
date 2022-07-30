@@ -42,6 +42,7 @@ public class RecastBuilder {
         progressListener = null;
     }
 
+    @SuppressWarnings("unused")
     public RecastBuilder(RecastBuilderProgressListener progressListener) {
         this.progressListener = progressListener;
     }
@@ -94,6 +95,7 @@ public class RecastBuilder {
 
     }
 
+    @SuppressWarnings("unused")
     public List<RecastBuilderResult> buildTiles(InputGeomProvider geom, RecastConfig cfg, Optional<Executor> executor) {
         Vector3f bmin = geom.getMeshBoundsMin();
         Vector3f bmax = geom.getMeshBoundsMax();
@@ -143,7 +145,7 @@ public class RecastBuilder {
         }
         try {
             latch.await();
-        } catch (InterruptedException e) {
+        } catch (InterruptedException ignored) {
         }
         return result;
     }
@@ -289,6 +291,7 @@ public class RecastBuilder {
         return chf;
     }
 
+    @SuppressWarnings("unused")
     public HeightfieldLayer[] buildLayers(InputGeomProvider geom, RecastBuilderConfig builderCfg) {
         Telemetry ctx = new Telemetry();
         Heightfield solid = RecastVoxelization.buildSolidHeightfield(geom, builderCfg, ctx);

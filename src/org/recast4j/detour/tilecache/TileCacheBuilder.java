@@ -19,7 +19,7 @@ freely, subject to the following restrictions:
 package org.recast4j.detour.tilecache;
 
 import org.joml.Vector3f;
-import org.recast4j.detour.Tupple2;
+import org.recast4j.Pair;
 import org.recast4j.detour.tilecache.io.TileCacheLayerHeaderReader;
 import org.recast4j.detour.tilecache.io.TileCacheLayerHeaderWriter;
 
@@ -558,7 +558,7 @@ public class TileCacheBuilder {
         }
     }
 
-    static Tupple2<Integer, Boolean> getCornerHeight(TileCacheLayer layer, int x, int y, int z, int walkableClimb) {
+    static Pair<Integer, Boolean> getCornerHeight(TileCacheLayer layer, int x, int y, int z, int walkableClimb) {
         int w = layer.header.width;
         int h = layer.header.height;
 
@@ -598,7 +598,7 @@ public class TileCacheBuilder {
             shouldRemove = true;
         }
 
-        return new Tupple2<>(height, shouldRemove);
+        return new Pair<>(height, shouldRemove);
     }
 
     // TODO: move this somewhere else, once the layer meshing is done.
@@ -650,7 +650,7 @@ public class TileCacheBuilder {
                         // stored at segment
                         // vertex of a
                         // segment.
-                        Tupple2<Integer, Boolean> res = getCornerHeight(layer, temp.verts.get(v), temp.verts.get(v + 1),
+                        Pair<Integer, Boolean> res = getCornerHeight(layer, temp.verts.get(v), temp.verts.get(v + 1),
                                 temp.verts.get(v + 2), walkableClimb);
                         int lh = res.first;
                         boolean shouldRemove = res.second;

@@ -20,6 +20,7 @@ package org.recast4j.detour;
 
 import org.joml.Vector3f;
 import org.joml.Vector3i;
+import org.recast4j.Pair;
 
 import java.util.Optional;
 
@@ -287,7 +288,7 @@ public class DetourCommon {
                 !(amin.z > bmax.z) && !(amax.z < bmin.z);
     }
 
-    public static Tupple2<Float, Float> distancePtSegSqr2D(Vector3f pt, Vector3f p, Vector3f q) {
+    public static Pair<Float, Float> distancePtSegSqr2D(Vector3f pt, Vector3f p, Vector3f q) {
         float pqx = q.x - p.x;
         float pqz = q.z - p.z;
         float dx = pt.x - p.x;
@@ -304,7 +305,7 @@ public class DetourCommon {
         }
         dx = p.x + t * pqx - pt.x;
         dz = p.z + t * pqz - pt.z;
-        return new Tupple2<>(dx * dx + dz * dz, t);
+        return new Pair<>(dx * dx + dz * dz, t);
     }
 
     static Optional<Float> closestHeightPointTriangle(Vector3f p, Vector3f a, Vector3f b, Vector3f c) {
@@ -363,7 +364,7 @@ public class DetourCommon {
                     * (pt.z - verts[vi + 2]) / (verts[vj + 2] - verts[vi + 2]) + verts[vi])) {
                 c = !c;
             }
-            Tupple2<Float, Float> edet = distancePtSegSqr2D(pt, verts, vj, vi);
+            Pair<Float, Float> edet = distancePtSegSqr2D(pt, verts, vj, vi);
             ed[j] = edet.first;
             et[j] = edet.second;
         }
@@ -551,7 +552,7 @@ public class DetourCommon {
         return result;
     }
 
-    public static Tupple2<Float, Float> distancePtSegSqr2D(Vector3f pt, float[] verts, int p, int q) {
+    public static Pair<Float, Float> distancePtSegSqr2D(Vector3f pt, float[] verts, int p, int q) {
         float pqx = verts[q] - verts[p];
         float pqz = verts[q + 2] - verts[p + 2];
         float dx = pt.x - verts[p];
@@ -568,7 +569,7 @@ public class DetourCommon {
         }
         dx = verts[p] + t * pqx - pt.x;
         dz = verts[p + 2] + t * pqz - pt.z;
-        return new Tupple2<>(dx * dx + dz * dz, t);
+        return new Pair<>(dx * dx + dz * dz, t);
     }
 
     static int oppositeTile(int side) {
@@ -579,7 +580,7 @@ public class DetourCommon {
         return a.x * b.z - a.z * b.x;
     }
 
-    static Optional<Tupple2<Float, Float>> intersectSegSeg2D(Vector3f ap, Vector3f aq, Vector3f bp, Vector3f bq) {
+    static Optional<Pair<Float, Float>> intersectSegSeg2D(Vector3f ap, Vector3f aq, Vector3f bp, Vector3f bq) {
         Vector3f u = vSub(aq, ap);
         Vector3f v = vSub(bq, bp);
         Vector3f w = vSub(ap, bp);
@@ -589,7 +590,7 @@ public class DetourCommon {
         }
         float s = vperpXZ(v, w) / d;
         float t = vperpXZ(u, w) / d;
-        return Optional.of(new Tupple2<>(s, t));
+        return Optional.of(new Pair<>(s, t));
     }
 
     /// Checks that the specified vector's components are all finite.

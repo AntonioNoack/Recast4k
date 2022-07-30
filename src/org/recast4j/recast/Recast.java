@@ -24,20 +24,6 @@ import static org.recast4j.recast.RecastConstants.RC_NULL_AREA;
 
 public class Recast {
 
-    void calcBounds(float[] verts, int nv, float[] bmin, float[] bmax) {
-        for (int i = 0; i < 3; i++) {
-            bmin[i] = verts[i];
-            bmax[i] = verts[i];
-        }
-        for (int i = 1; i < nv; ++i) {
-            for (int j = 0; j < 3; j++) {
-                bmin[j] = Math.min(bmin[j], verts[i * 3 + j]);
-                bmax[j] = Math.max(bmax[j], verts[i * 3 + j]);
-            }
-        }
-        // Calculate bounding box.
-    }
-
     public static int[] calcGridSize(Vector3f bmin, Vector3f bmax, float cs) {
         return new int[]{(int) ((bmax.x - bmin.x) / cs + 0.5f), (int) ((bmax.z - bmin.z) / cs + 0.5f)};
     }
@@ -88,7 +74,8 @@ public class Recast {
     /// See the #rcConfig documentation for more information on the configuration parameters.
     ///
     /// @see rcHeightfield, rcClearUnwalkableTriangles, rcRasterizeTriangles
-    public static void clearUnwalkableTriangles(Telemetry ctx, float walkableSlopeAngle, float[] verts, int nv,
+    @SuppressWarnings("unused")
+    public static void clearUnwalkableTriangles(float walkableSlopeAngle, float[] verts,
                                                 int[] tris, int nt, int[] areas) {
         float walkableThr = (float) Math.cos(walkableSlopeAngle / 180.0f * Math.PI);
 

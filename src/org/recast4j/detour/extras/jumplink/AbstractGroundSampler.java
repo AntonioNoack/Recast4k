@@ -1,7 +1,7 @@
 package org.recast4j.detour.extras.jumplink;
 
 import org.joml.Vector3f;
-import org.recast4j.detour.Tupple2;
+import org.recast4j.Pair;
 
 import java.util.function.BiFunction;
 
@@ -10,7 +10,7 @@ import static org.recast4j.detour.DetourCommon.vLerp;
 abstract class AbstractGroundSampler implements GroundSampler {
 
     protected void sampleGround(JumpLinkBuilderConfig acfg, EdgeSampler es,
-                                BiFunction<Vector3f, Float, Tupple2<Boolean, Float>> heightFunc) {
+                                BiFunction<Vector3f, Float, Pair<Boolean, Float>> heightFunc) {
         float cs = acfg.cellSize;
         float dist = es.start.p.distance(es.start.q);
         int ngsamples = Math.max(2, (int) Math.ceil(dist / cs));
@@ -20,7 +20,7 @@ abstract class AbstractGroundSampler implements GroundSampler {
         }
     }
 
-    protected void sampleGroundSegment(BiFunction<Vector3f, Float, Tupple2<Boolean, Float>> heightFunc, GroundSegment seg,
+    protected void sampleGroundSegment(BiFunction<Vector3f, Float, Pair<Boolean, Float>> heightFunc, GroundSegment seg,
                                        int nsamples) {
         seg.gsamples = new GroundSample[nsamples];
 
@@ -30,7 +30,7 @@ abstract class AbstractGroundSampler implements GroundSampler {
             GroundSample s = new GroundSample();
             seg.gsamples[i] = s;
             Vector3f pt = vLerp(seg.p, seg.q, u);
-            Tupple2<Boolean, Float> height = heightFunc.apply(pt, seg.height);
+            Pair<Boolean, Float> height = heightFunc.apply(pt, seg.height);
             s.p.set(pt);
             s.p.y = height.second;
 

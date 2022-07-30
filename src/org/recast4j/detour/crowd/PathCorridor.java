@@ -19,6 +19,7 @@ freely, subject to the following restrictions:
 package org.recast4j.detour.crowd;
 
 import org.joml.Vector3f;
+import org.recast4j.Pair;
 import org.recast4j.detour.*;
 
 import java.util.ArrayList;
@@ -334,7 +335,7 @@ public class PathCorridor {
         refs[1] = polyRef;
 
         NavMesh nav = navquery.getAttachedNavMesh();
-        Result<Tupple2<Vector3f, Vector3f>> startEnd = nav.getOffMeshConnectionPolyEndPoints(refs[0], refs[1]);
+        Result<Pair<Vector3f, Vector3f>> startEnd = nav.getOffMeshConnectionPolyEndPoints(refs[0], refs[1]);
         if (startEnd.succeeded()) {
             copy(m_pos, startEnd.result.second);
             copy(start, startEnd.result.first);

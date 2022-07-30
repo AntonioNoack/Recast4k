@@ -1,6 +1,6 @@
 /*
 Copyright (c) 2009-2010 Mikko Mononen memon@inside.org
-recast4j Copyright (c) 2015-2019 Piotr Piastucki piotr@jtilia.org
+recast4j copyright (c) 2015-2019 Piotr Piastucki piotr@jtilia.org
 
 This software is provided 'as-is', without any express or implied
 warranty.  In no event will the authors be held liable for any damages
@@ -16,20 +16,16 @@ freely, subject to the following restrictions:
  misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
-package org.recast4j.recast;
+package org.recast4j;
 
-import org.joml.Vector3f;
+public class Pair<T, S> {
 
-/// Represents a set of heightfield layers.
-/// @ingroup recast
-/// @see rcAllocHeightfieldLayerSet, rcFreeHeightfieldLayerSet
-public class HeightfieldLayerSet {
+    public final T first;
+    public final S second;
 
-    private HeightfieldLayerSet(){}
+    public Pair(T first, S second) {
+        this.first = first;
+        this.second = second;
+    }
 
-    /// Represents a heightfield layer within a layer set.
-    /// @see rcHeightfieldLayerSet
-
-
-    public HeightfieldLayer[] layers; /// < The layers in the set. [Size: #nlayers]
 }

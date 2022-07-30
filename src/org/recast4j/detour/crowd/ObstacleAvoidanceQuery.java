@@ -19,7 +19,7 @@ freely, subject to the following restrictions:
 package org.recast4j.detour.crowd;
 
 import org.joml.Vector3f;
-import org.recast4j.detour.Tupple2;
+import org.recast4j.Pair;
 import org.recast4j.detour.crowd.debug.ObstacleAvoidanceDebugData;
 
 import static org.recast4j.detour.DetourCommon.*;
@@ -207,7 +207,7 @@ public class ObstacleAvoidanceQuery {
 
             // Precalc if the agent is really close to the segment.
             float r = 0.01f;
-            Tupple2<Float, Float> dt = distancePtSegSqr2D(pos, seg.p, seg.q);
+            Pair<Float, Float> dt = distancePtSegSqr2D(pos, seg.p, seg.q);
             seg.touch = dt.first < sqr(r);
         }
     }
@@ -231,20 +231,20 @@ public class ObstacleAvoidanceQuery {
         return new SweepCircleCircleResult(true, (b - rd) * a, (b + rd) * a);
     }
 
-    Tupple2<Boolean, Float> isectRaySeg(Vector3f ap, Vector3f u, Vector3f bp, Vector3f bq) {
+    Pair<Boolean, Float> isectRaySeg(Vector3f ap, Vector3f u, Vector3f bp, Vector3f bq) {
         Vector3f v = vSub(bq, bp);
         Vector3f w = vSub(ap, bp);
         float d = vPerp2D(u, v);
         if (Math.abs(d) < 1e-6f)
-            return new Tupple2<>(false, 0f);
+            return new Pair<>(false, 0f);
         d = 1.0f / d;
         float t = vPerp2D(v, w) * d;
         if (t < 0 || t > 1)
-            return new Tupple2<>(false, 0f);
+            return new Pair<>(false, 0f);
         float s = vPerp2D(u, w) * d;
         if (s < 0 || s > 1)
-            return new Tupple2<>(false, 0f);
-        return new Tupple2<>(true, t);
+            return new Pair<>(false, 0f);
+        return new Pair<>(true, t);
     }
 
     /**
@@ -321,7 +321,7 @@ public class ObstacleAvoidanceQuery {
                 // Else immediate collision.
                 htmin = 0.0f;
             } else {
-                Tupple2<Boolean, Float> ires = isectRaySeg(pos, vcand, seg.p, seg.q);
+                Pair<Boolean, Float> ires = isectRaySeg(pos, vcand, seg.p, seg.q);
                 if (!ires.first)
                     continue;
                 htmin = ires.second;
@@ -353,8 +353,8 @@ public class ObstacleAvoidanceQuery {
         return penalty;
     }
 
-    public Tupple2<Integer, Vector3f> sampleVelocityGrid(Vector3f pos, float rad, float vmax, Vector3f vel, Vector3f dvel,
-                                                         ObstacleAvoidanceParams params, ObstacleAvoidanceDebugData debug) {
+    public Pair<Integer, Vector3f> sampleVelocityGrid(Vector3f pos, float rad, float vmax, Vector3f vel, Vector3f dvel,
+                                                      ObstacleAvoidanceParams params, ObstacleAvoidanceDebugData debug) {
         prepare(pos, dvel);
         m_params = params;
         m_invHorizTime = 1.0f / m_params.horizTime;
@@ -390,7 +390,7 @@ public class ObstacleAvoidanceQuery {
             }
         }
 
-        return new Tupple2<>(ns, nvel);
+        return new Pair<>(ns, nvel);
     }
 
     // vector normalization that ignores the y-component.
@@ -405,8 +405,8 @@ public class ObstacleAvoidanceQuery {
 
     static final float DT_PI = 3.14159265f;
 
-    public Tupple2<Integer, Vector3f> sampleVelocityAdaptive(Vector3f pos, float rad, float vmax, Vector3f vel,
-                                                            Vector3f dvel, ObstacleAvoidanceParams params, ObstacleAvoidanceDebugData debug) {
+    public Pair<Integer, Vector3f> sampleVelocityAdaptive(Vector3f pos, float rad, float vmax, Vector3f vel,
+                                                          Vector3f dvel, ObstacleAvoidanceParams params, ObstacleAvoidanceDebugData debug) {
         prepare(pos, dvel);
         m_params = params;
         m_invHorizTime = 1.0f / m_params.horizTime;
@@ -494,6 +494,6 @@ public class ObstacleAvoidanceQuery {
         }
         nvel.set(res);
 
-        return new Tupple2<>(ns, nvel);
+        return new Pair<>(ns, nvel);
     }
 }

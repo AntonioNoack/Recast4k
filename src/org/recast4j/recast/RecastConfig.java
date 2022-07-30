@@ -107,6 +107,7 @@ public class RecastConfig {
     /**
      * Non-tiled build configuration
      */
+    @SuppressWarnings("unused")
     public RecastConfig(PartitionType partitionType, float cellSize, float cellHeight, float agentHeight, float agentRadius,
             float agentMaxClimb, float agentMaxSlope, int regionMinSize, int regionMergeSize, float edgeMaxLen,
             float edgeMaxError, int vertsPerPoly, float detailSampleDist, float detailSampleMaxError,
@@ -167,7 +168,9 @@ public class RecastConfig {
         this.buildMeshDetail = buildMeshDetail;
     }
 
+    @SuppressWarnings("unused")
     public static int calcBorder(float agentRadius, float cs) {
         return 3 + (int) Math.ceil(agentRadius / cs);
     }
+
 }
