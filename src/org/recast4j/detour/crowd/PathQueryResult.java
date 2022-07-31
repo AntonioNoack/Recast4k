@@ -18,12 +18,10 @@ freely, subject to the following restrictions:
 
 package org.recast4j.detour.crowd;
 
-import java.util.Collections;
-import java.util.List;
-
+import org.recast4j.LongArrayList;
 import org.recast4j.detour.Status;
 
 public class PathQueryResult {
     Status status;
-    List<Long> path = Collections.emptyList();
+    LongArrayList path = LongArrayList.Companion.getEmpty();
 }

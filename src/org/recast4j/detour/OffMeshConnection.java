@@ -25,21 +25,29 @@ import org.joml.Vector3f;
  * traversable connection made up to two vertices.
  */
 public class OffMeshConnection {
-    /** The endpoints of the connection. [(ax, ay, az, bx, by, bz)] */
-    public Vector3f posA, posB;
-    /** The radius of the endpoints. [Limit: >= 0] */
+    /**
+     * The endpoints of the connection. [(ax, ay, az, bx, by, bz)]
+     */
+    public Vector3f posA = new Vector3f(), posB = new Vector3f();
+    /**
+     * The radius of the endpoints. [Limit: >= 0]
+     */
     public float rad;
-    /** The polygon reference of the connection within the tile. */
+    /**
+     * The polygon reference of the connection within the tile.
+     */
     public int poly;
     /**
-     * Link flags.
-     *
-     * @note These are not the connection's user defined flags. Those are assigned via the connection's Poly definition.
-     *       These are link flags used for internal purposes.
+     * Link flags. These are not the connection's user defined flags. Those are assigned via the connection's Poly definition.
+     * These are link flags used for internal purposes.
      */
     public int flags;
-    /** End point side. */
+    /**
+     * End point side.
+     */
     public int side;
-    /** The id of the offmesh connection. (User assigned when the navigation mesh is built.) */
+    /**
+     * The id of the offmesh connection. (User assigned when the navigation mesh is built.)
+     */
     public int userId;
 }

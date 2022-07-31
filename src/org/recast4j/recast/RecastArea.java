@@ -31,7 +31,7 @@ public class RecastArea {
     /**
      * Basically, any spans that are closer to a boundary or obstruction than the specified radius are marked as unwalkable.
      * This method is usually called immediately after the heightfield has been built.
-     * */
+     */
     public static void erodeWalkableArea(Telemetry ctx, int radius, CompactHeightfield chf) {
         int w = chf.width;
         int h = chf.height;
@@ -176,7 +176,7 @@ public class RecastArea {
             if (dist[i] < thr)
                 chf.areas[i] = RC_NULL_AREA;
 
-        ctx.stopTimer("ERODE_AREA");
+        if (ctx != null) ctx.stopTimer("ERODE_AREA");
     }
 
     /// @par
@@ -234,9 +234,7 @@ public class RecastArea {
             }
         }
         chf.areas = areas;
-
-        ctx.stopTimer("MEDIAN_AREA");
-
+        if (ctx != null) ctx.stopTimer("MEDIAN_AREA");
         return true;
     }
 
@@ -292,9 +290,8 @@ public class RecastArea {
     /// projected onto the xz-plane at @p hmin, then extruded to @p hmax.
     ///
     /// @see rcCompactHeightfield, rcMedianFilterWalkableArea
-    public static void markConvexPolyArea(Telemetry ctx, float[] vertices, float hmin, float hmax, AreaModification areaMod,
-                                          CompactHeightfield chf) {
-        ctx.startTimer("MARK_CONVEXPOLY_AREA");
+    public static void markConvexPolyArea(Telemetry ctx, float[] vertices, float hmin, float hmax, AreaModification areaMod, CompactHeightfield chf) {
+        if (ctx != null) ctx.startTimer("MARK_CONVEXPOLY_AREA");
 
         Vector3f bmin = new Vector3f(), bmax = new Vector3f();
         Vectors.copy(bmin, vertices, 0);
@@ -339,7 +336,7 @@ public class RecastArea {
             }
         }
 
-        ctx.stopTimer("MARK_CONVEXPOLY_AREA");
+        if (ctx != null) ctx.stopTimer("MARK_CONVEXPOLY_AREA");
     }
 
     /// @par
@@ -351,7 +348,7 @@ public class RecastArea {
     public void markCylinderArea(Telemetry ctx, Vector3f pos, float r, float h, AreaModification areaMod,
                                  CompactHeightfield chf) {
 
-        ctx.startTimer("MARK_CYLINDER_AREA");
+        if (ctx != null) ctx.startTimer("MARK_CYLINDER_AREA");
 
         Vector3f bmin = new Vector3f(), bmax = new Vector3f();
         bmin.x = pos.x - r;
@@ -378,17 +375,13 @@ public class RecastArea {
             for (int x = minx; x <= maxx; ++x) {
                 CompactCell c = chf.cells[x + z * chf.width];
                 for (int i = c.index, ni = c.index + c.count; i < ni; ++i) {
+                    if (chf.areas[i] == RC_NULL_AREA) continue;
                     CompactSpan s = chf.spans[i];
-
-                    if (chf.areas[i] == RC_NULL_AREA)
-                        continue;
-
                     if (s.y >= miny && s.y <= maxy) {
                         float sx = chf.bmin.x + (x + 0.5f) * chf.cellSize;
                         float sz = chf.bmin.z + (z + 0.5f) * chf.cellSize;
                         float dx = sx - pos.x;
                         float dz = sz - pos.z;
-
                         if (dx * dx + dz * dz < r2) {
                             chf.areas[i] = areaMod.apply(chf.areas[i]);
                         }
@@ -396,7 +389,7 @@ public class RecastArea {
                 }
             }
         }
-        ctx.stopTimer("MARK_CYLINDER_AREA");
+        if (ctx != null) ctx.stopTimer("MARK_CYLINDER_AREA");
     }
 
 }

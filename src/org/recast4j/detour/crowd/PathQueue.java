@@ -19,6 +19,7 @@ freely, subject to the following restrictions:
 package org.recast4j.detour.crowd;
 
 import org.joml.Vector3f;
+import org.recast4j.LongArrayList;
 import org.recast4j.detour.NavMesh;
 import org.recast4j.detour.NavMeshQuery;
 import org.recast4j.detour.QueryFilter;
@@ -26,7 +27,6 @@ import org.recast4j.detour.Result;
 
 import java.util.Deque;
 import java.util.LinkedList;
-import java.util.List;
 
 public class PathQueue {
 
@@ -57,7 +57,7 @@ public class PathQueue {
                 iterCount -= res.result;
             }
             if (q.result.status.isSuccess()) {
-                Result<List<Long>> path = q.navQuery.finalizeSlicedFindPath();
+                Result<LongArrayList> path = q.navQuery.finalizeSlicedFindPath();
                 q.result.status = path.status;
                 q.result.path = path.result;
             }

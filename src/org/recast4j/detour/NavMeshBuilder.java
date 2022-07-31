@@ -102,7 +102,7 @@ public class NavMeshBuilder {
             n.maxX = i.maxX;
             n.maxY = i.maxY;
             n.maxZ = i.maxZ;
-            n.i = i.i;
+            n.index = i.index;
         } else {
 
             // Split
@@ -130,7 +130,7 @@ public class NavMeshBuilder {
 
             int iescape = curBVNode - icur;
             // Negative index means escape.
-            n.i = -iescape;
+            n.index = -iescape;
         }
         return curBVNode;
     }
@@ -142,7 +142,7 @@ public class NavMeshBuilder {
         for (int i = 0; i < params.polyCount; i++) {
             BVNode it = new BVNode();
             items[i] = it;
-            it.i = i;
+            it.index = i;
             // Calc polygon bounds. Use detail meshes if available.
             if (params.detailMeshes != null) {
                 int vb = params.detailMeshes[i * 4];
@@ -568,10 +568,10 @@ public class NavMeshBuilder {
         MeshData nmd = new MeshData();
         nmd.header = header;
         nmd.vertices = navVertices;
-        nmd.polys = navPolys;
+        nmd.polygons = navPolys;
         nmd.detailMeshes = navDMeshes;
         nmd.detailVertices = navDVertices;
-        nmd.detailTris = navDTris;
+        nmd.detailTriangles = navDTris;
         nmd.bvTree = navBvtree;
         nmd.offMeshCons = offMeshCons;
         return nmd;

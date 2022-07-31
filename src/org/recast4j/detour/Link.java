@@ -29,7 +29,7 @@ public class Link {
     public long ref;
     /** Index of the next link. */
     public int next;
-    /** Index of the polygon edge that owns this link. */
+    /** Index of the polygon edge, that owns this link. */
     public int edge;
     /** If a boundary link, defines on which side the link is. */
     int side;

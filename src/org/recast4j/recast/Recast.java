@@ -77,7 +77,6 @@ public class Recast {
     public static void clearUnwalkableTriangles(float walkableSlopeAngle, float[] vertices,
                                                 int[] tris, int nt, int[] areas) {
         float walkableThr = (float) Math.cos(walkableSlopeAngle / 180.0f * Math.PI);
-
         Vector3f norm = new Vector3f();
         for (int i = 0; i < nt; ++i) {
             int tri = i * 3;

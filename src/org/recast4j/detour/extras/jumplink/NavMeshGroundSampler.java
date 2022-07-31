@@ -44,8 +44,8 @@ class NavMeshGroundSampler extends AbstractGroundSampler {
         NavMeshDataCreateParams params = new NavMeshDataCreateParams();
         params.vertices = r.mesh.vertices;
         params.vertCount = r.mesh.numVertices;
-        params.polys = r.mesh.polys;
-        params.polyAreas = r.mesh.areas;
+        params.polys = r.mesh.polygons;
+        params.polyAreas = r.mesh.areaIds;
         params.polyFlags = r.mesh.flags;
         params.polyCount = r.mesh.numPolygons;
         params.maxVerticesPerPolygon = r.mesh.maxVerticesPerPolygon;
@@ -59,8 +59,8 @@ class NavMeshGroundSampler extends AbstractGroundSampler {
         params.walkableClimb = agentClimb;
         params.bmin = r.mesh.bmin;
         params.bmax = r.mesh.bmax;
-        params.cellSize = r.mesh.cs;
-        params.cellHeight = r.mesh.ch;
+        params.cellSize = r.mesh.cellSize;
+        params.cellHeight = r.mesh.cellHeight;
         params.buildBvTree = true;
         return new NavMeshQuery(new NavMesh(NavMeshBuilder.createNavMeshData(params), params.maxVerticesPerPolygon, 0));
     }

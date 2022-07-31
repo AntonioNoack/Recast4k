@@ -18,13 +18,13 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour;
 
-import java.util.List;
+import org.recast4j.LongArrayList;
 
 public class FindLocalNeighbourhoodResult {
-    public final List<Long> refs;
-    public final List<Long> parentRefs;
+    public final LongArrayList refs;
+    public final LongArrayList parentRefs;
 
-    public FindLocalNeighbourhoodResult(List<Long> refs, List<Long> parentRefs) {
+    public FindLocalNeighbourhoodResult(LongArrayList refs, LongArrayList parentRefs) {
         this.refs = refs;
         this.parentRefs = parentRefs;
     }

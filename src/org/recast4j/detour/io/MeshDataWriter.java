@@ -66,15 +66,15 @@ public class MeshDataWriter extends DetourWriter {
 
     private void writePolys(OutputStream stream, MeshData data, ByteOrder order) throws IOException {
         for (int i = 0; i < data.header.polyCount; i++) {
-            for (int j = 0; j < data.polys[i].vertices.length; j++) {
-                write(stream, (short) data.polys[i].vertices[j], order);
+            for (int j = 0; j < data.polygons[i].vertices.length; j++) {
+                write(stream, (short) data.polygons[i].vertices[j], order);
             }
-            for (int j = 0; j < data.polys[i].neis.length; j++) {
-                write(stream, (short) data.polys[i].neis[j], order);
+            for (int j = 0; j < data.polygons[i].neis.length; j++) {
+                write(stream, (short) data.polygons[i].neis[j], order);
             }
-            write(stream, (short) data.polys[i].flags, order);
-            stream.write(data.polys[i].vertCount);
-            stream.write(data.polys[i].areaAndtype);
+            write(stream, (short) data.polygons[i].flags, order);
+            stream.write(data.polygons[i].vertCount);
+            stream.write(data.polygons[i].areaAndtype);
         }
     }
 
@@ -89,7 +89,7 @@ public class MeshDataWriter extends DetourWriter {
 
     private void writeDTris(OutputStream stream, MeshData data) throws IOException {
         for (int i = 0; i < data.header.detailTriCount * 4; i++) {
-            stream.write(data.detailTris[i]);
+            stream.write(data.detailTriangles[i]);
         }
     }
 
@@ -101,7 +101,7 @@ public class MeshDataWriter extends DetourWriter {
             write(stream, data.bvTree[i].maxX, order);
             write(stream, data.bvTree[i].maxY, order);
             write(stream, data.bvTree[i].maxZ, order);
-            write(stream, data.bvTree[i].i, order);
+            write(stream, data.bvTree[i].index, order);
         }
     }
 

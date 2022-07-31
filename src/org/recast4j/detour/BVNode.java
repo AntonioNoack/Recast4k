@@ -27,7 +27,7 @@ package org.recast4j.detour;
 public class BVNode {
     public int minX, minY, minZ, maxX, maxY, maxZ;
     /**
-     * The node's index. (Negative for escape sequence.)
+     * Negative for escape sequence.
      */
-    public int i;
+    public int index;
 }

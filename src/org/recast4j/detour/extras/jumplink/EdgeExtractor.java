@@ -15,30 +15,30 @@ class EdgeExtractor {
         List<Edge> edges = new ArrayList<>();
         if (mesh != null) {
             Vector3f orig = mesh.bmin;
-            float cs = mesh.cs;
-            float ch = mesh.ch;
+            float cs = mesh.cellSize;
+            float ch = mesh.cellHeight;
             for (int i = 0; i < mesh.numPolygons; i++) {
                 int nvp = mesh.maxVerticesPerPolygon;
                 int p = i * 2 * nvp;
                 for (int j = 0; j < nvp; ++j) {
-                    if (mesh.polys[p + j] == RC_MESH_NULL_IDX) {
+                    if (mesh.polygons[p + j] == RC_MESH_NULL_IDX) {
                         break;
                     }
                     // Skip connected edges.
-                    if ((mesh.polys[p + nvp + j] & 0x8000) != 0) {
-                        int dir = mesh.polys[p + nvp + j] & 0xf;
+                    if ((mesh.polygons[p + nvp + j] & 0x8000) != 0) {
+                        int dir = mesh.polygons[p + nvp + j] & 0xf;
                         if (dir == 0xf) {// Border
-                            if (mesh.polys[p + nvp + j] != RC_MESH_NULL_IDX) {
+                            if (mesh.polygons[p + nvp + j] != RC_MESH_NULL_IDX) {
                                 continue;
                             }
                             int nj = j + 1;
-                            if (nj >= nvp || mesh.polys[p + nj] == RC_MESH_NULL_IDX) {
+                            if (nj >= nvp || mesh.polygons[p + nj] == RC_MESH_NULL_IDX) {
                                 nj = 0;
                             }
                             Edge e = new Edge();
-                            copy(e.a, mesh.vertices, mesh.polys[p + nj] * 3);
+                            copy(e.a, mesh.vertices, mesh.polygons[p + nj] * 3);
                             e.a.mul(cs, ch, cs).add(orig);
-                            copy(e.b, mesh.vertices, mesh.polys[p + j] * 3);
+                            copy(e.b, mesh.vertices, mesh.polygons[p + j] * 3);
                             e.b.mul(cs, ch, cs).add(orig);
                             edges.add(e);
                         }

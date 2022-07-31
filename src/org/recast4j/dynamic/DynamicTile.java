@@ -122,8 +122,8 @@ class DynamicTile {
         params.tileZ = tileZ;
         params.vertices = mesh.vertices;
         params.vertCount = mesh.numVertices;
-        params.polys = mesh.polys;
-        params.polyAreas = mesh.areas;
+        params.polys = mesh.polygons;
+        params.polyAreas = mesh.areaIds;
         params.polyFlags = mesh.flags;
         params.polyCount = mesh.numPolygons;
         params.maxVerticesPerPolygon = mesh.maxVerticesPerPolygon;

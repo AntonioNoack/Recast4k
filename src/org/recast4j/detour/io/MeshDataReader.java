@@ -84,13 +84,13 @@ public class MeshDataReader {
         header.bmax.set(buf.getFloat(), buf.getFloat(), buf.getFloat());
         header.bvQuantizationFactor = buf.getFloat();
         data.vertices = readVertices(buf, header.vertCount);
-        data.polys = readPolys(buf, header, maxVertPerPoly);
+        data.polygons = readPolys(buf, header, maxVertPerPoly);
         if (cCompatibility) {
             buf.position(buf.position() + header.maxLinkCount * getSizeofLink(is32Bit));
         }
         data.detailMeshes = readPolyDetails(buf, header, cCompatibility);
         data.detailVertices = readVertices(buf, header.detailVertCount);
-        data.detailTris = readDTris(buf, header);
+        data.detailTriangles = readDTris(buf, header);
         data.bvTree = readBVTree(buf, header);
         data.offMeshCons = readOffMeshCons(buf, header);
         return data;
@@ -164,7 +164,7 @@ public class MeshDataReader {
             n.maxX = buf.getInt();
             n.maxY = buf.getInt();
             n.maxZ = buf.getInt();
-            n.i = buf.getInt();
+            n.index = buf.getInt();
         }
         return nodes;
     }

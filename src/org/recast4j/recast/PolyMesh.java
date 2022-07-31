@@ -32,15 +32,15 @@ public class PolyMesh {
     /**
      * Polygon and neighbor data. [Length: #maxpolys * 2 * #nvp]
      */
-    public int[] polys;
+    public int[] polygons;
     /**
      * The region id assigned to each polygon. [Length: #maxpolys]
      */
-    public int[] regs;
+    public int[] regionIds;
     /**
      * The area id assigned to each polygon. [Length: #maxpolys]
      */
-    public int[] areas;
+    public int[] areaIds;
     public int numVertices;
     public int numPolygons;
     public int maxVerticesPerPolygon;
@@ -50,21 +50,10 @@ public class PolyMesh {
      */
     public int[] flags;
     /**
-     * The minimum bounds in world space.
+     * The bounds.
      */
-    public final Vector3f bmin = new Vector3f();
-    /**
-     * The maximum bounds in world space.
-     */
-    public final Vector3f bmax = new Vector3f();
-    /**
-     * The size of each cell. (On the xz-plane.)
-     */
-    public float cs;
-    /**
-     * The height of each cell. (The minimum increment along the y-axis.)
-     */
-    public float ch;
+    public final Vector3f bmin = new Vector3f(), bmax = new Vector3f();
+    public float cellSize, cellHeight;
     /**
      * The AABB border size used to generate the source data from which the mesh was derived.
      */

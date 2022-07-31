@@ -19,6 +19,7 @@ freely, subject to the following restrictions:
 package org.recast4j.detour.tilecache;
 
 import org.joml.Vector3f;
+import org.recast4j.LongArrayList;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,8 +39,8 @@ public class TileCacheObstacle {
     final Vector3f center = new Vector3f();
     final Vector3f extents = new Vector3f();
     final float[] rotAux = new float[2]; // { cos(0.5f*angle)*sin(-0.5f*angle); cos(0.5f*angle)*cos(0.5f*angle) - 0.5 }
-    List<Long> touched = new ArrayList<>();
-    final List<Long> pending = new ArrayList<>();
+    LongArrayList touched = new  LongArrayList();
+    final  LongArrayList pending = new  LongArrayList();
     int salt;
     ObstacleState state = ObstacleState.DT_OBSTACLE_EMPTY;
     TileCacheObstacle next;

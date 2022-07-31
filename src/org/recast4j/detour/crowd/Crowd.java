@@ -19,6 +19,7 @@ freely, subject to the following restrictions:
 package org.recast4j.detour.crowd;
 
 import org.joml.Vector3f;
+import org.recast4j.LongArrayList;
 import org.recast4j.Pair;
 import org.recast4j.Vectors;
 import org.recast4j.detour.*;
@@ -460,7 +461,7 @@ public class Crowd {
             // If the end of the path is near and it is not the requested
             // location, replan.
             if (ag.targetState == MoveRequestState.DT_CROWDAGENT_TARGET_VALID) {
-                if (ag.targetReplanTime > config.targetReplanDelay && ag.corridor.path.size() < config.checkLookAhead
+                if (ag.targetReplanTime > config.targetReplanDelay && ag.corridor.path.getSize() < config.checkLookAhead
                         && ag.corridor.getLastPoly() != ag.targetRef) {
                     replan = true;
                 }
@@ -493,7 +494,7 @@ public class Crowd {
             }
 
             if (ag.targetState == MoveRequestState.DT_CROWDAGENT_TARGET_REQUESTING) {
-                List<Long> path = ag.corridor.path;
+                LongArrayList path = ag.corridor.path;
                 if (path.isEmpty()) {
                     throw new IllegalArgumentException("Empty path");
                 }
@@ -501,7 +502,7 @@ public class Crowd {
                 navQuery.initSlicedFindPath(path.get(0), ag.targetRef, ag.npos, ag.targetPos,
                         m_filters[ag.params.queryFilterType], 0);
                 navQuery.updateSlicedFindPath(config.maxTargetFindPathIterations);
-                Result<List<Long>> pathFound;
+                Result<LongArrayList> pathFound;
                 if (ag.targetReplan) // && npath > 10)
                 {
                     // Try to use existing steady path during replan if
@@ -511,19 +512,19 @@ public class Crowd {
                     // Try to move towards target when goal changes.
                     pathFound = navQuery.finalizeSlicedFindPath();
                 }
-                List<Long> reqPath = pathFound.result;
+                LongArrayList reqPath = pathFound.result;
                 Vector3f reqPos = new Vector3f();
-                if (pathFound.succeeded() && reqPath.size() > 0) {
+                if (pathFound.succeeded() && reqPath.getSize() > 0) {
                     // In progress or succeed.
-                    if (reqPath.get(reqPath.size() - 1) != ag.targetRef) {
+                    if (reqPath.get(reqPath.getSize() - 1) != ag.targetRef) {
                         // Partial path, constrain target position inside the
                         // last polygon.
-                        Result<ClosestPointOnPolyResult> cr = navQuery.closestPointOnPoly(reqPath.get(reqPath.size() - 1),
+                        Result<ClosestPointOnPolyResult> cr = navQuery.closestPointOnPoly(reqPath.get(reqPath.getSize() - 1),
                                 ag.targetPos);
                         if (cr.succeeded()) {
                             reqPos = cr.result.getClosest();
                         } else {
-                            reqPath = new ArrayList<>();
+                            reqPath = new LongArrayList();
                         }
                     } else {
                         copy(reqPos, ag.targetPos);
@@ -532,7 +533,7 @@ public class Crowd {
                     // Could not find path, start the request from current
                     // location.
                     copy(reqPos, ag.npos);
-                    reqPath = new ArrayList<>();
+                    reqPath = new LongArrayList();
                     reqPath.add(path.get(0));
                 }
 
@@ -540,7 +541,7 @@ public class Crowd {
                 ag.boundary.reset();
                 ag.partial = false;
 
-                if (reqPath.get(reqPath.size() - 1) == ag.targetRef) {
+                if (reqPath.get(reqPath.getSize() - 1) == ag.targetRef) {
                     ag.targetState = MoveRequestState.DT_CROWDAGENT_TARGET_VALID;
                     ag.targetReplanTime = 0;
                 } else {
@@ -594,7 +595,7 @@ public class Crowd {
                     }
                     ag.targetReplanTime = 0;
                 } else if (status != null && status.isSuccess()) {
-                    List<Long> path = ag.corridor.path;
+                    LongArrayList path = ag.corridor.path;
                     if (path.isEmpty()) {
                         throw new IllegalArgumentException("Empty path");
                     }
@@ -603,7 +604,7 @@ public class Crowd {
                     Vector3f targetPos = ag.targetPos;
 
                     boolean valid = true;
-                    List<Long> res = ag.targetPathQueryResult.path;
+                    LongArrayList res = ag.targetPathQueryResult.path;
                     if (res.isEmpty()) {
                         valid = false;
                     }
@@ -619,20 +620,20 @@ public class Crowd {
 
                     // The last ref in the old path should be the same as
                     // the location where the request was issued..
-                    if (valid && path.get(path.size() - 1).longValue() != res.get(0).longValue()) {
+                    if (valid && path.get(path.getSize() - 1) != res.get(0)) {
                         valid = false;
                     }
 
                     if (valid) {
                         // Put the old path infront of the old path.
-                        if (path.size() > 1) {
-                            path.remove(path.size() - 1);
+                        if (path.getSize() > 1) {
+                            path.remove(path.getSize() - 1);
                             path.addAll(res);
                             res = path;
                             // Remove trackbacks
-                            for (int j = 1; j < res.size() - 1; ++j) {
-                                if (j - 1 >= 0 && j + 1 < res.size()) {
-                                    if (res.get(j - 1).longValue() == res.get(j + 1).longValue()) {
+                            for (int j = 1; j < res.getSize() - 1; ++j) {
+                                if (j - 1 >= 0 && j + 1 < res.getSize()) {
+                                    if (res.get(j - 1) == res.get(j + 1)) {
                                         res.remove(j + 1);
                                         res.remove(j);
                                         j -= 2;
@@ -642,10 +643,10 @@ public class Crowd {
                         }
 
                         // Check for partial path.
-                        if (res.get(res.size() - 1) != ag.targetRef) {
+                        if (res.get(res.getSize() - 1) != ag.targetRef) {
                             // Partial path, constrain target position inside
                             // the last polygon.
-                            Result<ClosestPointOnPolyResult> cr = navQuery.closestPointOnPoly(res.get(res.size() - 1), targetPos);
+                            Result<ClosestPointOnPolyResult> cr = navQuery.closestPointOnPoly(res.get(res.getSize() - 1), targetPos);
                             if (cr.succeeded()) {
                                 targetPos = cr.result.getClosest();
                             } else {
@@ -778,7 +779,7 @@ public class Crowd {
             }
 
             // Find corners for steering
-            ag.corners = ag.corridor.findCorners(DT_CROWDAGENT_MAX_CORNERS, navQuery, m_filters[ag.params.queryFilterType]);
+            ag.corners = ag.corridor.findCorners(DT_CROWDAGENT_MAX_CORNERS, navQuery);
 
             // Check to see if the corner after the next corner is directly visible,
             // and short cut to there.

@@ -62,7 +62,7 @@ public class RecastLayers {
 
     public static HeightfieldLayer[] buildHeightfieldLayers(Telemetry ctx, CompactHeightfield chf, int walkableHeight) {
 
-        if(ctx != null) ctx.startTimer("RC_TIMER_BUILD_LAYERS");
+        if (ctx != null) ctx.startTimer("RC_TIMER_BUILD_LAYERS");
         int w = chf.width;
         int h = chf.height;
         int borderSize = chf.borderSize;
@@ -422,8 +422,8 @@ public class RecastLayers {
             // Update usable data region.
             layer.minX = layer.width;
             layer.maxX = 0;
-            layer.minY = layer.height;
-            layer.maxY = 0;
+            layer.minZ = layer.height;
+            layer.maxZ = 0;
 
             // Copy height and area from compact heightfield.
             for (int y = 0; y < lh; ++y) {
@@ -444,8 +444,8 @@ public class RecastLayers {
                         // Update data bounds.
                         layer.minX = Math.min(layer.minX, x);
                         layer.maxX = Math.max(layer.maxX, x);
-                        layer.minY = Math.min(layer.minY, y);
-                        layer.maxY = Math.max(layer.maxY, y);
+                        layer.minZ = Math.min(layer.minZ, y);
+                        layer.maxZ = Math.max(layer.maxZ, y);
 
                         // Store height and area type.
                         int idx = x + y * lw;
@@ -486,8 +486,8 @@ public class RecastLayers {
 
             if (layer.minX > layer.maxX)
                 layer.minX = layer.maxX = 0;
-            if (layer.minY > layer.maxY)
-                layer.minY = layer.maxY = 0;
+            if (layer.minZ > layer.maxZ)
+                layer.minZ = layer.maxZ = 0;
         }
 
         // ctx->stopTimer(RC_TIMER_BUILD_LAYERS);

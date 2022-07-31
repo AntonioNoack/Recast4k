@@ -653,7 +653,7 @@ public class RecastContour {
         int borderSize = chf.borderSize;
         ContourSet cset = new ContourSet();
 
-        ctx.startTimer("CONTOURS");
+        if (ctx != null) ctx.startTimer("CONTOURS");
         cset.bmin.set(chf.bmin);
         cset.bmax.set(chf.bmax);
         if (borderSize > 0) {
@@ -673,7 +673,7 @@ public class RecastContour {
 
         int[] flags = new int[chf.spanCount];
 
-        ctx.startTimer("CONTOURS_TRACE");
+        if (ctx != null) ctx.startTimer("CONTOURS_TRACE");
 
         // Mark boundaries.
         for (int y = 0; y < h; ++y) {
@@ -702,7 +702,7 @@ public class RecastContour {
             }
         }
 
-        ctx.stopTimer("CONTOURS_TRACE");
+        if (ctx != null) ctx.stopTimer("CONTOURS_TRACE");
 
         List<Integer> vertices = new ArrayList<>(256);
         List<Integer> simplified = new ArrayList<>(64);
@@ -723,14 +723,14 @@ public class RecastContour {
                     vertices.clear();
                     simplified.clear();
 
-                    ctx.startTimer("CONTOURS_WALK");
+                    if (ctx != null) ctx.startTimer("CONTOURS_WALK");
                     walkContour(x, y, i, chf, flags, vertices);
-                    ctx.stopTimer("CONTOURS_WALK");
+                    if (ctx != null) ctx.stopTimer("CONTOURS_WALK");
 
-                    ctx.startTimer("CONTOURS_SIMPLIFY");
+                    if (ctx != null) ctx.startTimer("CONTOURS_SIMPLIFY");
                     simplifyContour(vertices, simplified, maxError, maxEdgeLen, buildFlags);
                     removeDegenerateSegments(simplified);
-                    ctx.stopTimer("CONTOURS_SIMPLIFY");
+                    if (ctx != null) ctx.stopTimer("CONTOURS_SIMPLIFY");
 
                     // Store region->contour remap info.
                     // Create contour.
@@ -842,7 +842,7 @@ public class RecastContour {
                 }
             }
         }
-        ctx.stopTimer("CONTOURS");
+        if (ctx != null) ctx.stopTimer("CONTOURS");
         return cset;
     }
 }

@@ -18,14 +18,16 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour;
 
+import org.recast4j.LongArrayList;
+
 import java.util.List;
 
 public class GetPolyWallSegmentsResult {
 
     public final List<float[]> segmentVertices;
-    public final List<Long> segmentRefs;
+    public final LongArrayList segmentRefs;
 
-    public GetPolyWallSegmentsResult(List<float[]> segmentVertices, List<Long> segmentRefs) {
+    public GetPolyWallSegmentsResult(List<float[]> segmentVertices, LongArrayList segmentRefs) {
         this.segmentVertices = segmentVertices;
         this.segmentRefs = segmentRefs;
     }

@@ -27,26 +27,38 @@ import static org.recast4j.Vectors.copy;
 
 public class MeshData {
 
-    /** The tile header. */
+    /**
+     * The tile header.
+     */
     public MeshHeader header;
-    /** The tile vertices. [Size: MeshHeader::vertCount] */
+    /**
+     * The tile vertices. [Size: MeshHeader::vertCount]
+     */
     public float[] vertices;
-    /** The tile polygons. [Size: MeshHeader::polyCount] */
-    public Poly[] polys;
-    /** The tile's detail sub-meshes. [Size: MeshHeader::detailMeshCount] */
+    /**
+     * The tile polygons. [Size: MeshHeader::polyCount]
+     */
+    public Poly[] polygons;
+    /**
+     * The tile's detail sub-meshes. [Size: MeshHeader::detailMeshCount]
+     */
     public PolyDetail[] detailMeshes;
-    /** The detail mesh's unique vertices. [(x, y, z) * MeshHeader::detailVertCount] */
+    /**
+     * The detail mesh's unique vertices. [(x, y, z) * MeshHeader::detailVertCount]
+     */
     public float[] detailVertices;
     /**
      * The detail mesh's triangles. [(vertA, vertB, vertC) * MeshHeader::detailTriCount] See DetailTriEdgeFlags and
      * NavMesh::getDetailTriEdgeFlags.
      */
-    public int[] detailTris;
+    public int[] detailTriangles;
     /**
      * The tile bounding volume nodes. [Size: MeshHeader::bvNodeCount] (Will be null if bounding volumes are disabled.)
      */
     public BVNode[] bvTree;
-    /** The tile off-mesh connections. [Size: MeshHeader::offMeshConCount] */
+    /**
+     * The tile off-mesh connections. [Size: MeshHeader::offMeshConCount]
+     */
     public OffMeshConnection[] offMeshCons;
 
     public static MeshData build(NavMeshDataCreateParams params, int tileX, int tileY) {
@@ -69,14 +81,14 @@ public class MeshData {
         for (int i = 0; i < data.header.polyCount; i++) {
             BVNode it = new BVNode();
             items[i] = it;
-            it.i = i;
+            it.index = i;
             Vector3f bmin = new Vector3f();
-            Vector3f bmax = new Vector3f();
-            copy(bmin, data.vertices, data.polys[i].vertices[0] * 3);
-            copy(bmax, data.vertices, data.polys[i].vertices[0] * 3);
-            for (int j = 1; j < data.polys[i].vertCount; j++) {
-                min(bmin, data.vertices, data.polys[i].vertices[j] * 3);
-                max(bmax, data.vertices, data.polys[i].vertices[j] * 3);
+            copy(bmin, data.vertices, data.polygons[i].vertices[0] * 3);
+            Vector3f bmax = new Vector3f(bmin);
+            for (int j = 1; j < data.polygons[i].vertCount; j++) {
+                int idx = data.polygons[i].vertices[j] * 3;
+                min(bmin, data.vertices, idx);
+                max(bmax, data.vertices, idx);
             }
             it.minX = clamp((int) ((bmin.x - data.header.bmin.x) * quantFactor), 0, 0x7fffffff);
             it.minY = clamp((int) ((bmin.y - data.header.bmin.y) * quantFactor), 0, 0x7fffffff);

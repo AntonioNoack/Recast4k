@@ -19,9 +19,7 @@ freely, subject to the following restrictions:
 package org.recast4j.detour;
 
 import org.joml.Vector3f;
-
-import java.util.ArrayList;
-import java.util.List;
+import org.recast4j.LongArrayList;
 
 /**
  * Provides information about raycast hit. Filled by NavMeshQuery::raycast
@@ -32,7 +30,7 @@ public class RaycastHit {
     /** hitNormal The normal of the nearest wall hit. [(x, y, z)] */
     public final Vector3f hitNormal = new Vector3f();
     /** Visited polygons. */
-    public final List<Long> path = new ArrayList<>();
+    public final LongArrayList path = new LongArrayList();
     /** The cost of the path until hit. */
     public float pathCost;
     /** The index of the edge on the final polygon where the wall was hit. */

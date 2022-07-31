@@ -21,12 +21,12 @@ package org.recast4j.recast;
 import org.joml.Vector3f;
 import org.recast4j.Vectors;
 
+import java.util.function.Function;
+
 import static org.joml.Math.clamp;
-import static org.recast4j.recast.RecastConstants.SPAN_MAX_HEIGHT;
 import static org.recast4j.Vectors.dot;
 import static org.recast4j.Vectors.normalize;
-
-import java.util.function.Function;
+import static org.recast4j.recast.RecastConstants.SPAN_MAX_HEIGHT;
 
 public class RecastFilledVolumeRasterization {
 
@@ -34,42 +34,42 @@ public class RecastFilledVolumeRasterization {
     private static final int[] BOX_EDGES = {0, 1, 0, 2, 0, 4, 1, 3, 1, 5, 2, 3, 2, 6, 3, 7, 4, 5, 4, 6, 5, 7, 6, 7};
 
     public static void rasterizeSphere(Heightfield hf, Vector3f center, float radius, int area, int flagMergeThr, Telemetry ctx) {
-        ctx.startTimer("RASTERIZE_SPHERE");
+        if (ctx != null) ctx.startTimer("RASTERIZE_SPHERE");
         float[] bounds = {
                 center.x - radius, center.y - radius, center.z - radius,
                 center.x + radius, center.y + radius, center.z + radius};
         rasterizationFilledShape(hf, bounds, area, flagMergeThr,
                 rectangle -> intersectSphere(rectangle, center, radius * radius));
-        ctx.stopTimer("RASTERIZE_SPHERE");
+        if (ctx != null) ctx.stopTimer("RASTERIZE_SPHERE");
     }
 
     public static void rasterizeCapsule(Heightfield hf, Vector3f start, Vector3f end, float radius, int area, int flagMergeThr,
                                         Telemetry ctx) {
-        ctx.startTimer("RASTERIZE_CAPSULE");
+        if (ctx != null) ctx.startTimer("RASTERIZE_CAPSULE");
         float[] bounds = {Math.min(start.x, end.x) - radius, Math.min(start.y, end.y) - radius,
                 Math.min(start.z, end.z) - radius, Math.max(start.x, end.x) + radius, Math.max(start.y, end.y) + radius,
                 Math.max(start.z, end.z) + radius};
         Vector3f axis = new Vector3f(end).sub(start);
         rasterizationFilledShape(hf, bounds, area, flagMergeThr,
                 rectangle -> intersectCapsule(rectangle, start, end, axis, radius * radius));
-        ctx.stopTimer("RASTERIZE_CAPSULE");
+        if (ctx != null) ctx.stopTimer("RASTERIZE_CAPSULE");
     }
 
     public static void rasterizeCylinder(Heightfield hf, Vector3f start, Vector3f end, float radius, int area, int flagMergeThr,
                                          Telemetry ctx) {
-        ctx.startTimer("RASTERIZE_CYLINDER");
-        float[] bounds = {Math.min(start.x, end.x) - radius, Math.min(start.y, end.y) - radius,
-                Math.min(start.z, end.z) - radius, Math.max(start.x, end.x) + radius, Math.max(start.y, end.y) + radius,
-                Math.max(start.z, end.z) + radius};
+        if (ctx != null) ctx.startTimer("RASTERIZE_CYLINDER");
+        float[] bounds = {
+                Math.min(start.x, end.x) - radius, Math.min(start.y, end.y) - radius, Math.min(start.z, end.z) - radius,
+                Math.max(start.x, end.x) + radius, Math.max(start.y, end.y) + radius, Math.max(start.z, end.z) + radius};
         Vector3f axis = new Vector3f(end).sub(start);
         rasterizationFilledShape(hf, bounds, area, flagMergeThr,
                 rectangle -> intersectCylinder(rectangle, start, end, axis, radius * radius));
-        ctx.stopTimer("RASTERIZE_CYLINDER");
+        if (ctx != null) ctx.stopTimer("RASTERIZE_CYLINDER");
     }
 
     public static void rasterizeBox(Heightfield hf, Vector3f center, float[][] halfEdges, int area, int flagMergeThr, Telemetry ctx) {
 
-        if(ctx != null) ctx.startTimer("RASTERIZE_BOX");
+        if (ctx != null) ctx.startTimer("RASTERIZE_BOX");
         float[][] normals = {{halfEdges[0][0], halfEdges[0][1], halfEdges[0][2]},
                 {halfEdges[1][0], halfEdges[1][1], halfEdges[1][2]}, {halfEdges[2][0], halfEdges[2][1], halfEdges[2][2]}};
         normalize(normals[0]);
@@ -77,7 +77,8 @@ public class RecastFilledVolumeRasterization {
         normalize(normals[2]);
 
         float[] vertices = new float[8 * 3];
-        float[] bounds = new float[]{Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY,
+        float[] bounds = new float[]{
+                Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY,
                 Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY};
         for (int i = 0; i < 8; ++i) {
             float s0 = (i & 1) != 0 ? 1f : -1f;
@@ -103,12 +104,12 @@ public class RecastFilledVolumeRasterization {
             planes[i][3] = vertices[vi * 3] * planes[i][0] + vertices[vi * 3 + 1] * planes[i][1] + vertices[vi * 3 + 2] * planes[i][2];
         }
         rasterizationFilledShape(hf, bounds, area, flagMergeThr, rectangle -> intersectBox(rectangle, vertices, planes));
-        if(ctx != null) ctx.stopTimer("RASTERIZE_BOX");
+        if (ctx != null) ctx.stopTimer("RASTERIZE_BOX");
     }
 
     public static void rasterizeConvex(Heightfield hf, float[] vertices, int[] triangles, int area, int flagMergeThr, Telemetry ctx) {
 
-        if(ctx != null) ctx.startTimer("RASTERIZE_CONVEX");
+        if (ctx != null) ctx.startTimer("RASTERIZE_CONVEX");
         float[] bounds = new float[]{vertices[0], vertices[1], vertices[2], vertices[0], vertices[1], vertices[2]};
         for (int i = 0; i < vertices.length; i += 3) {
             bounds[0] = Math.min(bounds[0], vertices[i]);
@@ -154,7 +155,7 @@ public class RecastFilledVolumeRasterization {
         }
         rasterizationFilledShape(hf, bounds, area, flagMergeThr,
                 rectangle -> intersectConvex(rectangle, triangles, vertices, planes, triBounds));
-        if(ctx != null) ctx.stopTimer("RASTERIZE_CONVEX");
+        if (ctx != null) ctx.stopTimer("RASTERIZE_CONVEX");
     }
 
     private static void plane(float[][] planes, int p, Vector3f v1, Vector3f v2, float[] vertices, int vert) {

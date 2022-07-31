@@ -19,6 +19,7 @@ freely, subject to the following restrictions:
 package org.recast4j.detour;
 
 import org.joml.Vector3f;
+import org.recast4j.LongArrayList;
 
 import java.util.List;
 
@@ -31,9 +32,9 @@ public class MoveAlongSurfaceResult {
     /**
      * The reference ids of the polygons visited during the move.
      */
-    public final List<Long> visited;
+    public final LongArrayList visited;
 
-    public MoveAlongSurfaceResult(Vector3f resultPos, List<Long> visited) {
+    public MoveAlongSurfaceResult(Vector3f resultPos, LongArrayList visited) {
         this.resultPos = resultPos;
         this.visited = visited;
     }

@@ -504,11 +504,11 @@ public class RecastMesh {
         int numRemainingEdges = 0;
         for (int i = 0; i < mesh.numPolygons; ++i) {
             int p = i * nvp * 2;
-            int nv = countPolyVertices(mesh.polys, p, nvp);
+            int nv = countPolyVertices(mesh.polygons, p, nvp);
             int numRemoved = 0;
             int numVertices = 0;
             for (int j = 0; j < nv; ++j) {
-                if (mesh.polys[p + j] == rem) {
+                if (mesh.polygons[p + j] == rem) {
                     numTouchedVertices++;
                     numRemoved++;
                 }
@@ -532,13 +532,13 @@ public class RecastMesh {
 
         for (int i = 0; i < mesh.numPolygons; ++i) {
             int p = i * nvp * 2;
-            int nv = countPolyVertices(mesh.polys, p, nvp);
+            int nv = countPolyVertices(mesh.polygons, p, nvp);
 
             // Collect edges which touches the removed vertex.
             for (int j = 0, k = nv - 1; j < nv; k = j++) {
-                if (mesh.polys[p + j] == rem || mesh.polys[p + k] == rem) {
+                if (mesh.polygons[p + j] == rem || mesh.polygons[p + k] == rem) {
                     // Arrange edge so that a=rem.
-                    int a = mesh.polys[p + j], b = mesh.polys[p + k];
+                    int a = mesh.polygons[p + j], b = mesh.polygons[p + k];
                     if (b == rem) {
                         int temp = a;
                         a = b;
@@ -584,9 +584,9 @@ public class RecastMesh {
         int numRemovedVertices = 0;
         for (int i = 0; i < mesh.numPolygons; ++i) {
             int p = i * nvp * 2;
-            int nv = countPolyVertices(mesh.polys, p, nvp);
+            int nv = countPolyVertices(mesh.polygons, p, nvp);
             for (int j = 0; j < nv; ++j) {
-                if (mesh.polys[p + j] == rem)
+                if (mesh.polygons[p + j] == rem)
                     numRemovedVertices++;
             }
         }
@@ -605,33 +605,33 @@ public class RecastMesh {
 
         for (int i = 0; i < mesh.numPolygons; ++i) {
             int p = i * nvp * 2;
-            int nv = countPolyVertices(mesh.polys, p, nvp);
+            int nv = countPolyVertices(mesh.polygons, p, nvp);
             boolean hasRem = false;
             for (int j = 0; j < nv; ++j)
-                if (mesh.polys[p + j] == rem) {
+                if (mesh.polygons[p + j] == rem) {
                     hasRem = true;
                     break;
                 }
             if (hasRem) {
                 // Collect edges which does not touch the removed vertex.
                 for (int j = 0, k = nv - 1; j < nv; k = j++) {
-                    if (mesh.polys[p + j] != rem && mesh.polys[p + k] != rem) {
+                    if (mesh.polygons[p + j] != rem && mesh.polygons[p + k] != rem) {
                         int e = nedges * 4;
-                        edges[e] = mesh.polys[p + k];
-                        edges[e + 1] = mesh.polys[p + j];
-                        edges[e + 2] = mesh.regs[i];
-                        edges[e + 3] = mesh.areas[i];
+                        edges[e] = mesh.polygons[p + k];
+                        edges[e + 1] = mesh.polygons[p + j];
+                        edges[e + 2] = mesh.regionIds[i];
+                        edges[e + 3] = mesh.areaIds[i];
                         nedges++;
                     }
                 }
                 // Remove the polygon.
                 int p2 = (mesh.numPolygons - 1) * nvp * 2;
                 if (p != p2) {
-                    System.arraycopy(mesh.polys, p2, mesh.polys, p, nvp);
+                    System.arraycopy(mesh.polygons, p2, mesh.polygons, p, nvp);
                 }
-                Arrays.fill(mesh.polys, p + nvp, p + nvp + nvp, RC_MESH_NULL_IDX);
-                mesh.regs[i] = mesh.regs[mesh.numPolygons - 1];
-                mesh.areas[i] = mesh.areas[mesh.numPolygons - 1];
+                Arrays.fill(mesh.polygons, p + nvp, p + nvp + nvp, RC_MESH_NULL_IDX);
+                mesh.regionIds[i] = mesh.regionIds[mesh.numPolygons - 1];
+                mesh.areaIds[i] = mesh.areaIds[mesh.numPolygons - 1];
                 mesh.numPolygons--;
                 --i;
             }
@@ -648,10 +648,10 @@ public class RecastMesh {
         // Adjust indices to match the removed vertex layout.
         for (int i = 0; i < mesh.numPolygons; ++i) {
             int p = i * nvp * 2;
-            int nv = countPolyVertices(mesh.polys, p, nvp);
+            int nv = countPolyVertices(mesh.polygons, p, nvp);
             for (int j = 0; j < nv; ++j)
-                if (mesh.polys[p + j] > rem)
-                    mesh.polys[p + j]--;
+                if (mesh.polygons[p + j] > rem)
+                    mesh.polygons[p + j]--;
         }
         for (int i = 0; i < nedges; ++i) {
             if (edges[i * 4] > rem)
@@ -810,10 +810,10 @@ public class RecastMesh {
             if (mesh.numPolygons >= maxTris)
                 break;
             int p = mesh.numPolygons * nvp * 2;
-            Arrays.fill(mesh.polys, p, p + nvp * 2, RC_MESH_NULL_IDX);
-            if (nvp >= 0) System.arraycopy(polys, i * nvp, mesh.polys, p, nvp);
-            mesh.regs[mesh.numPolygons] = pregs[i];
-            mesh.areas[mesh.numPolygons] = pareas[i];
+            Arrays.fill(mesh.polygons, p, p + nvp * 2, RC_MESH_NULL_IDX);
+            if (nvp >= 0) System.arraycopy(polys, i * nvp, mesh.polygons, p, nvp);
+            mesh.regionIds[mesh.numPolygons] = pregs[i];
+            mesh.areaIds[mesh.numPolygons] = pareas[i];
             mesh.numPolygons++;
             if (mesh.numPolygons > maxTris) {
                 throw new RuntimeException("removeVertex: Too many polygons " + mesh.numPolygons + " (max:" + maxTris + ".");
@@ -829,12 +829,12 @@ public class RecastMesh {
     ///
     /// @see rcAllocPolyMesh, rcContourSet, rcPolyMesh, rcConfig
     public static PolyMesh buildPolyMesh(Telemetry ctx, ContourSet cset, int nvp) {
-        ctx.startTimer("POLYMESH");
+        if (ctx != null) ctx.startTimer("POLYMESH");
         PolyMesh mesh = new PolyMesh();
         mesh.bmin.set(cset.bmin);
         mesh.bmax.set(cset.bmax);
-        mesh.cs = cset.cellSize;
-        mesh.ch = cset.cellHeight;
+        mesh.cellSize = cset.cellSize;
+        mesh.cellHeight = cset.cellHeight;
         mesh.borderSize = cset.borderSize;
         mesh.maxEdgeError = cset.maxError;
 
@@ -855,10 +855,10 @@ public class RecastMesh {
         int[] vflags = new int[maxVertices];
 
         mesh.vertices = new int[maxVertices * 3];
-        mesh.polys = new int[maxTris * nvp * 2];
-        Arrays.fill(mesh.polys, RC_MESH_NULL_IDX);
-        mesh.regs = new int[maxTris];
-        mesh.areas = new int[maxTris];
+        mesh.polygons = new int[maxTris * nvp * 2];
+        Arrays.fill(mesh.polygons, RC_MESH_NULL_IDX);
+        mesh.regionIds = new int[maxTris];
+        mesh.areaIds = new int[maxTris];
 
         mesh.numVertices = 0;
         mesh.numPolygons = 0;
@@ -890,7 +890,7 @@ public class RecastMesh {
             int ntris = triangulate(cont.numVertices, cont.vertices, indices, tris);
             if (ntris <= 0) {
                 // Bad triangulation, should not happen.
-                ctx.warn("buildPolyMesh: Bad triangulation Contour " + i + ".");
+                if (ctx != null) ctx.warn("buildPolyMesh: Bad triangulation Contour " + i + ".");
                 ntris = -ntris;
             }
 
@@ -968,9 +968,9 @@ public class RecastMesh {
             for (int j = 0; j < npolys; ++j) {
                 int p = mesh.numPolygons * nvp * 2;
                 int q = j * nvp;
-                if (nvp >= 0) System.arraycopy(polys, q, mesh.polys, p, nvp);
-                mesh.regs[mesh.numPolygons] = cont.reg;
-                mesh.areas[mesh.numPolygons] = cont.area;
+                if (nvp >= 0) System.arraycopy(polys, q, mesh.polygons, p, nvp);
+                mesh.regionIds[mesh.numPolygons] = cont.reg;
+                mesh.areaIds[mesh.numPolygons] = cont.area;
                 mesh.numPolygons++;
                 if (mesh.numPolygons > maxTris) {
                     throw new RuntimeException(
@@ -994,7 +994,7 @@ public class RecastMesh {
         }
 
         // Calculate adjacency.
-        buildMeshAdjacency(mesh.polys, mesh.numPolygons, mesh.numVertices, nvp);
+        buildMeshAdjacency(mesh.polygons, mesh.numPolygons, mesh.numVertices, nvp);
 
         // Find portal edges
         if (mesh.borderSize > 0) {
@@ -1003,25 +1003,25 @@ public class RecastMesh {
             for (int i = 0; i < mesh.numPolygons; ++i) {
                 int p = i * 2 * nvp;
                 for (int j = 0; j < nvp; ++j) {
-                    if (mesh.polys[p + j] == RC_MESH_NULL_IDX)
+                    if (mesh.polygons[p + j] == RC_MESH_NULL_IDX)
                         break;
                     // Skip connected edges.
-                    if (mesh.polys[p + nvp + j] != RC_MESH_NULL_IDX)
+                    if (mesh.polygons[p + nvp + j] != RC_MESH_NULL_IDX)
                         continue;
                     int nj = j + 1;
-                    if (nj >= nvp || mesh.polys[p + nj] == RC_MESH_NULL_IDX)
+                    if (nj >= nvp || mesh.polygons[p + nj] == RC_MESH_NULL_IDX)
                         nj = 0;
-                    int va = mesh.polys[p + j] * 3;
-                    int vb = mesh.polys[p + nj] * 3;
+                    int va = mesh.polygons[p + j] * 3;
+                    int vb = mesh.polygons[p + nj] * 3;
 
                     if (mesh.vertices[va] == 0 && mesh.vertices[vb] == 0)
-                        mesh.polys[p + nvp + j] = 0x8000;
+                        mesh.polygons[p + nvp + j] = 0x8000;
                     else if (mesh.vertices[va + 2] == h && mesh.vertices[vb + 2] == h)
-                        mesh.polys[p + nvp + j] = 0x8001;
+                        mesh.polygons[p + nvp + j] = 0x8001;
                     else if (mesh.vertices[va] == w && mesh.vertices[vb] == w)
-                        mesh.polys[p + nvp + j] = 0x8002;
+                        mesh.polygons[p + nvp + j] = 0x8002;
                     else if (mesh.vertices[va + 2] == 0 && mesh.vertices[vb + 2] == 0)
-                        mesh.polys[p + nvp + j] = 0x8003;
+                        mesh.polygons[p + nvp + j] = 0x8003;
                 }
             }
         }
@@ -1038,7 +1038,7 @@ public class RecastMesh {
                     + " (max " + MAX_MESH_VERTICES_POLY + "). Data can be corrupted.");
         }
 
-        ctx.stopTimer("POLYMESH");
+        if (ctx != null) ctx.stopTimer("POLYMESH");
         return mesh;
 
     }
@@ -1050,11 +1050,11 @@ public class RecastMesh {
         if (nmeshes == 0 || meshes == null)
             return null;
 
-        ctx.startTimer("MERGE_POLYMESH");
+        if (ctx != null) ctx.startTimer("MERGE_POLYMESH");
         PolyMesh mesh = new PolyMesh();
         mesh.maxVerticesPerPolygon = meshes[0].maxVerticesPerPolygon;
-        mesh.cs = meshes[0].cs;
-        mesh.ch = meshes[0].ch;
+        mesh.cellSize = meshes[0].cellSize;
+        mesh.cellHeight = meshes[0].cellHeight;
         mesh.bmin.set(meshes[0].bmin);
         mesh.bmax.set(meshes[0].bmax);
 
@@ -1073,10 +1073,10 @@ public class RecastMesh {
         mesh.vertices = new int[maxVertices * 3];
 
         mesh.numPolygons = 0;
-        mesh.polys = new int[maxPolys * 2 * mesh.maxVerticesPerPolygon];
-        Arrays.fill(mesh.polys, 0, mesh.polys.length, RC_MESH_NULL_IDX);
-        mesh.regs = new int[maxPolys];
-        mesh.areas = new int[maxPolys];
+        mesh.polygons = new int[maxPolys * 2 * mesh.maxVerticesPerPolygon];
+        Arrays.fill(mesh.polygons, 0, mesh.polygons.length, RC_MESH_NULL_IDX);
+        mesh.regionIds = new int[maxPolys];
+        mesh.areaIds = new int[maxPolys];
         mesh.flags = new int[maxPolys];
 
         int[] nextVert = new int[maxVertices];
@@ -1090,13 +1090,13 @@ public class RecastMesh {
         for (int i = 0; i < nmeshes; ++i) {
             PolyMesh pmesh = meshes[i];
 
-            int ox = (int) Math.floor((pmesh.bmin.x - mesh.bmin.x) / mesh.cs + 0.5f);
-            int oz = (int) Math.floor((pmesh.bmin.z - mesh.bmin.z) / mesh.cs + 0.5f);
+            int ox = (int) Math.floor((pmesh.bmin.x - mesh.bmin.x) / mesh.cellSize + 0.5f);
+            int oz = (int) Math.floor((pmesh.bmin.z - mesh.bmin.z) / mesh.cellSize + 0.5f);
 
             boolean isMinX = (ox == 0);
             boolean isMinZ = (oz == 0);
-            boolean isMaxX = (Math.floor((mesh.bmax.x - pmesh.bmax.x) / mesh.cs + 0.5f)) == 0;
-            boolean isMaxZ = (Math.floor((mesh.bmax.z - pmesh.bmax.z) / mesh.cs + 0.5f)) == 0;
+            boolean isMaxX = (Math.floor((mesh.bmax.x - pmesh.bmax.x) / mesh.cellSize + 0.5f)) == 0;
+            boolean isMaxZ = (Math.floor((mesh.bmax.z - pmesh.bmax.z) / mesh.cellSize + 0.5f)) == 0;
             boolean isOnBorder = (isMinX || isMinZ || isMaxX || isMaxZ);
 
             for (int j = 0; j < pmesh.numVertices; ++j) {
@@ -1111,36 +1111,36 @@ public class RecastMesh {
             for (int j = 0; j < pmesh.numPolygons; ++j) {
                 int tgt = mesh.numPolygons * 2 * mesh.maxVerticesPerPolygon;
                 int src = j * 2 * mesh.maxVerticesPerPolygon;
-                mesh.regs[mesh.numPolygons] = pmesh.regs[j];
-                mesh.areas[mesh.numPolygons] = pmesh.areas[j];
+                mesh.regionIds[mesh.numPolygons] = pmesh.regionIds[j];
+                mesh.areaIds[mesh.numPolygons] = pmesh.areaIds[j];
                 mesh.flags[mesh.numPolygons] = pmesh.flags[j];
                 mesh.numPolygons++;
                 for (int k = 0; k < mesh.maxVerticesPerPolygon; ++k) {
-                    if (pmesh.polys[src + k] == RC_MESH_NULL_IDX)
+                    if (pmesh.polygons[src + k] == RC_MESH_NULL_IDX)
                         break;
-                    mesh.polys[tgt + k] = vremap[pmesh.polys[src + k]];
+                    mesh.polygons[tgt + k] = vremap[pmesh.polygons[src + k]];
                 }
 
                 if (isOnBorder) {
                     for (int k = mesh.maxVerticesPerPolygon; k < mesh.maxVerticesPerPolygon * 2; ++k) {
-                        if ((pmesh.polys[src + k] & 0x8000) != 0 && pmesh.polys[src + k] != 0xffff) {
-                            int dir = pmesh.polys[src + k] & 0xf;
+                        if ((pmesh.polygons[src + k] & 0x8000) != 0 && pmesh.polygons[src + k] != 0xffff) {
+                            int dir = pmesh.polygons[src + k] & 0xf;
                             switch (dir) {
                                 case 0: // Portal x-
                                     if (isMinX)
-                                        mesh.polys[tgt + k] = pmesh.polys[src + k];
+                                        mesh.polygons[tgt + k] = pmesh.polygons[src + k];
                                     break;
                                 case 1: // Portal z+
                                     if (isMaxZ)
-                                        mesh.polys[tgt + k] = pmesh.polys[src + k];
+                                        mesh.polygons[tgt + k] = pmesh.polygons[src + k];
                                     break;
                                 case 2: // Portal x+
                                     if (isMaxX)
-                                        mesh.polys[tgt + k] = pmesh.polys[src + k];
+                                        mesh.polygons[tgt + k] = pmesh.polygons[src + k];
                                     break;
                                 case 3: // Portal z-
                                     if (isMinZ)
-                                        mesh.polys[tgt + k] = pmesh.polys[src + k];
+                                        mesh.polygons[tgt + k] = pmesh.polygons[src + k];
                                     break;
                             }
                         }
@@ -1150,7 +1150,7 @@ public class RecastMesh {
         }
 
         // Calculate adjacency.
-        buildMeshAdjacency(mesh.polys, mesh.numPolygons, mesh.numVertices, mesh.maxVerticesPerPolygon);
+        buildMeshAdjacency(mesh.polygons, mesh.numPolygons, mesh.numVertices, mesh.maxVerticesPerPolygon);
         if (mesh.numVertices > MAX_MESH_VERTICES_POLY) {
             throw new RuntimeException("rcBuildPolyMesh: The resulting mesh has too many vertices " + mesh.numVertices
                     + " (max " + MAX_MESH_VERTICES_POLY + "). Data can be corrupted.");
@@ -1160,7 +1160,7 @@ public class RecastMesh {
                     + " (max " + MAX_MESH_VERTICES_POLY + "). Data can be corrupted.");
         }
 
-        ctx.stopTimer("MERGE_POLYMESH");
+        if (ctx != null) ctx.stopTimer("MERGE_POLYMESH");
 
         return mesh;
     }
@@ -1175,19 +1175,19 @@ public class RecastMesh {
         dst.maxVerticesPerPolygon = src.maxVerticesPerPolygon;
         dst.bmin.set(src.bmin);
         dst.bmax.set(src.bmax);
-        dst.cs = src.cs;
-        dst.ch = src.ch;
+        dst.cellSize = src.cellSize;
+        dst.cellHeight = src.cellHeight;
         dst.borderSize = src.borderSize;
         dst.maxEdgeError = src.maxEdgeError;
 
         dst.vertices = new int[src.numVertices * 3];
         System.arraycopy(src.vertices, 0, dst.vertices, 0, dst.vertices.length);
-        dst.polys = new int[src.numPolygons * 2 * src.maxVerticesPerPolygon];
-        System.arraycopy(src.polys, 0, dst.polys, 0, dst.polys.length);
-        dst.regs = new int[src.numPolygons];
-        System.arraycopy(src.regs, 0, dst.regs, 0, dst.regs.length);
-        dst.areas = new int[src.numPolygons];
-        System.arraycopy(src.areas, 0, dst.areas, 0, dst.areas.length);
+        dst.polygons = new int[src.numPolygons * 2 * src.maxVerticesPerPolygon];
+        System.arraycopy(src.polygons, 0, dst.polygons, 0, dst.polygons.length);
+        dst.regionIds = new int[src.numPolygons];
+        System.arraycopy(src.regionIds, 0, dst.regionIds, 0, dst.regionIds.length);
+        dst.areaIds = new int[src.numPolygons];
+        System.arraycopy(src.areaIds, 0, dst.areaIds, 0, dst.areaIds.length);
         dst.flags = new int[src.numPolygons];
         System.arraycopy(src.flags, 0, dst.flags, 0, dst.flags.length);
         return dst;

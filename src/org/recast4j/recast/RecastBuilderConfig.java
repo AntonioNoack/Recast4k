@@ -64,10 +64,10 @@ public class RecastBuilderConfig {
             this.bmin.z += tileZ * tsz;
             this.bmax.x = this.bmin.x + tsx;
             this.bmax.z = this.bmin.z + tsz;
-            // Expand the heighfield bounding box by border size to find the extents of geometry we need to build this
+            // Expand the heightfield bounding box by border size to find the extents of geometry we need to build this
             // tile.
             //
-            // This is done in order to make sure that the navmesh tiles connect correctly at the borders,
+            // This is done to make sure that the navmesh tiles connect correctly at the borders,
             // and the obstacles close to the border work correctly with the dilation process.
             // No polygons (or contours) will be created on the border area.
             //

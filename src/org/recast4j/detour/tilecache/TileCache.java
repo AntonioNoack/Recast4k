@@ -19,6 +19,7 @@ freely, subject to the following restrictions:
 package org.recast4j.detour.tilecache;
 
 import org.joml.Vector3f;
+import org.recast4j.LongArrayList;
 import org.recast4j.detour.MeshData;
 import org.recast4j.detour.NavMesh;
 import org.recast4j.detour.NavMeshBuilder;
@@ -55,12 +56,12 @@ public class TileCache {
     private TileCacheObstacle nextFreeObstacle;
 
     private final List<ObstacleRequest> requests = new ArrayList<>();
-    private final List<Long> update = new ArrayList<>();
+    private final LongArrayList update = new LongArrayList();
 
     private final TileCacheBuilder builder = new TileCacheBuilder();
     private final TileCacheLayerHeaderReader tileReader = new TileCacheLayerHeaderReader();
 
-    private boolean contains(List<Long> a, long v) {
+    private boolean contains(LongArrayList a, long v) {
         return a.contains(v);
     }
 
@@ -141,8 +142,8 @@ public class TileCache {
         return tile;
     }
 
-    public List<Long> getTilesAt(int tx, int ty) {
-        List<Long> tiles = new ArrayList<>();
+    public LongArrayList getTilesAt(int tx, int ty) {
+        LongArrayList tiles = new LongArrayList();
 
         // Find tile based on hash.
         int h = NavMesh.computeTileHash(tx, ty, m_tileLutMask);
@@ -292,7 +293,9 @@ public class TileCache {
 
     }
 
-    /** Cylinder obstacle */
+    /**
+     * Cylinder obstacle
+     */
     @SuppressWarnings("unused")
     public long addObstacle(Vector3f pos, float radius, float height) {
         TileCacheObstacle ob = allocObstacle();
@@ -305,7 +308,9 @@ public class TileCache {
         return addObstacleRequest(ob).ref;
     }
 
-    /** Aabb obstacle */
+    /**
+     * Aabb obstacle
+     */
     @SuppressWarnings("unused")
     public long addBoxObstacle(float[] bmin, float[] bmax) {
         TileCacheObstacle ob = allocObstacle();
@@ -317,7 +322,9 @@ public class TileCache {
         return addObstacleRequest(ob).ref;
     }
 
-    /** Box obstacle: can be rotated in Y */
+    /**
+     * Box obstacle: can be rotated in Y
+     */
     @SuppressWarnings("unused")
     public long addBoxObstacle(Vector3f center, float[] extents, float yRadians) {
         TileCacheObstacle ob = allocObstacle();
@@ -366,24 +373,25 @@ public class TileCache {
         return o;
     }
 
-    List<Long> queryTiles(Vector3f bmin, Vector3f bmax) {
-        List<Long> results = new ArrayList<>();
+    LongArrayList queryTiles(Vector3f bmin, Vector3f bmax) {
+        LongArrayList results = new LongArrayList();
         float tw = params.width * params.cellSize;
         float th = params.height * params.cellSize;
         int tx0 = (int) Math.floor((bmin.x - params.orig.x) / tw);
         int tx1 = (int) Math.floor((bmax.x - params.orig.x) / tw);
         int ty0 = (int) Math.floor((bmin.z - params.orig.z) / th);
         int ty1 = (int) Math.floor((bmax.z - params.orig.z) / th);
+        Vector3f tbmin = new Vector3f();
+        Vector3f tbmax = new Vector3f();
         for (int ty = ty0; ty <= ty1; ++ty) {
             for (int tx = tx0; tx <= tx1; ++tx) {
-                List<Long> tiles = getTilesAt(tx, ty);
-                for (long i : tiles) {
-                    CompressedTile tile = m_tiles[decodeTileIdTile(i)];
-                    Vector3f tbmin = new Vector3f();
-                    Vector3f tbmax = new Vector3f();
+                LongArrayList tiles = getTilesAt(tx, ty);
+                for (int i = 0, l = tiles.getSize(); i < l; i++) {
+                    long t = tiles.get(i);
+                    CompressedTile tile = m_tiles[decodeTileIdTile(t)];
                     calcTightTileBounds(tile.header, tbmin, tbmax);
                     if (overlapBounds(bmin, bmax, tbmin, tbmax)) {
-                        results.add(i);
+                        results.add(t);
                     }
                 }
             }
@@ -420,7 +428,8 @@ public class TileCache {
                     ob.touched = queryTiles(bmin, bmax);
                     // Add tiles to update list.
                     ob.pending.clear();
-                    for (long j : ob.touched) {
+                    for (int i = 0, l = ob.touched.getSize(); i < l; i++) {
+                        long j = ob.touched.get(i);
                         if (!contains(update, j)) {
                             update.add(j);
                         }
@@ -431,7 +440,8 @@ public class TileCache {
                     ob.state = ObstacleState.DT_OBSTACLE_REMOVING;
                     // Add tiles to update list.
                     ob.pending.clear();
-                    for (long j : ob.touched) {
+                    for (int i = 0, l = ob.touched.getSize(); i < l; i++) {
+                        long j = ob.touched.get(i);
                         if (!contains(update, j)) {
                             update.add(j);
                         }
@@ -579,13 +589,13 @@ public class TileCache {
             bmin.set(ob.bmin);
             bmax.set(ob.bmax);
         } else if (ob.type == TileCacheObstacleType.ORIENTED_BOX) {
-            float maxr = 1.41f * Math.max(ob.extents.x, ob.extents.z);
-            bmin.x = ob.center.x - maxr;
-            bmax.x = ob.center.x + maxr;
+            float maxRadius = 1.41f * Math.max(ob.extents.x, ob.extents.z);
+            bmin.x = ob.center.x - maxRadius;
+            bmax.x = ob.center.x + maxRadius;
             bmin.y = ob.center.y - ob.extents.y;
             bmax.y = ob.center.y + ob.extents.y;
-            bmin.z = ob.center.z - maxr;
-            bmax.z = ob.center.z + maxr;
+            bmin.z = ob.center.z - maxRadius;
+            bmax.z = ob.center.z + maxRadius;
         }
     }
 

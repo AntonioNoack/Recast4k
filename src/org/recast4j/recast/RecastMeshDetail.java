@@ -1109,15 +1109,15 @@ public class RecastMeshDetail {
     public static PolyMeshDetail buildPolyMeshDetail(Telemetry ctx, PolyMesh mesh, CompactHeightfield chf,
                                                      float sampleDist, float sampleMaxError) {
 
-        ctx.startTimer("POLYMESHDETAIL");
+        if (ctx != null) ctx.startTimer("POLYMESHDETAIL");
         if (mesh.numVertices == 0 || mesh.numPolygons == 0) {
             return null;
         }
 
         PolyMeshDetail dmesh = new PolyMeshDetail();
         int nvp = mesh.maxVerticesPerPolygon;
-        float cs = mesh.cs;
-        float ch = mesh.ch;
+        float cs = mesh.cellSize;
+        float ch = mesh.cellHeight;
         Vector3f orig = mesh.bmin;
         int borderSize = mesh.borderSize;
         int heightSearchRadius = (int) Math.max(1, Math.ceil(mesh.maxEdgeError));
@@ -1139,10 +1139,10 @@ public class RecastMeshDetail {
             bounds[i * 4 + 2] = chf.height;
             bounds[i * 4 + 3] = 0;
             for (int j = 0; j < nvp; ++j) {
-                if (mesh.polys[p + j] == RC_MESH_NULL_IDX) {
+                if (mesh.polygons[p + j] == RC_MESH_NULL_IDX) {
                     break;
                 }
-                int v = mesh.polys[p + j] * 3;
+                int v = mesh.polygons[p + j] * 3;
                 bounds[i * 4] = Math.min(bounds[i * 4], mesh.vertices[v]);
                 bounds[i * 4 + 1] = Math.max(bounds[i * 4 + 1], mesh.vertices[v]);
                 bounds[i * 4 + 2] = Math.min(bounds[i * 4 + 2], mesh.vertices[v + 2]);
@@ -1178,10 +1178,10 @@ public class RecastMeshDetail {
             // Store polygon vertices for processing.
             int npoly = 0;
             for (int j = 0; j < nvp; ++j) {
-                if (mesh.polys[p + j] == RC_MESH_NULL_IDX) {
+                if (mesh.polygons[p + j] == RC_MESH_NULL_IDX) {
                     break;
                 }
-                int v = mesh.polys[p + j] * 3;
+                int v = mesh.polygons[p + j] * 3;
                 poly[j * 3] = mesh.vertices[v] * cs;
                 poly[j * 3 + 1] = mesh.vertices[v + 1] * ch;
                 poly[j * 3 + 2] = mesh.vertices[v + 2] * cs;
@@ -1193,7 +1193,7 @@ public class RecastMeshDetail {
             hp.ymin = bounds[i * 4 + 2];
             hp.width = bounds[i * 4 + 1] - bounds[i * 4];
             hp.height = bounds[i * 4 + 3] - bounds[i * 4 + 2];
-            getHeightData(ctx, chf, mesh.polys, p, npoly, mesh.vertices, borderSize, hp, mesh.regs[i]);
+            getHeightData(ctx, chf, mesh.polygons, p, npoly, mesh.vertices, borderSize, hp, mesh.regionIds[i]);
 
             // Build detail mesh.
             int nvertices = buildPolyDetail(poly, npoly, sampleDist, sampleMaxError, heightSearchRadius, chf, hp,
@@ -1261,7 +1261,7 @@ public class RecastMeshDetail {
             }
         }
 
-        ctx.stopTimer("POLYMESHDETAIL");
+        if (ctx != null) ctx.stopTimer("POLYMESHDETAIL");
         return dmesh;
 
     }

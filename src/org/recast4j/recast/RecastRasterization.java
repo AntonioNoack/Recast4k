@@ -263,13 +263,13 @@ public class RecastRasterization {
     public static void rasterizeTriangle(Heightfield solid, float[] vertices, int v0, int v1, int v2, int area, int flagMergeThr,
                                          Telemetry ctx) {
 
-        ctx.startTimer("RASTERIZE_TRIANGLES");
+        if (ctx != null) ctx.startTimer("RASTERIZE_TRIANGLES");
 
         float ics = 1.0f / solid.cellSize;
         float ich = 1.0f / solid.cellHeight;
         rasterizeTri(vertices, v0, v1, v2, area, solid, solid.bmin, solid.bmax, solid.cellSize, ics, ich, flagMergeThr);
 
-        ctx.stopTimer("RASTERIZE_TRIANGLES");
+        if (ctx != null) ctx.stopTimer("RASTERIZE_TRIANGLES");
     }
 
     /**
@@ -280,7 +280,7 @@ public class RecastRasterization {
     public static void rasterizeTriangles(Heightfield solid, float[] vertices, int[] tris, int[] areas, int nt, int flagMergeThr,
                                           Telemetry ctx) {
 
-        ctx.startTimer("RASTERIZE_TRIANGLES");
+        if (ctx != null) ctx.startTimer("RASTERIZE_TRIANGLES");
 
         float ics = 1.0f / solid.cellSize;
         float ich = 1.0f / solid.cellHeight;
@@ -293,7 +293,7 @@ public class RecastRasterization {
             rasterizeTri(vertices, v0, v1, v2, areas[i], solid, solid.bmin, solid.bmax, solid.cellSize, ics, ich, flagMergeThr);
         }
 
-        ctx.stopTimer("RASTERIZE_TRIANGLES");
+        if (ctx != null) ctx.stopTimer("RASTERIZE_TRIANGLES");
     }
 
     /**
@@ -304,7 +304,7 @@ public class RecastRasterization {
     @SuppressWarnings("unused")
     public static void rasterizeTriangles(Heightfield solid, float[] vertices, int[] areas, int nt, int flagMergeThr,
                                           Telemetry ctx) {
-        ctx.startTimer("RASTERIZE_TRIANGLES");
+        if (ctx != null) ctx.startTimer("RASTERIZE_TRIANGLES");
 
         float ics = 1.0f / solid.cellSize;
         float ich = 1.0f / solid.cellHeight;
@@ -316,7 +316,7 @@ public class RecastRasterization {
             // Rasterize.
             rasterizeTri(vertices, v0, v1, v2, areas[i], solid, solid.bmin, solid.bmax, solid.cellSize, ics, ich, flagMergeThr);
         }
-        ctx.stopTimer("RASTERIZE_TRIANGLES");
+        if (ctx != null) ctx.stopTimer("RASTERIZE_TRIANGLES");
     }
 
 }

@@ -36,7 +36,7 @@ public class RecastFilter {
     /// @see rcHeightfield, rcConfig
     public static void filterLowHangingWalkableObstacles(Telemetry ctx, int walkableClimb, Heightfield solid) {
 
-        ctx.startTimer("FILTER_LOW_OBSTACLES");
+        if (ctx != null) ctx.startTimer("FILTER_LOW_OBSTACLES");
 
         int w = solid.width;
         int h = solid.height;
@@ -63,7 +63,7 @@ public class RecastFilter {
             }
         }
 
-        ctx.stopTimer("FILTER_LOW_OBSTACLES");
+        if (ctx != null) ctx.stopTimer("FILTER_LOW_OBSTACLES");
     }
 
     /// @par
@@ -77,7 +77,7 @@ public class RecastFilter {
     ///
     /// @see rcHeightfield, rcConfig
     public static void filterLedgeSpans(Telemetry ctx, int walkableHeight, int walkableClimb, Heightfield solid) {
-        ctx.startTimer("FILTER_LEDGE");
+        if (ctx != null) ctx.startTimer("FILTER_LEDGE");
 
         int w = solid.width;
         int h = solid.height;
@@ -151,7 +151,7 @@ public class RecastFilter {
             }
         }
 
-        ctx.stopTimer("FILTER_LEDGE");
+        if (ctx != null) ctx.stopTimer("FILTER_LEDGE");
     }
 
     /// @par
@@ -161,7 +161,7 @@ public class RecastFilter {
     ///
     /// @see rcHeightfield, rcConfig
     public static void filterWalkableLowHeightSpans(Telemetry ctx, int walkableHeight, Heightfield solid) {
-        ctx.startTimer("FILTER_WALKABLE");
+        if (ctx != null) ctx.startTimer("FILTER_WALKABLE");
 
         int w = solid.width;
         int h = solid.height;
@@ -178,6 +178,6 @@ public class RecastFilter {
                 }
             }
         }
-        ctx.stopTimer("FILTER_WALKABLE");
+        if (ctx != null) ctx.stopTimer("FILTER_WALKABLE");
     }
 }

@@ -26,7 +26,7 @@ public class RecastConstants {
     public static int SPAN_HEIGHT_BITS = 20;
     /// Defines the maximum value for rcSpan::smin and rcSpan::smax.
     public static int SPAN_MAX_HEIGHT = (1 << SPAN_HEIGHT_BITS) - 1;
-    /// Heighfield border flag.
+    /// Heightfield border flag.
     /// If a heightfield region ID has this bit set, then the region is a border
     /// region and its spans are considered unwalkable.
     /// (Used during the region and contour build process.)
@@ -58,9 +58,9 @@ public class RecastConstants {
     /// fields value can't be used directly.
     /// @see rcContour::vertices, rcContour::rvertices
     static int RC_CONTOUR_REG_MASK = 0xffff;
-    /// A value which indicates an invalid index within a mesh.
-    /// @note This does not necessarily indicate an error.
-    /// @see rcPolyMesh::polys
+    /** A value, which indicates an invalid index within a mesh.
+     * @note This does not necessarily indicate an error.
+     * @see PolyMesh::polygons */
     public static int RC_MESH_NULL_IDX = 0xffff;
 
     public static int RC_CONTOUR_TESS_WALL_EDGES = 0x01; /// < Tessellate solid (impassable) edges during contour

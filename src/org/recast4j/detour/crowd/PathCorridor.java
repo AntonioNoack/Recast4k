@@ -19,6 +19,7 @@ freely, subject to the following restrictions:
 package org.recast4j.detour.crowd;
 
 import org.joml.Vector3f;
+import org.recast4j.LongArrayList;
 import org.recast4j.Pair;
 import org.recast4j.detour.*;
 
@@ -78,17 +79,17 @@ public class PathCorridor {
     /**
      * The corridor's path.
      */
-    public List<Long> path;
+    public LongArrayList path;
 
-    protected List<Long> mergeCorridorStartMoved(List<Long> path, List<Long> visited) {
+    protected LongArrayList mergeCorridorStartMoved(LongArrayList path, LongArrayList visited) {
         int furthestPath = -1;
         int furthestVisited = -1;
 
         // Find furthest common polygon.
-        for (int i = path.size() - 1; i >= 0; --i) {
+        for (int i = path.getSize() - 1; i >= 0; --i) {
             boolean found = false;
-            for (int j = visited.size() - 1; j >= 0; --j) {
-                if (path.get(i).longValue() == visited.get(j).longValue()) {
+            for (int j = visited.getSize() - 1; j >= 0; --j) {
+                if (path.get(i) == visited.get(j)) {
                     furthestPath = i;
                     furthestVisited = j;
                     found = true;
@@ -107,23 +108,23 @@ public class PathCorridor {
         // Concatenate paths.
 
         // Adjust beginning of the buffer to include the visited.
-        List<Long> result = new ArrayList<>();
+        LongArrayList result = new LongArrayList();
         // Store visited
-        for (int i = visited.size() - 1; i > furthestVisited; --i) {
+        for (int i = visited.getSize() - 1; i > furthestVisited; --i) {
             result.add(visited.get(i));
         }
-        result.addAll(path.subList(furthestPath, path.size()));
+        result.addAll(path, furthestPath, path.getSize());
         return result;
     }
 
-    protected List<Long> mergeCorridorEndMoved(List<Long> path, List<Long> visited) {
+    protected LongArrayList mergeCorridorEndMoved(LongArrayList path, LongArrayList visited) {
         int furthestPath = -1;
         int furthestVisited = -1;
 
-        // Find furthest common polygon.
-        for (int i = 0; i < path.size(); ++i) {
+        // Find the furthest common polygon.
+        for (int i = 0; i < path.getSize(); ++i) {
             boolean found = false;
-            for (int j = visited.size() - 1; j >= 0; --j) {
+            for (int j = visited.getSize() - 1; j >= 0; --j) {
                 if (path.get(i) == visited.get(j)) {
                     furthestPath = i;
                     furthestVisited = j;
@@ -141,20 +142,20 @@ public class PathCorridor {
         }
 
         // Concatenate paths.
-        List<Long> result = path.subList(0, furthestPath);
-        result.addAll(visited.subList(furthestVisited, visited.size()));
-        return result;
+        path.shrink(furthestPath);
+        path.addAll(visited, furthestVisited, visited.getSize());
+        return path;
     }
 
-    protected List<Long> mergeCorridorStartShortcut(List<Long> path, List<Long> visited) {
+    protected LongArrayList mergeCorridorStartShortcut(LongArrayList path, LongArrayList visited) {
 
         int furthestPath = -1;
         int furthestVisited = -1;
 
-        // Find furthest common polygon.
-        for (int i = path.size() - 1; i >= 0; --i) {
+        // Find the furthest common polygon.
+        for (int i = path.getSize() - 1; i >= 0; --i) {
             boolean found = false;
-            for (int j = visited.size() - 1; j >= 0; --j) {
+            for (int j = visited.getSize() - 1; j >= 0; --j) {
                 if (path.get(i) == visited.get(j)) {
                     furthestPath = i;
                     furthestVisited = j;
@@ -174,16 +175,16 @@ public class PathCorridor {
         // Concatenate paths.
 
         // Adjust beginning of the buffer to include the visited.
-        List<Long> result = visited.subList(0, furthestVisited);
-        result.addAll(path.subList(furthestPath, path.size()));
-        return result;
+        visited.shrink(furthestVisited);
+        visited.addAll(path, furthestPath, path.getSize());
+        return visited;
     }
 
     /**
      * Allocates the corridor's path buffer.
      */
     public PathCorridor() {
-        path = new ArrayList<>();
+        path = new LongArrayList();
     }
 
     /**
@@ -213,11 +214,10 @@ public class PathCorridor {
      * <p>
      * If the target is within range, it will be the last corner and have a polygon reference id of zero.
      *
-     * @param filter
      * @return Corners
      * @param[in] navquery The query object used to build the corridor.
      */
-    public List<StraightPathItem> findCorners(int maxCorners, NavMeshQuery navquery, QueryFilter filter) {
+    public List<StraightPathItem> findCorners(int maxCorners, NavMeshQuery navquery) {
         List<StraightPathItem> path = new ArrayList<>();
         Result<List<StraightPathItem>> result = navquery.findStraightPath(pos, target, this.path, maxCorners, 0);
         if (result.succeeded()) {
@@ -289,7 +289,7 @@ public class PathCorridor {
 
         Result<RaycastHit> rc = navquery.raycast(path.get(0), pos, goal, filter, 0, 0);
         if (rc.succeeded()) {
-            if (rc.result.path.size() > 1 && rc.result.t > 0.99f) {
+            if (rc.result.path.getSize() > 1 && rc.result.t > 0.99f) {
                 path = mergeCorridorStartShortcut(path, rc.result.path);
             }
         }
@@ -305,24 +305,19 @@ public class PathCorridor {
      * The more inaccurate the agent movement, the more beneficial this function becomes. Simply adjust the frequency of
      * the call to match the needs to the agent.
      *
-     * @param navquery The query object used to build the corridor.
+     * @param query The query object used to build the corridor.
      * @param filter   The filter to apply to the operation.
      */
-    boolean optimizePathTopology(NavMeshQuery navquery, QueryFilter filter, int maxIterations) {
-        if (path.size() < 3) {
-            return false;
+    void optimizePathTopology(NavMeshQuery query, QueryFilter filter, int maxIterations) {
+        if (path.getSize() < 3) {
+            return;
         }
-
-        navquery.initSlicedFindPath(path.get(0), path.get(path.size() - 1), pos, target, filter, 0);
-        navquery.updateSlicedFindPath(maxIterations);
-        Result<List<Long>> fpr = navquery.finalizeSlicedFindPathPartial(path);
-
-        if (fpr.succeeded() && fpr.result.size() > 0) {
+        query.initSlicedFindPath(path.get(0), path.get(path.getSize() - 1), pos, target, filter, 0);
+        query.updateSlicedFindPath(maxIterations);
+        Result<LongArrayList> fpr = query.finalizeSlicedFindPathPartial(path);
+        if (fpr.succeeded() && fpr.result.getSize() > 0) {
             path = mergeCorridorStartShortcut(path, fpr.result);
-            return true;
         }
-
-        return false;
     }
 
     public boolean moveOverOffmeshConnection(long offMeshConRef, long[] refs, Vector3f start, Vector3f end,
@@ -330,18 +325,18 @@ public class PathCorridor {
         // Advance the path up to and over the off-mesh connection.
         long prevRef = 0, polyRef = path.get(0);
         int npos = 0;
-        while (npos < path.size() && polyRef != offMeshConRef) {
+        while (npos < path.getSize() && polyRef != offMeshConRef) {
             prevRef = polyRef;
             polyRef = path.get(npos);
             npos++;
         }
-        if (npos == path.size()) {
+        if (npos == path.getSize()) {
             // Could not find offMeshConRef
             return false;
         }
 
         // Prune path
-        path = path.subList(npos, path.size());
+        path = path.subList(npos, path.getSize());
         refs[0] = prevRef;
         refs[1] = polyRef;
 
@@ -408,13 +403,13 @@ public class PathCorridor {
     @SuppressWarnings("unused")
     public boolean moveTargetPosition(Vector3f npos, NavMeshQuery navquery, QueryFilter filter, boolean adjustPositionToTopOfNavMesh) {
         // Move along navmesh and update new position.
-        Result<MoveAlongSurfaceResult> masResult = navquery.moveAlongSurface(path.get(path.size() - 1), target, npos, filter);
+        Result<MoveAlongSurfaceResult> masResult = navquery.moveAlongSurface(path.get(path.getSize() - 1), target, npos, filter);
         if (masResult.succeeded()) {
             path = mergeCorridorEndMoved(path, masResult.result.visited);
             Vector3f resultPos = masResult.result.resultPos;
-            if(adjustPositionToTopOfNavMesh) {
-                float h =target.y;
-                navquery.getPolyHeight(path.get(path.size()-1), npos);
+            if (adjustPositionToTopOfNavMesh) {
+                float h = target.y;
+                navquery.getPolyHeight(path.get(path.getSize() - 1), npos);
                 resultPos.y = h;
             }
             target.set(resultPos);
@@ -432,15 +427,15 @@ public class PathCorridor {
      * @warning The size of the path must not exceed the size of corridor's path buffer set during #init().
      */
 
-    public void setCorridor(Vector3f target, List<Long> path) {
+    public void setCorridor(Vector3f target, LongArrayList path) {
         this.target.set(target);
-        this.path = new ArrayList<>(path);
+        this.path = new LongArrayList(path);
     }
 
     public void fixPathStart(long safeRef, Vector3f safePos) {
         pos.set(safePos);
-        if (path.size() < 3 && path.size() > 0) {
-            Long p = path.get(path.size() - 1);
+        if (path.getSize() < 3 && path.getSize() > 0) {
+            long p = path.get(path.getSize() - 1);
             path.clear();
             path.add(safeRef);
             path.add(0L);
@@ -457,7 +452,7 @@ public class PathCorridor {
     public void trimInvalidPath(long safeRef, Vector3f safePos, NavMeshQuery navquery, QueryFilter filter) {
         // Keep valid path as far as possible.
         int n = 0;
-        while (n < path.size() && navquery.isValidPolyRef(path.get(n), filter)) {
+        while (n < path.getSize() && navquery.isValidPolyRef(path.get(n), filter)) {
             n++;
         }
 
@@ -466,12 +461,12 @@ public class PathCorridor {
             copy(pos, safePos);
             path.clear();
             path.add(safeRef);
-        } else if (n < path.size()) {
-            path = path.subList(0, n);
+        } else if (n < path.getSize()) {
+            path.shrink(n);
             // The path is partially usable.
         }
         // Clamp target pos to last poly
-        Result<Vector3f> result = navquery.closestPointOnPolyBoundary(path.get(path.size() - 1), target);
+        Result<Vector3f> result = navquery.closestPointOnPolyBoundary(path.get(path.getSize() - 1), target);
         if (result.succeeded()) {
             target.set(result.result);
         }
@@ -488,7 +483,7 @@ public class PathCorridor {
      */
     boolean isValid(int maxLookAhead, NavMeshQuery navquery, QueryFilter filter) {
         // Check that all polygons still pass query filter.
-        int n = Math.min(path.size(), maxLookAhead);
+        int n = Math.min(path.getSize(), maxLookAhead);
         for (int i = 0; i < n; ++i) {
             if (!navquery.isValidPolyRef(path.get(i), filter)) {
                 return false;
@@ -513,7 +508,7 @@ public class PathCorridor {
      * @return The polygon reference id of the last polygon in the corridor. (Or zero if there is no path.)
      */
     public long getLastPoly() {
-        return path.isEmpty() ? 0 : path.get(path.size() - 1);
+        return path.isEmpty() ? 0 : path.get(path.getSize() - 1);
     }
 
 }

@@ -1137,15 +1137,14 @@ public class RecastRegion {
     /// @see rcCompactHeightfield, rcBuildRegions, rcBuildRegionsMonotone
     public static void buildDistanceField(Telemetry ctx, CompactHeightfield chf) {
 
-        ctx.startTimer("DISTANCEFIELD");
+        if (ctx != null) ctx.startTimer("DISTANCEFIELD");
         int[] src = new int[chf.spanCount];
-        ctx.startTimer("DISTANCEFIELD_DIST");
+        if (ctx != null) ctx.startTimer("DISTANCEFIELD_DIST");
 
         chf.maxDistance = calculateDistanceField(chf, src);
 
-        ctx.stopTimer("DISTANCEFIELD_DIST");
-
-        ctx.startTimer("DISTANCEFIELD_BLUR");
+        if (ctx != null) ctx.stopTimer("DISTANCEFIELD_DIST");
+        if (ctx != null) ctx.startTimer("DISTANCEFIELD_BLUR");
 
         // Blur
         src = boxBlur(chf, src);
@@ -1153,9 +1152,8 @@ public class RecastRegion {
         // Store distance.
         chf.dist = src;
 
-        ctx.stopTimer("DISTANCEFIELD_BLUR");
-
-        ctx.stopTimer("DISTANCEFIELD");
+        if (ctx != null) ctx.stopTimer("DISTANCEFIELD_BLUR");
+        if (ctx != null) ctx.stopTimer("DISTANCEFIELD");
 
     }
 
@@ -1195,7 +1193,7 @@ public class RecastRegion {
     /// @see rcCompactHeightfield, rcCompactSpan, rcBuildDistanceField, rcBuildRegionsMonotone, rcConfig
     public static void buildRegionsMonotone(Telemetry ctx, CompactHeightfield chf, int minRegionArea,
                                             int mergeRegionArea) {
-        ctx.startTimer("REGIONS");
+        if (ctx != null) ctx.startTimer("REGIONS");
 
         int w = chf.width;
         int h = chf.height;
@@ -1311,7 +1309,7 @@ public class RecastRegion {
             }
         }
 
-        ctx.startTimer("REGIONS_FILTER");
+        if (ctx != null) ctx.startTimer("REGIONS_FILTER");
 
         // Merge regions and filter out small regions.
         List<Integer> overlaps = new ArrayList<>();
@@ -1319,14 +1317,14 @@ public class RecastRegion {
 
         // Monotone partitioning does not generate overlapping regions.
 
-        ctx.stopTimer("REGIONS_FILTER");
+        if (ctx != null) ctx.stopTimer("REGIONS_FILTER");
 
         // Store the result out.
         for (int i = 0; i < chf.spanCount; ++i) {
             chf.spans[i].reg = srcReg[i];
         }
 
-        ctx.stopTimer("REGIONS");
+        if (ctx != null) ctx.stopTimer("REGIONS");
 
     }
 
@@ -1351,13 +1349,13 @@ public class RecastRegion {
     /// @see rcCompactHeightfield, rcCompactSpan, rcBuildDistanceField, rcBuildRegionsMonotone, rcConfig
     public static void buildRegions(Telemetry ctx, CompactHeightfield chf, int minRegionArea,
                                     int mergeRegionArea) {
-        ctx.startTimer("REGIONS");
+        if (ctx != null) ctx.startTimer("REGIONS");
 
         int w = chf.width;
         int h = chf.height;
         int borderSize = chf.borderSize;
 
-        ctx.startTimer("REGIONS_WATERSHED");
+        if (ctx != null) ctx.startTimer("REGIONS_WATERSHED");
 
         int LOG_NB_STACKS = 3;
         int NB_STACKS = 1 << LOG_NB_STACKS;
@@ -1413,14 +1411,14 @@ public class RecastRegion {
 
             // ctx->stopTimer(RC_TIMER_DIVIDE_TO_LEVELS);
 
-            ctx.startTimer("REGIONS_EXPAND");
+            if (ctx != null) ctx.startTimer("REGIONS_EXPAND");
 
             // Expand current regions until no empty connected cells found.
             expandRegions(expandIters, level, chf, srcReg, srcDist, lvlStacks.get(sId), false);
 
-            ctx.stopTimer("REGIONS_EXPAND");
+            if (ctx != null) ctx.stopTimer("REGIONS_EXPAND");
 
-            ctx.startTimer("REGIONS_FLOOD");
+            if (ctx != null) ctx.startTimer("REGIONS_FLOOD");
 
             // Mark new regions with IDs.
             for (int j = 0; j < lvlStacks.get(sId).size(); j += 3) {
@@ -1434,39 +1432,38 @@ public class RecastRegion {
                 }
             }
 
-            ctx.stopTimer("REGIONS_FLOOD");
+            if (ctx != null) ctx.stopTimer("REGIONS_FLOOD");
         }
 
         // Expand current regions until no empty connected cells found.
         expandRegions(expandIters * 8, 0, chf, srcReg, srcDist, stack, true);
 
-        ctx.stopTimer("REGIONS_WATERSHED");
-
-        ctx.startTimer("REGIONS_FILTER");
+        if (ctx != null) ctx.stopTimer("REGIONS_WATERSHED");
+        if (ctx != null) ctx.startTimer("REGIONS_FILTER");
 
         // Merge regions and filter out smalle regions.
         List<Integer> overlaps = new ArrayList<>();
         chf.maxRegions = mergeAndFilterRegions(minRegionArea, mergeRegionArea, regionId, chf, srcReg, overlaps);
 
         // If overlapping regions were found during merging, split those regions.
-        if (overlaps.size() > 0) {
+        if (overlaps.size() > 0 && ctx != null) {
             ctx.warn("rcBuildRegions: " + overlaps.size() + " overlapping regions.");
         }
 
-        ctx.stopTimer("REGIONS_FILTER");
+        if (ctx != null) ctx.stopTimer("REGIONS_FILTER");
 
         // Write the result out.
         for (int i = 0; i < chf.spanCount; ++i) {
             chf.spans[i].reg = srcReg[i];
         }
 
-        ctx.stopTimer("REGIONS");
+        if (ctx != null) ctx.stopTimer("REGIONS");
 
     }
 
     public static void buildLayerRegions(Telemetry ctx, CompactHeightfield chf, int minRegionArea) {
 
-        ctx.startTimer("REGIONS");
+        if (ctx != null) ctx.startTimer("REGIONS");
 
         int w = chf.width;
         int h = chf.height;
@@ -1581,20 +1578,20 @@ public class RecastRegion {
             }
         }
 
-        ctx.startTimer("REGIONS_FILTER");
+        if (ctx != null) ctx.startTimer("REGIONS_FILTER");
 
         // Merge monotone regions to layers and remove small regions.
         List<Integer> overlaps = new ArrayList<>();
         chf.maxRegions = mergeAndFilterLayerRegions(minRegionArea, id, chf, srcReg, overlaps);
 
-        ctx.stopTimer("REGIONS_FILTER");
+        if (ctx != null) ctx.stopTimer("REGIONS_FILTER");
 
         // Store the result out.
         for (int i = 0; i < chf.spanCount; ++i) {
             chf.spans[i].reg = srcReg[i];
         }
 
-        ctx.stopTimer("REGIONS");
+        if (ctx != null) ctx.stopTimer("REGIONS");
 
     }
 }

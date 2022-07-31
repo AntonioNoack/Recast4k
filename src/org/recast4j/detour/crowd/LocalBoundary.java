@@ -19,6 +19,7 @@ freely, subject to the following restrictions:
 package org.recast4j.detour.crowd;
 
 import org.joml.Vector3f;
+import org.recast4j.LongArrayList;
 import org.recast4j.Pair;
 import org.recast4j.detour.*;
 
@@ -38,7 +39,7 @@ public class LocalBoundary {
 
     public Vector3f center = new Vector3f();
     public List<Segment> segments = new ArrayList<>();
-    List<Long> polygons = new ArrayList<>();
+    LongArrayList polygons = new LongArrayList();
 
     protected LocalBoundary() {
         center.set(Float.MAX_VALUE);
@@ -64,7 +65,7 @@ public class LocalBoundary {
             }
             segments.add(seg);
         } else {
-            // Insert inbetween.
+            // Insert in-between.
             int i;
             for (i = 0; i < segments.size(); ++i) {
                 if (dist <= segments.get(i).pruningDist) {
@@ -90,11 +91,12 @@ public class LocalBoundary {
             polygons = res.result.refs;
             segments.clear();
             // Secondly, store all polygon edges.
-            for (Long m_poly : polygons) {
-                Result<GetPolyWallSegmentsResult> result = navquery.getPolyWallSegments(m_poly, false, filter);
+            for (int i = 0, l0 = polygons.getSize(); i < l0; i++) {
+                long poly = polygons.get(i);
+                Result<GetPolyWallSegmentsResult> result = navquery.getPolyWallSegments(poly, false, filter);
                 if (result.succeeded()) {
                     GetPolyWallSegmentsResult gpws = result.result;
-                    for (int k = 0; k < gpws.segmentRefs.size(); ++k) {
+                    for (int k = 0, l = gpws.segmentRefs.getSize(); k < l; ++k) {
                         float[] s = gpws.segmentVertices.get(k);
                         // Skip too distant segments.
                         Pair<Float, Float> distseg = distancePtSegSqr2D(pos, s, 0, 3);
@@ -114,7 +116,8 @@ public class LocalBoundary {
         }
 
         // Check, that all polygons still pass query filter.
-        for (long ref : polygons) {
+        for (int i = 0, l0 = polygons.getSize(); i < l0; i++) {
+            long ref = polygons.get(i);
             if (!navMeshQuery.isValidPolyRef(ref, filter)) {
                 return false;
             }

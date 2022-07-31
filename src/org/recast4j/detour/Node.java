@@ -19,6 +19,7 @@ freely, subject to the following restrictions:
 package org.recast4j.detour;
 
 import org.joml.Vector3f;
+import org.recast4j.LongArrayList;
 
 import java.util.List;
 
@@ -48,7 +49,7 @@ public class Node {
     /** Polygon ref the node corresponds to. */
     long id;
     /** Shortcut found by raycast. */
-    List<Long> shortcut;
+    LongArrayList shortcut;
 
     public Node(int index) {
         this.index = index;

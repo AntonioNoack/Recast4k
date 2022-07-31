@@ -18,14 +18,17 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour;
 
+import org.recast4j.FloatArrayList;
+import org.recast4j.LongArrayList;
+
 import java.util.List;
 
 public class FindPolysAroundResult {
-    public final List<Long> refs;
-    public final List<Long> parentRefs;
-    public final List<Float> costs;
+    public final LongArrayList refs;
+    public final LongArrayList parentRefs;
+    public final FloatArrayList costs;
 
-    public FindPolysAroundResult(List<Long> refs, List<Long> parentRefs, List<Float> costs) {
+    public FindPolysAroundResult(LongArrayList refs, LongArrayList parentRefs, FloatArrayList costs) {
         this.refs = refs;
         this.parentRefs = parentRefs;
         this.costs = costs;

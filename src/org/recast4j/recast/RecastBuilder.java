@@ -245,9 +245,7 @@ public class RecastBuilder {
         }
     }
 
-    /*
-     * Step 3. Partition walkable surface to simple regions.
-     */
+    /** Step 3. Partition walkable surface to simple regions. */
     private CompactHeightfield buildCompactHeightfield(ConvexVolumeProvider volumeProvider, RecastConfig cfg, Telemetry ctx,
                                                        Heightfield solid) {
         // Compact the heightfield so that it is faster to handle from now on.
