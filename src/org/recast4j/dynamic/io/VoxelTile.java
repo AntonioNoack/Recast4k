@@ -68,8 +68,8 @@ public class VoxelTile {
         depth = heightfield.height;
         boundsMin = heightfield.bmin;
         boundsMax = heightfield.bmax;
-        cellSize = heightfield.cs;
-        cellHeight = heightfield.ch;
+        cellSize = heightfield.cellSize;
+        cellHeight = heightfield.cellHeight;
         borderSize = heightfield.borderSize;
         spanData = serializeSpans(heightfield, VoxelFile.PREFERRED_BYTE_ORDER);
     }
@@ -88,9 +88,9 @@ public class VoxelTile {
                 position += 2;
                 for (int s = 0; s < spanCount; s++) {
                     Span span = new Span();
-                    span.smin = getIntBE(spanData, position);
+                    span.min = getIntBE(spanData, position);
                     position += 4;
-                    span.smax = getIntBE(spanData, position);
+                    span.max = getIntBE(spanData, position);
                     position += 4;
                     span.area = getIntBE(spanData, position);
                     position += 4;
@@ -116,9 +116,9 @@ public class VoxelTile {
                 position += 2;
                 for (int s = 0; s < spanCount; s++) {
                     Span span = new Span();
-                    span.smin = getIntLE(spanData, position);
+                    span.min = getIntLE(spanData, position);
                     position += 4;
-                    span.smax = getIntLE(spanData, position);
+                    span.max = getIntLE(spanData, position);
                     position += 4;
                     span.area = getIntLE(spanData, position);
                     position += 4;
@@ -154,8 +154,8 @@ public class VoxelTile {
                 position = putShort(counts[pz + x], data, position, order);
                 Span span = heightfield.spans[pz + x];
                 while (span != null) {
-                    position = putInt(span.smin, data, position, order);
-                    position = putInt(span.smax, data, position, order);
+                    position = putInt(span.min, data, position, order);
+                    position = putInt(span.max, data, position, order);
                     position = putInt(span.area, data, position, order);
                     span = span.next;
                 }

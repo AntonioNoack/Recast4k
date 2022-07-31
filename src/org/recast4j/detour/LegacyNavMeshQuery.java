@@ -25,8 +25,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import static org.recast4j.detour.DetourCommon.*;
+import static org.recast4j.Vectors.*;
 
+@SuppressWarnings("unused")
 public class LegacyNavMeshQuery extends NavMeshQuery {
 
     private static final float H_SCALE = 0.999f; // Search heuristic scale.
@@ -62,7 +63,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
 
         Node startNode = nodePool.getNode(startRef);
         copy(startNode.pos, startPos);
-        startNode.pidx = 0;
+        startNode.parentIndex = 0;
         startNode.cost = 0;
         startNode.total = startPos.distance(endPos) * H_SCALE;
         startNode.id = startRef;
@@ -97,8 +98,8 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
             long parentRef = 0;
             MeshTile parentTile = null;
             Poly parentPoly = null;
-            if (bestNode.pidx != 0) {
-                parentRef = nodePool.getNodeAtIdx(bestNode.pidx).id;
+            if (bestNode.parentIndex != 0) {
+                parentRef = nodePool.getNodeAtIdx(bestNode.parentIndex).id;
             }
             if (parentRef != 0) {
                 tileAndPoly = m_nav.getTileAndPolyByRefUnsafe(parentRef);
@@ -172,7 +173,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
                 }
 
                 // Add or update the node.
-                neighbourNode.pidx = nodePool.getNodeIdx(bestNode);
+                neighbourNode.parentIndex = nodePool.getNodeIdx(bestNode);
                 neighbourNode.id = neighbourRef;
                 neighbourNode.flags = (neighbourNode.flags & ~Node.DT_NODE_CLOSED);
                 neighbourNode.cost = cost;
@@ -255,11 +256,11 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
             MeshTile parentTile = null;
             Poly parentPoly = null;
             Node parentNode = null;
-            if (bestNode.pidx != 0) {
-                parentNode = nodePool.getNodeAtIdx(bestNode.pidx);
+            if (bestNode.parentIndex != 0) {
+                parentNode = nodePool.getNodeAtIdx(bestNode.parentIndex);
                 parentRef = parentNode.id;
-                if (parentNode.pidx != 0) {
-                    grandpaRef = nodePool.getNodeAtIdx(parentNode.pidx).id;
+                if (parentNode.parentIndex != 0) {
+                    grandpaRef = nodePool.getNodeAtIdx(parentNode.parentIndex).id;
                 }
             }
             if (parentRef != 0) {
@@ -307,7 +308,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
 
                 // do not expand to nodes that were already visited from the
                 // same parent
-                if (neighbourNode.pidx != 0 && neighbourNode.pidx == bestNode.pidx) {
+                if (neighbourNode.parentIndex != 0 && neighbourNode.parentIndex == bestNode.parentIndex) {
                     continue;
                 }
 
@@ -372,7 +373,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
                 }
 
                 // Add or update the node.
-                neighbourNode.pidx = foundShortCut ? bestNode.pidx : nodePool.getNodeIdx(bestNode);
+                neighbourNode.parentIndex = foundShortCut ? bestNode.parentIndex : nodePool.getNodeIdx(bestNode);
                 neighbourNode.id = neighbourRef;
                 neighbourNode.flags = (neighbourNode.flags & ~(Node.DT_NODE_CLOSED | Node.DT_NODE_PARENT_DETACHED));
                 neighbourNode.cost = cost;
@@ -433,8 +434,8 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
             Node node = m_query.lastBestNode;
             int prevRay = 0;
             do {
-                Node next = nodePool.getNodeAtIdx(node.pidx);
-                node.pidx = nodePool.getNodeIdx(prev);
+                Node next = nodePool.getNodeAtIdx(node.parentIndex);
+                node.parentIndex = nodePool.getNodeIdx(prev);
                 prev = node;
                 int nextRay = node.flags & Node.DT_NODE_PARENT_DETACHED; // keep track of whether parent is not adjacent
                 // (i.e. due to raycast shortcut)
@@ -447,7 +448,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
             // Store path
             node = prev;
             do {
-                Node next = nodePool.getNodeAtIdx(node.pidx);
+                Node next = nodePool.getNodeAtIdx(node.parentIndex);
                 if ((node.flags & Node.DT_NODE_PARENT_DETACHED) != 0) {
                     Result<RaycastHit> iresult = raycast(node.id, node.pos, next.pos, m_query.filter, 0, 0);
                     if (iresult.succeeded()) {
@@ -513,8 +514,8 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
             // Reverse the path.
             int prevRay = 0;
             do {
-                Node next = nodePool.getNodeAtIdx(node.pidx);
-                node.pidx = nodePool.getNodeIdx(prev);
+                Node next = nodePool.getNodeAtIdx(node.parentIndex);
+                node.parentIndex = nodePool.getNodeIdx(prev);
                 prev = node;
                 int nextRay = node.flags & Node.DT_NODE_PARENT_DETACHED; // keep track of whether parent is not adjacent
                 // (i.e. due to raycast shortcut)
@@ -527,7 +528,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
             // Store path
             node = prev;
             do {
-                Node next = nodePool.getNodeAtIdx(node.pidx);
+                Node next = nodePool.getNodeAtIdx(node.parentIndex);
                 if ((node.flags & Node.DT_NODE_PARENT_DETACHED) != 0) {
                     Result<RaycastHit> iresult = raycast(node.id, node.pos, next.pos, m_query.filter, 0, 0);
                     if (iresult.succeeded()) {
@@ -566,7 +567,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
 
         Node startNode = nodePool.getNode(startRef);
         copy(startNode.pos, centerPos);
-        startNode.pidx = 0;
+        startNode.parentIndex = 0;
         startNode.cost = 0;
         startNode.total = 0;
         startNode.id = startRef;
@@ -591,8 +592,8 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
 
             // Get parent poly and tile.
             long parentRef = 0;
-            if (bestNode.pidx != 0) {
-                parentRef = nodePool.getNodeAtIdx(bestNode.pidx).id;
+            if (bestNode.parentIndex != 0) {
+                parentRef = nodePool.getNodeAtIdx(bestNode.parentIndex).id;
             }
 
             // Hit test walls.
@@ -705,7 +706,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
 
                 neighbourNode.id = neighbourRef;
                 neighbourNode.flags = (neighbourNode.flags & ~Node.DT_NODE_CLOSED);
-                neighbourNode.pidx = nodePool.getNodeIdx(bestNode);
+                neighbourNode.parentIndex = nodePool.getNodeIdx(bestNode);
                 neighbourNode.total = total;
 
                 if ((neighbourNode.flags & Node.DT_NODE_OPEN) != 0) {
@@ -720,7 +721,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
         // Calc hit normal.
         Vector3f hitNormal = new Vector3f();
         if (bestvi != null) {
-            Vector3f tangent = vSub(bestvi, bestvj);
+            Vector3f tangent = sub(bestvi, bestvj);
             hitNormal.x = tangent.z;
             hitNormal.z = -tangent.x;
             hitNormal.normalize();

@@ -82,8 +82,8 @@ public class TileCacheReader {
     private TileCacheParams readCacheParams(ByteBuffer bb) {
         TileCacheParams params = new TileCacheParams();
         params.orig.set(bb.getFloat(), bb.getFloat(), bb.getFloat());
-        params.cs = bb.getFloat();
-        params.ch = bb.getFloat();
+        params.cellSize = bb.getFloat();
+        params.cellHeight = bb.getFloat();
         params.width = bb.getInt();
         params.height = bb.getInt();
         params.walkableHeight = bb.getFloat();

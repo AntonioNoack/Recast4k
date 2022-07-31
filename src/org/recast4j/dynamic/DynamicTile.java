@@ -69,7 +69,7 @@ class DynamicTile {
         Heightfield heightfield = checkpoint != null ? checkpoint.heightfield : voxelTile.heightfield();
         colliders.forEach((id, c) -> {
             if (!rasterizedColliders.contains(id)) {
-                heightfield.bmax.y = Math.max(heightfield.bmax.y, c.bounds()[4] + heightfield.ch * 2);
+                heightfield.bmax.y = Math.max(heightfield.bmax.y, c.bounds()[4] + heightfield.cellHeight * 2);
                 c.rasterize(heightfield, telemetry);
             }
         });
@@ -115,32 +115,32 @@ class DynamicTile {
         PolyMesh mesh = rcResult.mesh;
         PolyMeshDetail meshDetail = rcResult.meshDetail;
         NavMeshDataCreateParams params = new NavMeshDataCreateParams();
-        for (int i = 0; i < mesh.npolys; ++i) {
+        for (int i = 0; i < mesh.numPolygons; ++i) {
             mesh.flags[i] = 1;
         }
         params.tileX = tilex;
         params.tileZ = tileZ;
         params.vertices = mesh.vertices;
-        params.vertCount = mesh.nvertices;
+        params.vertCount = mesh.numVertices;
         params.polys = mesh.polys;
         params.polyAreas = mesh.areas;
         params.polyFlags = mesh.flags;
-        params.polyCount = mesh.npolys;
-        params.nvp = mesh.nvp;
+        params.polyCount = mesh.numPolygons;
+        params.maxVerticesPerPolygon = mesh.maxVerticesPerPolygon;
         if (meshDetail != null) {
             params.detailMeshes = meshDetail.meshes;
             params.detailVertices = meshDetail.vertices;
-            params.detailVerticesCount = meshDetail.nvertices;
-            params.detailTris = meshDetail.tris;
-            params.detailTriCount = meshDetail.ntris;
+            params.detailVerticesCount = meshDetail.numVertices;
+            params.detailTris = meshDetail.triangles;
+            params.detailTriCount = meshDetail.numTriangles;
         }
         params.walkableHeight = config.walkableHeight;
         params.walkableRadius = config.walkableRadius;
         params.walkableClimb = config.walkableClimb;
         params.bmin = mesh.bmin;
         params.bmax = mesh.bmax;
-        params.cs = cellSize;
-        params.ch = cellHeight;
+        params.cellSize = cellSize;
+        params.cellHeight = cellHeight;
         params.buildBvTree = true;
 
         params.offMeshConCount = 0;

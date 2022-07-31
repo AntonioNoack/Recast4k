@@ -30,7 +30,7 @@ public class NavMeshParams {
     /**
      * The world space origin of the navigation mesh's tile space. [(x, y, z)]
      */
-    public final Vector3f orig = new Vector3f();
+    public final Vector3f origin = new Vector3f();
     /**
      * The width of each tile. (Along the x-axis.)
      */

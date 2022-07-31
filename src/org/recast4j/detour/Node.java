@@ -38,7 +38,7 @@ public class Node {
     /** Total cost of reaching the goal via the given node including heuristics. */
     float total;
     /** Index to parent node. */
-    public int pidx;
+    public int parentIndex;
     /**
      * extra state information. A polyRef can have multiple nodes with different extra info. see DT_MAX_STATES_PER_NODE
      */

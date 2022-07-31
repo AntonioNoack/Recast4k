@@ -71,10 +71,10 @@ public class MeshHeader {
     public float walkableRadius;
     /** The maximum climb height of the agents using the tile. */
     public float walkableClimb;
-    /** The minimum bounds of the tile's AABB. [(x, y, z)] */
+    /** The minimum bounds of the tile's AABB. */
     public final Vector3f bmin = new Vector3f();
     /** The maximum bounds of the tile's AABB. [(x, y, z)] */
     public final Vector3f bmax = new Vector3f();
     /** The bounding volume quantization factor. */
-    public float bvQuantFactor;
+    public float bvQuantizationFactor;
 }

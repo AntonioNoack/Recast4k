@@ -1,6 +1,6 @@
 /*
 Copyright (c) 2009-2010 Mikko Mononen memon@inside.org
-recast4j copyright (c) 2015-2019 Piotr Piastucki piotr@jtilia.org
+recast4j Copyright (c) 2015-2019 Piotr Piastucki piotr@jtilia.org
 
 This software is provided 'as-is', without any express or implied
 warranty.  In no event will the authors be held liable for any damages
@@ -16,34 +16,87 @@ freely, subject to the following restrictions:
  misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
-package org.recast4j.detour;
+package org.recast4j;
 
 import org.joml.Vector3f;
 import org.joml.Vector3i;
-import org.recast4j.Pair;
+import org.recast4j.detour.BVNode;
+import org.recast4j.detour.VectorPtr;
 
 import java.util.Optional;
 
-public class DetourCommon {
+public class Vectors {
+
+    public static void min(Vector3f a, float[] b, int i) {
+        a.x = Math.min(a.x, b[i]);
+        a.y = Math.min(a.y, b[i + 1]);
+        a.z = Math.min(a.z, b[i + 2]);
+    }
+
+    public static void max(Vector3f a, float[] b, int i) {
+        a.x = Math.max(a.x, b[i]);
+        a.y = Math.max(a.y, b[i + 1]);
+        a.z = Math.max(a.z, b[i + 2]);
+    }
+
+    public static void copy(float[] out, float[] in, int i) {
+        copy(out, 0, in, i);
+    }
+
+    public static void copy(Vector3f out, float[] in, int i) {
+        out.set(in[i], in[i + 1], in[i + 2]);
+    }
+
+    public static void copy(float[] out, float[] in) {
+        copy(out, 0, in, 0);
+    }
+
+    public static void copy(float[] out, int n, float[] in, int m) {
+        out[n] = in[m];
+        out[n + 1] = in[m + 1];
+        out[n + 2] = in[m + 2];
+    }
+
+    public static void add(float[] dst, float[] a, float[] vertices, int i) {
+        dst[0] = a[0] + vertices[i];
+        dst[1] = a[1] + vertices[i + 1];
+        dst[2] = a[2] + vertices[i + 2];
+    }
+
+    public static void sub(Vector3f dst, float[] vertices, int i, int j) {
+        dst.x = vertices[i] - vertices[j];
+        dst.y = vertices[i + 1] - vertices[j + 1];
+        dst.z = vertices[i + 2] - vertices[j + 2];
+    }
+
+    public static void sub(float[] dst, float[] i, float[] vertices, int j) {
+        dst[0] = i[0] - vertices[j];
+        dst[1] = i[1] - vertices[j + 1];
+        dst[2] = i[2] - vertices[j + 2];
+    }
+
+    public static void cross(Vector3f dest, Vector3f v1, Vector3f v2) {
+        v1.cross(v2, dest);
+    }
+
+    public static void normalize(float[] v) {
+        float d = (float) (1.0f / Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]));
+        v[0] *= d;
+        v[1] *= d;
+        v[2] *= d;
+    }
+
+    public static float dot(float[] v1, float[] v2) {
+        return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
+    }
 
     static float EPS = 1e-4f;
 
-    /// Performs a scaled vector addition. (@p v1 + (@p v2 * @p s))
-    /// @param[out] dest The result vector. [(x, y, z)]
-    /// @param[in] v1 The base vector. [(x, y, z)]
-    /// @param[in] v2 The vector to scale and add to @p v1. [(x, y, z)]
-    /// @param[in] s The amount to scale @p v2 by before adding to @p v1.
-    public static Vector3f vMad(Vector3f v1, Vector3f v2, float s) {
+    public static Vector3f mad(Vector3f v1, Vector3f v2, float s) {
         return new Vector3f(v2).mul(s).add(v1);
     }
 
-    /// Performs a linear interpolation between two vectors. (@p v1 toward @p
-    /// v2)
-    /// @param[out] dest The result vector. [(x, y, x)]
-    /// @param[in] v1 The starting vector.
-    /// @param[in] v2 The destination vector.
-    /// @param[in] t The interpolation factor. [Limits: 0 <= value <= 1.0]
-    public static Vector3f vLerp(float[] vertices, int v1, int v2, float t) {
+    public static Vector3f lerp(float[] vertices, int v1, int v2, float t) {
         Vector3f dest = new Vector3f();
         dest.x = vertices[v1] + (vertices[v2] - vertices[v1]) * t;
         dest.y = vertices[v1 + 1] + (vertices[v2 + 1] - vertices[v1 + 1]) * t;
@@ -51,23 +104,23 @@ public class DetourCommon {
         return dest;
     }
 
-    public static Vector3f vLerp(Vector3f v1, Vector3f v2, float t) {
+    public static Vector3f lerp(Vector3f v1, Vector3f v2, float t) {
         return new Vector3f(v1).lerp(v2, t);
     }
 
-    public static Vector3f vSub(VectorPtr v1, VectorPtr v2) {
+    public static Vector3f sub(VectorPtr v1, VectorPtr v2) {
         return new Vector3f(v1.get(0) - v2.get(0), v1.get(1) - v2.get(1), v1.get(2) - v2.get(2));
     }
 
-    public static Vector3f vSub(Vector3f v1, VectorPtr v2) {
+    public static Vector3f sub(Vector3f v1, VectorPtr v2) {
         return new Vector3f(v1.get(0) - v2.get(0), v1.get(1) - v2.get(1), v1.get(2) - v2.get(2));
     }
 
-    public static Vector3f vSub(Vector3f v1, Vector3f v2) {
+    public static Vector3f sub(Vector3f v1, Vector3f v2) {
         return new Vector3f(v1).sub(v2);
     }
 
-    public static Vector3f vAdd(Vector3f v1, Vector3f v2) {
+    public static Vector3f add(Vector3f v1, Vector3f v2) {
         return new Vector3f(v1).add(v2);
     }
 
@@ -75,16 +128,12 @@ public class DetourCommon {
         return new Vector3f(in);
     }
 
-    public static void vSet(Vector3f out, float a, float b, float c) {
+    public static void set(Vector3f out, float a, float b, float c) {
         out.set(a, b, c);
     }
 
     public static void copy(Vector3f out, Vector3f in) {
         out.set(in);
-    }
-
-    public static void copy(Vector3f out, float[] in, int i) {
-        out.set(in[i], in[i + 1], in[i + 2]);
     }
 
     public static void copy(float[] out, int o, Vector3f in) {
@@ -96,36 +145,8 @@ public class DetourCommon {
     public static void copy(Vector3f out, int[] in, int i) {
         out.set(in[i], in[i + 1], in[i + 2]);
     }
-
-    public static void min(Vector3f out, float[] in, int i) {
-        out.x = Math.min(out.x, in[i]);
-        out.y = Math.min(out.y, in[i + 1]);
-        out.z = Math.min(out.z, in[i + 2]);
-    }
-
-    public static void max(Vector3f out, float[] in, int i) {
-        out.x = Math.max(out.x, in[i]);
-        out.y = Math.max(out.y, in[i + 1]);
-        out.z = Math.max(out.z, in[i + 2]);
-    }
-
     public static float sqr(float a) {
         return a * a;
-    }
-
-    static float vDist(float[] v1, float[] vertices, int i) {
-        float dx = vertices[i] - v1[0];
-        float dy = vertices[i + 1] - v1[1];
-        float dz = vertices[i + 2] - v1[2];
-        return (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-    }
-
-    public static float clamp(float v, float min, float max) {
-        return Math.max(Math.min(v, max), min);
-    }
-
-    public static int clamp(int v, int min, int max) {
-        return Math.max(Math.min(v, max), min);
     }
 
     /// Derives the distance between the specified points on the xz-plane.
@@ -135,19 +156,19 @@ public class DetourCommon {
     ///
     /// The vectors are projected onto the xz-plane, so the y-values are
     /// ignored.
-    public static float vDist2D(Vector3f v1, Vector3f v2) {
+    public static float dist2D(Vector3f v1, Vector3f v2) {
         float dx = v2.x - v1.x;
         float dz = v2.z - v1.z;
         return (float) Math.sqrt(dx * dx + dz * dz);
     }
 
-    public static float vDist2DSqr(Vector3f v1, Vector3f v2) {
+    public static float dist2DSqr(Vector3f v1, Vector3f v2) {
         float dx = v2.x - v1.x;
         float dz = v2.z - v1.z;
         return dx * dx + dz * dz;
     }
 
-    public static float vDist2DSqr(Vector3f p, float[] vertices, int i) {
+    public static float dist2DSqr(Vector3f p, float[] vertices, int i) {
         float dx = vertices[i] - p.x;
         float dz = vertices[i + 2] - p.z;
         return dx * dx + dz * dz;
@@ -173,23 +194,12 @@ public class DetourCommon {
     ///
     /// The vectors are projected onto the xz-plane, so the y-values are
     /// ignored.
-    public static float vDot2D(Vector3f u, Vector3f v) {
+    public static float dot2D(Vector3f u, Vector3f v) {
         return u.x * v.x + u.z * v.z;
     }
 
-    static float vDot2D(Vector3f u, float[] v, int vi) {
+    static float dot2D(Vector3f u, float[] v, int vi) {
         return u.x * v[vi] + u.z * v[vi + 2];
-    }
-
-    /// Derives the xz-plane 2D perp product of the two vectors. (uz*vx - ux*vz)
-    /// @param[in] u The LHV vector [(x, y, z)]
-    /// @param[in] v The RHV vector [(x, y, z)]
-    /// @return The dot product on the xz-plane.
-    ///
-    /// The vectors are projected onto the xz-plane, so the y-values are
-    /// ignored.
-    public static float vPerp2D(Vector3f u, Vector3f v) {
-        return u.z * v.x - u.x * v.z;
     }
 
     /// @}
@@ -220,14 +230,16 @@ public class DetourCommon {
 
     /**
      * Determines if two axis-aligned bounding boxes overlap.
-     * */
-    static boolean overlapQuantBounds(Vector3i amin, Vector3i amax, BVNode n) {
+     */
+    public static boolean overlapQuantBounds(Vector3i amin, Vector3i amax, BVNode n) {
         return amin.x <= n.maxX && amax.x >= n.minX &&
                 amin.y <= n.maxY && amax.y >= n.minY &&
                 amin.z <= n.maxZ && amax.z >= n.minZ;
     }
 
-    /** Determines if two axis-aligned bounding boxes overlap. */
+    /**
+     * Determines if two axis-aligned bounding boxes overlap.
+     */
     public static boolean overlapBounds(Vector3f amin, Vector3f amax, Vector3f bmin, Vector3f bmax) {
         return !(amin.x > bmax.x) && !(amax.x < bmin.x) &&
                 !(amin.y > bmax.y) && !(amax.y < bmin.y) &&
@@ -254,10 +266,10 @@ public class DetourCommon {
         return new Pair<>(dx * dx + dz * dz, t);
     }
 
-    static Optional<Float> closestHeightPointTriangle(Vector3f p, Vector3f a, Vector3f b, Vector3f c) {
-        Vector3f v0 = vSub(c, a);
-        Vector3f v1 = vSub(b, a);
-        Vector3f v2 = vSub(p, a);
+    public static Optional<Float> closestHeightPointTriangle(Vector3f p, Vector3f a, Vector3f b, Vector3f c) {
+        Vector3f v0 = sub(c, a);
+        Vector3f v1 = sub(b, a);
+        Vector3f v2 = sub(p, a);
 
         // Compute scaled barycentric coordinates
         float denom = v0.x * v1.z - v0.z * v1.x;
@@ -286,10 +298,10 @@ public class DetourCommon {
     /// @par
     ///
     /// All points are projected onto the xz-plane, so the y-values are ignored.
-    static boolean pointInPolygon(Vector3f pt, float[] vertices, int nvertices) {
+    public static boolean pointInPolygon(Vector3f pt, float[] vertices, int numVertices) {
         int i, j;
         boolean c = false;
-        for (i = 0, j = nvertices - 1; i < nvertices; j = i++) {
+        for (i = 0, j = numVertices - 1; i < numVertices; j = i++) {
             int vi = i * 3;
             int vj = j * 3;
             if (((vertices[vi + 2] > pt.z) != (vertices[vj + 2] > pt.z)) && (pt.x < (vertices[vj] - vertices[vi])
@@ -300,28 +312,28 @@ public class DetourCommon {
         return c;
     }
 
-    static boolean distancePtPolyEdgesSqr(Vector3f pt, float[] vertices, int nvertices, float[] ed, float[] et) {
+    public static boolean distancePtPolyEdgesSqr(Vector3f pt, float[] vertices, int numVertices, float[] ed, float[] et) {
         int i, j;
         boolean c = false;
-        for (i = 0, j = nvertices - 1; i < nvertices; j = i++) {
+        for (i = 0, j = numVertices - 1; i < numVertices; j = i++) {
             int vi = i * 3;
             int vj = j * 3;
             if (((vertices[vi + 2] > pt.z) != (vertices[vj + 2] > pt.z)) && (pt.x < (vertices[vj] - vertices[vi])
                     * (pt.z - vertices[vi + 2]) / (vertices[vj + 2] - vertices[vi + 2]) + vertices[vi])) {
                 c = !c;
             }
-            Pair<Float, Float> edet = distancePtSegSqr2D(pt, vertices, vj, vi);
-            ed[j] = edet.first;
-            et[j] = edet.second;
+            Pair<Float, Float> dist = distancePtSegSqr2D(pt, vertices, vj, vi);
+            ed[j] = dist.first;
+            et[j] = dist.second;
         }
         return c;
     }
 
-    static float[] projectPoly(Vector3f axis, float[] poly, int npoly) {
+    static float[] projectPoly(Vector3f axis, float[] polygons, int numPolygons) {
         float rmin, rmax;
-        rmin = rmax = vDot2D(axis, poly, 0);
-        for (int i = 1; i < npoly; ++i) {
-            float d = vDot2D(axis, poly, i * 3);
+        rmin = rmax = dot2D(axis, polygons, 0);
+        for (int i = 1; i < numPolygons; ++i) {
+            float d = dot2D(axis, polygons, i * 3);
             rmin = Math.min(rmin, d);
             rmax = Math.max(rmax, d);
         }
@@ -342,10 +354,10 @@ public class DetourCommon {
 
     static float eps = 1e-4f;
 
-    /// @par
-    ///
-    /// All vertices are projected onto the xz-plane, so the y-values are ignored.
-    static boolean overlapPolyPoly2D(float[] polya, int npolya, float[] polyb, int npolyb) {
+    /**
+     * All vertices are projected onto the xz-plane, so the y-values are ignored.
+     */
+    public static boolean overlapPolyPoly2D(float[] polya, int npolya, float[] polyb, int npolyb) {
 
         for (int i = 0, j = npolya - 1; i < npolya; j = i++) {
             int va = j * 3;
@@ -378,7 +390,7 @@ public class DetourCommon {
 
     // Returns a random point in a convex polygon.
     // Adapted from Graphics Gems article.
-    static Vector3f randomPointInConvexPoly(float[] pts, int npts, float[] areas, float s, float t) {
+    public static Vector3f randomPointInConvexPoly(float[] pts, int npts, float[] areas, float s, float t) {
         // Calc triangle araes
         float areasum = 0.0f;
         for (int i = 2; i < npts; i++) {
@@ -444,25 +456,25 @@ public class DetourCommon {
     }
 
     public static class IntersectResult {
-        boolean intersects;
-        float tmin;
-        float tmax = 1f;
-        int segMin = -1;
-        int segMax = -1;
+        public boolean intersects;
+        public float tmin;
+        public float tmax = 1f;
+        public int segMin = -1;
+        public int segMax = -1;
     }
 
-    static IntersectResult intersectSegmentPoly2D(Vector3f p0, Vector3f p1, float[] vertices, int nvertices) {
+    public static IntersectResult intersectSegmentPoly2D(Vector3f p0, Vector3f p1, float[] vertices, int nvertices) {
 
         IntersectResult result = new IntersectResult();
         float EPS = 0.00000001f;
-        Vector3f dir = vSub(p1, p0);
+        Vector3f dir = sub(p1, p0);
 
         for (int i = 0, j = nvertices - 1; i < nvertices; j = i++) {
             VectorPtr vpj = new VectorPtr(vertices, j * 3);
-            Vector3f edge = vSub(new VectorPtr(vertices, i * 3), vpj);
-            Vector3f diff = vSub(p0, vpj);
-            float n = vPerp2D(edge, diff);
-            float d = vPerp2D(dir, edge);
+            Vector3f edge = sub(new VectorPtr(vertices, i * 3), vpj);
+            Vector3f diff = sub(p0, vpj);
+            float n = -crossXZ(edge, diff);
+            float d = -crossXZ(dir, edge);
             if (Math.abs(d) < EPS) {
                 // S is nearly parallel to this edge
                 if (n < 0) {
@@ -518,28 +530,30 @@ public class DetourCommon {
         return new Pair<>(dx * dx + dz * dz, t);
     }
 
-    static int oppositeTile(int side) {
+    public static int oppositeTile(int side) {
         return (side + 4) & 0x7;
     }
 
-    static float vperpXZ(Vector3f a, Vector3f b) {
+    public static float crossXZ(Vector3f a, Vector3f b) {
         return a.x * b.z - a.z * b.x;
     }
 
-    static Optional<Pair<Float, Float>> intersectSegSeg2D(Vector3f ap, Vector3f aq, Vector3f bp, Vector3f bq) {
-        Vector3f u = vSub(aq, ap);
-        Vector3f v = vSub(bq, bp);
-        Vector3f w = vSub(ap, bp);
-        float d = vperpXZ(u, v);
+    public static Optional<Pair<Float, Float>> intersectSegSeg2D(Vector3f ap, Vector3f aq, Vector3f bp, Vector3f bq) {
+        Vector3f u = sub(aq, ap);
+        Vector3f v = sub(bq, bp);
+        Vector3f w = sub(ap, bp);
+        float d = crossXZ(u, v);
         if (Math.abs(d) < 1e-6f) {
             return Optional.empty();
         }
-        float s = vperpXZ(v, w) / d;
-        float t = vperpXZ(u, w) / d;
+        float s = crossXZ(v, w) / d;
+        float t = crossXZ(u, w) / d;
         return Optional.of(new Pair<>(s, t));
     }
 
-    /** Checks that the specified vector's components are all finite. */
+    /**
+     * Checks that the specified vector's components are all finite.
+     */
     public static boolean isFinite(Vector3f v) {
         return v.isFinite();
     }
@@ -548,6 +562,10 @@ public class DetourCommon {
     /// @param[in] v A point. [(x, y, z)]
     public static boolean vIsFinite2D(Vector3f v) {
         return Float.isFinite(v.x) && Float.isFinite(v.z);
+    }
+
+    public static void add(Vector3f dest, Vector3f v1, Vector3f v2) {
+        dest.set(v1).add(v2);
     }
 
 }

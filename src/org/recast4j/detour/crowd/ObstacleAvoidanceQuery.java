@@ -22,7 +22,8 @@ import org.joml.Vector3f;
 import org.recast4j.Pair;
 import org.recast4j.detour.crowd.debug.ObstacleAvoidanceDebugData;
 
-import static org.recast4j.detour.DetourCommon.*;
+import static org.joml.Math.clamp;
+import static org.recast4j.Vectors.*;
 
 public class ObstacleAvoidanceQuery {
 
@@ -107,29 +108,27 @@ public class ObstacleAvoidanceQuery {
         }
     }
 
-    ;
-
     private ObstacleAvoidanceParams m_params;
     private float m_invHorizTime;
     private float m_invVmax;
 
     private final int m_maxCircles;
-    private final ObstacleCircle[] m_circles;
-    private int m_ncircles;
+    public final ObstacleCircle[] circles;
+    public int circleCount;
 
     private final int maxNumSegments;
-    private final ObstacleSegment[] segments;
-    private int m_nsegments;
+    public final ObstacleSegment[] segments;
+    public int segmentCount;
 
     public ObstacleAvoidanceQuery(int maxCircles, int maxSegments) {
         m_maxCircles = maxCircles;
-        m_ncircles = 0;
-        m_circles = new ObstacleCircle[m_maxCircles];
+        circleCount = 0;
+        circles = new ObstacleCircle[m_maxCircles];
         for (int i = 0; i < m_maxCircles; i++) {
-            m_circles[i] = new ObstacleCircle();
+            circles[i] = new ObstacleCircle();
         }
         maxNumSegments = maxSegments;
-        m_nsegments = 0;
+        segmentCount = 0;
         segments = new ObstacleSegment[maxNumSegments];
         for (int i = 0; i < maxNumSegments; i++) {
             segments[i] = new ObstacleSegment();
@@ -137,15 +136,15 @@ public class ObstacleAvoidanceQuery {
     }
 
     public void reset() {
-        m_ncircles = 0;
-        m_nsegments = 0;
+        circleCount = 0;
+        segmentCount = 0;
     }
 
     public void addCircle(Vector3f pos, float rad, Vector3f vel, Vector3f dvel) {
-        if (m_ncircles >= m_maxCircles)
+        if (circleCount >= m_maxCircles)
             return;
 
-        ObstacleCircle cir = m_circles[m_ncircles++];
+        ObstacleCircle cir = circles[circleCount++];
         copy(cir.p, pos);
         cir.rad = rad;
         copy(cir.vel, vel);
@@ -153,42 +152,25 @@ public class ObstacleAvoidanceQuery {
     }
 
     public void addSegment(Vector3f p, Vector3f q) {
-        if (m_nsegments >= maxNumSegments) return;
-        ObstacleSegment seg = segments[m_nsegments++];
+        if (segmentCount >= maxNumSegments) return;
+        ObstacleSegment seg = segments[segmentCount++];
         copy(seg.p, p);
         copy(seg.q, q);
     }
 
-    public int getObstacleCircleCount() {
-        return m_ncircles;
-    }
-
-    public ObstacleCircle getObstacleCircle(int i) {
-        return m_circles[i];
-    }
-
-    public int getObstacleSegmentCount() {
-        return m_nsegments;
-    }
-
-    public ObstacleSegment getObstacleSegment(int i) {
-        return segments[i];
-    }
-
     private void prepare(Vector3f pos, Vector3f dvel) {
         // Prepare obstacles
-        for (int i = 0; i < m_ncircles; i++) {
-            ObstacleCircle cir = m_circles[i];
+        for (int i = 0; i < circleCount; i++) {
+            ObstacleCircle cir = circles[i];
 
             // Side
-            Vector3f pa = pos;
             Vector3f pb = cir.p;
 
             Vector3f orig = new Vector3f();
             Vector3f dv;
-            copy(cir.dp, vSub(pb, pa));
+            copy(cir.dp, sub(pb, pos));
             cir.dp.normalize();
-            dv = vSub(cir.dvel, dvel);
+            dv = sub(cir.dvel, dvel);
 
             float a = triArea2D(orig, cir.dp, dv);
             if (a < 0.01f) {
@@ -200,7 +182,7 @@ public class ObstacleAvoidanceQuery {
             }
         }
 
-        for (int i = 0; i < m_nsegments; ++i) {
+        for (int i = 0; i < segmentCount; ++i) {
             ObstacleSegment seg = segments[i];
 
             // Precalc if the agent is really close to the segment.
@@ -212,15 +194,15 @@ public class ObstacleAvoidanceQuery {
 
     SweepCircleCircleResult sweepCircleCircle(Vector3f c0, float r0, Vector3f v, Vector3f c1, float r1) {
         final float EPS = 0.0001f;
-        Vector3f s = vSub(c1, c0);
+        Vector3f s = sub(c1, c0);
         float r = r0 + r1;
-        float c = vDot2D(s, s) - r * r;
-        float a = vDot2D(v, v);
+        float c = dot2D(s, s) - r * r;
+        float a = dot2D(v, v);
         if (a < EPS)
             return new SweepCircleCircleResult(false, 0f, 0f); // not moving
 
         // Overlap, calc time to exit.
-        float b = vDot2D(v, s);
+        float b = dot2D(v, s);
         float d = b * b - a * c;
         if (d < 0.0f)
             return new SweepCircleCircleResult(false, 0f, 0f); // no intersection.
@@ -230,16 +212,16 @@ public class ObstacleAvoidanceQuery {
     }
 
     Pair<Boolean, Float> isectRaySeg(Vector3f ap, Vector3f u, Vector3f bp, Vector3f bq) {
-        Vector3f v = vSub(bq, bp);
-        Vector3f w = vSub(ap, bp);
-        float d = vPerp2D(u, v);
+        Vector3f v = sub(bq, bp);
+        Vector3f w = sub(ap, bp);
+        float d = -crossXZ(u, v);
         if (Math.abs(d) < 1e-6f)
             return new Pair<>(false, 0f);
         d = 1.0f / d;
-        float t = vPerp2D(v, w) * d;
+        float t = -crossXZ(v, w) * d;
         if (t < 0 || t > 1)
             return new Pair<>(false, 0f);
-        float s = vPerp2D(u, w) * d;
+        float s = -crossXZ(u, w) * d;
         if (s < 0 || s > 1)
             return new Pair<>(false, 0f);
         return new Pair<>(true, t);
@@ -255,8 +237,8 @@ public class ObstacleAvoidanceQuery {
     private float processSample(Vector3f vcand, float cs, Vector3f pos, float rad, Vector3f vel, Vector3f dvel,
                                 float minPenalty, ObstacleAvoidanceDebugData debug) {
         // penalty for straying away from the desired and current velocities
-        float vpen = m_params.weightDesVel * (vDist2D(vcand, dvel) * m_invVmax);
-        float vcpen = m_params.weightCurVel * (vDist2D(vcand, vel) * m_invVmax);
+        float vpen = m_params.weightDesVel * (dist2D(vcand, dvel) * m_invVmax);
+        float vcpen = m_params.weightCurVel * (dist2D(vcand, vel) * m_invVmax);
 
         // find the threshold hit time to bail out based on the early out penalty
         // (see how the penalty is calculated below to understnad)
@@ -270,16 +252,16 @@ public class ObstacleAvoidanceQuery {
         float side = 0;
         int nside = 0;
 
-        for (int i = 0; i < m_ncircles; ++i) {
-            ObstacleCircle cir = m_circles[i];
+        for (int i = 0; i < circleCount; ++i) {
+            ObstacleCircle cir = circles[i];
 
             // RVO
             Vector3f vab = new Vector3f(vcand).mul(2f);
-            vab = vSub(vab, vel);
-            vab = vSub(vab, cir.vel);
+            vab = sub(vab, vel);
+            vab = sub(vab, cir.vel);
 
             // Side
-            side += clamp(Math.min(vDot2D(cir.dp, vab) * 0.5f + 0.5f, vDot2D(cir.np, vab) * 2), 0.0f, 1.0f);
+            side += clamp(Math.min(dot2D(cir.dp, vab) * 0.5f + 0.5f, dot2D(cir.np, vab) * 2), 0.0f, 1.0f);
             nside++;
 
             SweepCircleCircleResult sres = sweepCircleCircle(pos, rad, vab, cir.p, cir.rad);
@@ -303,18 +285,18 @@ public class ObstacleAvoidanceQuery {
             }
         }
 
-        for (int i = 0; i < m_nsegments; ++i) {
+        for (int i = 0; i < segmentCount; ++i) {
             ObstacleSegment seg = segments[i];
-            float htmin = 0;
+            float htmin;
 
             if (seg.touch) {
                 // Special case when the agent is very close to the segment.
-                Vector3f sdir = vSub(seg.q, seg.p);
+                Vector3f sdir = sub(seg.q, seg.p);
                 Vector3f snorm = new Vector3f();
                 snorm.x = -sdir.z;
                 snorm.z = sdir.x;
                 // If the velocity is pointing towards the segment, no collision.
-                if (vDot2D(snorm, vcand) < 0.0f)
+                if (dot2D(snorm, vcand) < 0.0f)
                     continue;
                 // Else immediate collision.
                 htmin = 0.0f;
@@ -351,6 +333,7 @@ public class ObstacleAvoidanceQuery {
         return penalty;
     }
 
+    @SuppressWarnings("unused")
     public Pair<Integer, Vector3f> sampleVelocityGrid(Vector3f pos, float rad, float vmax, Vector3f vel, Vector3f dvel,
                                                       ObstacleAvoidanceParams params, ObstacleAvoidanceDebugData debug) {
         prepare(pos, dvel);
@@ -359,7 +342,7 @@ public class ObstacleAvoidanceQuery {
         m_invVmax = vmax > 0 ? 1.0f / vmax : Float.MAX_VALUE;
 
         Vector3f nvel = new Vector3f();
-        vSet(nvel, 0f, 0f, 0f);
+        set(nvel, 0f, 0f, 0f);
 
         if (debug != null)
             debug.reset();

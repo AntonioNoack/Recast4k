@@ -2,7 +2,7 @@ package org.recast4j.detour;
 
 import org.joml.Vector3f;
 
-import static org.recast4j.detour.DetourCommon.vSub;
+import static org.recast4j.Vectors.sub;
 
 public class FindNearestPolyQuery implements PolyQuery {
 
@@ -30,7 +30,7 @@ public class FindNearestPolyQuery implements PolyQuery {
         // If a point is directly over a polygon and closer than
         // climb height, favor that instead of straight line nearest point.
         float d;
-        Vector3f diff = vSub(center, closestPtPoly);
+        Vector3f diff = sub(center, closestPtPoly);
         if (posOverPoly) {
             d = Math.abs(diff.y) - tile.data.header.walkableClimb;
             d = d > 0 ? d * d : 0;

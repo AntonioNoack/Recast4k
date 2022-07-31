@@ -26,12 +26,16 @@ import org.recast4j.detour.crowd.Crowd.CrowdNeighbour;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.recast4j.detour.DetourCommon.*;
+import static org.recast4j.Vectors.*;
 
-/** Represents an agent managed by a #dtCrowd object. */
+/**
+ * Represents an agent managed by a #dtCrowd object.
+ */
 public class CrowdAgent {
-    
-    /** The type of navigation mesh polygon the agent is currently traversing. */
+
+    /**
+     * The type of navigation mesh polygon the agent is currently traversing.
+     */
     public enum CrowdAgentState {
         DT_CROWDAGENT_STATE_INVALID, /// < The agent is not in a valid state.
         DT_CROWDAGENT_STATE_WALKING, /// < The agent is traversing a normal navigation mesh polygon.
@@ -102,15 +106,15 @@ public class CrowdAgent {
     void integrate(float dt) {
         // Fake dynamic constraint.
         float maxDelta = params.maxAcceleration * dt;
-        Vector3f dv = vSub(nvel, vel);
+        Vector3f dv = sub(nvel, vel);
         float ds = dv.length();
         if (ds > maxDelta)
             dv.mul(maxDelta / ds);
-        vel = vAdd(vel, dv);
+        vel.add(dv);
 
         // Integrate
         if (vel.length() > 0.0001f)
-            npos = vMad(npos, vel, dt);
+            npos = mad(npos, vel, dt);
         else vel.set(0f);
     }
 
@@ -121,7 +125,7 @@ public class CrowdAgent {
         boolean offMeshConnection = (corners.get(corners.size() - 1).getFlags()
                 & NavMeshQuery.DT_STRAIGHTPATH_OFFMESH_CONNECTION) != 0;
         if (offMeshConnection) {
-            float distSq = vDist2DSqr(npos, corners.get(corners.size() - 1).pos);
+            float distSq = dist2DSqr(npos, corners.get(corners.size() - 1).pos);
             return distSq < radius * radius;
         }
         return false;
@@ -133,7 +137,7 @@ public class CrowdAgent {
 
         boolean endOfPath = (corners.get(corners.size() - 1).getFlags() & NavMeshQuery.DT_STRAIGHTPATH_END) != 0;
         if (endOfPath)
-            return Math.min(vDist2D(npos, corners.get(corners.size() - 1).pos), range);
+            return Math.min(dist2D(npos, corners.get(corners.size() - 1).pos), range);
 
         return range;
     }
@@ -147,8 +151,8 @@ public class CrowdAgent {
             Vector3f p0 = corners.get(ip0).pos;
             Vector3f p1 = corners.get(ip1).pos;
 
-            Vector3f dir0 = vSub(p0, npos);
-            Vector3f dir1 = vSub(p1, npos);
+            Vector3f dir0 = sub(p0, npos);
+            Vector3f dir1 = sub(p1, npos);
             dir0.y = 0;
             dir1.y = 0;
 

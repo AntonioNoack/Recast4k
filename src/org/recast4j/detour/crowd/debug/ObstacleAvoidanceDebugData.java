@@ -20,8 +20,8 @@ package org.recast4j.detour.crowd.debug;
 
 import org.joml.Vector3f;
 
-import static org.recast4j.detour.DetourCommon.clamp;
-import static org.recast4j.detour.DetourCommon.copy;
+import static org.joml.Math.clamp;
+import static org.recast4j.Vectors.copy;
 
 public class ObstacleAvoidanceDebugData {
     int m_nsamples;
@@ -89,7 +89,7 @@ public class ObstacleAvoidanceDebugData {
 
     public Vector3f getSampleVelocity(int i) {
         Vector3f vel = new Vector3f();
-        copy(vel, m_vel, i*3);
+        copy(vel, m_vel, i * 3);
         return vel;
     }
 

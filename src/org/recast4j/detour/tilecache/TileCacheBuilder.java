@@ -31,7 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.recast4j.detour.DetourCommon.sqr;
+import static org.recast4j.Vectors.sqr;
 
 public class TileCacheBuilder {
 
@@ -1183,7 +1183,7 @@ public class TileCacheBuilder {
         // Count number of polygons to remove.
         int maxVerticesPerPoly = mesh.nvp;
         int numRemainingEdges = 0;
-        for (int i = 0; i < mesh.npolys; ++i) {
+        for (int i = 0; i < mesh.numPolygons; ++i) {
             int p = i * mesh.nvp * 2;
             int nv = countPolyVertices(mesh.polys, p, maxVerticesPerPoly);
             int numRemoved = 0;
@@ -1210,7 +1210,7 @@ public class TileCacheBuilder {
         List<Integer> edges = new ArrayList<>();
         int nedges = 0;
 
-        for (int i = 0; i < mesh.npolys; ++i) {
+        for (int i = 0; i < mesh.numPolygons; ++i) {
             int p = i * mesh.nvp * 2;
             int nv = countPolyVertices(mesh.polys, p, maxVerticesPerPoly);
 
@@ -1267,7 +1267,7 @@ public class TileCacheBuilder {
         List<Integer> hole = new ArrayList<>();
         List<Integer> harea = new ArrayList<>();
 
-        for (int i = 0; i < mesh.npolys; ++i) {
+        for (int i = 0; i < mesh.numPolygons; ++i) {
             int p = i * maxVerticesPerPoly * 2;
             int nv = countPolyVertices(mesh.polys, p, maxVerticesPerPoly);
             boolean hasRem = false;
@@ -1287,25 +1287,25 @@ public class TileCacheBuilder {
                     }
                 }
                 // Remove the polygon.
-                int p2 = (mesh.npolys - 1) * maxVerticesPerPoly * 2;
+                int p2 = (mesh.numPolygons - 1) * maxVerticesPerPoly * 2;
                 System.arraycopy(mesh.polys, p2, mesh.polys, p, maxVerticesPerPoly);
                 Arrays.fill(mesh.polys, p + maxVerticesPerPoly, p + 2 * maxVerticesPerPoly, DT_TILECACHE_NULL_IDX);
-                mesh.areas[i] = mesh.areas[mesh.npolys - 1];
-                mesh.npolys--;
+                mesh.areas[i] = mesh.areas[mesh.numPolygons - 1];
+                mesh.numPolygons--;
                 --i;
             }
         }
 
         // Remove vertex.
-        for (int i = rem; i < mesh.nvertices; ++i) {
+        for (int i = rem; i < mesh.numVertices; ++i) {
             mesh.vertices[i * 3] = mesh.vertices[(i + 1) * 3];
             mesh.vertices[i * 3 + 1] = mesh.vertices[(i + 1) * 3 + 1];
             mesh.vertices[i * 3 + 2] = mesh.vertices[(i + 1) * 3 + 2];
         }
-        mesh.nvertices--;
+        mesh.numVertices--;
 
         // Adjust indices to match the removed vertex layout.
-        for (int i = 0; i < mesh.npolys; ++i) {
+        for (int i = 0; i < mesh.numPolygons; ++i) {
             int p = i * maxVerticesPerPoly * 2;
             int nv = countPolyVertices(mesh.polys, p, maxVerticesPerPoly);
             for (int j = 0; j < nv; ++j)
@@ -1443,15 +1443,15 @@ public class TileCacheBuilder {
 
         // Store polygons.
         for (int i = 0; i < npolys; ++i) {
-            if (mesh.npolys >= maxTris)
+            if (mesh.numPolygons >= maxTris)
                 break;
-            int p = mesh.npolys * maxVerticesPerPoly * 2;
+            int p = mesh.numPolygons * maxVerticesPerPoly * 2;
             Arrays.fill(mesh.polys, p, p + maxVerticesPerPoly * 2, DT_TILECACHE_NULL_IDX);
             for (int j = 0; j < maxVerticesPerPoly; ++j)
                 mesh.polys[p + j] = polys[i * maxVerticesPerPoly + j];
-            mesh.areas[mesh.npolys] = pareas[i];
-            mesh.npolys++;
-            if (mesh.npolys > maxTris) {
+            mesh.areas[mesh.numPolygons] = pareas[i];
+            mesh.numPolygons++;
+            if (mesh.numPolygons > maxTris) {
                 throw new RuntimeException("Buffer too small");
             }
         }
@@ -1485,8 +1485,8 @@ public class TileCacheBuilder {
         // for filling it.
         mesh.flags = new int[maxTris];
 
-        mesh.nvertices = 0;
-        mesh.npolys = 0;
+        mesh.numVertices = 0;
+        mesh.numPolygons = 0;
 
         Arrays.fill(mesh.polys, DT_TILECACHE_NULL_IDX);
 
@@ -1520,8 +1520,8 @@ public class TileCacheBuilder {
             for (int j = 0; j < cont.nvertices; ++j) {
                 int v = j * 4;
                 indices[j] = addVertex(cont.vertices[v], cont.vertices[v + 1], cont.vertices[v + 2], mesh.vertices, firstVert,
-                        nextVert, mesh.nvertices);
-                mesh.nvertices = Math.max(mesh.nvertices, indices[j] + 1);
+                        nextVert, mesh.numVertices);
+                mesh.numVertices = Math.max(mesh.numVertices, indices[j] + 1);
                 if ((cont.vertices[v + 3] & 0x80) != 0) {
                     // This vertex should be removed.
                     vflags[indices[j]] = 1;
@@ -1584,18 +1584,18 @@ public class TileCacheBuilder {
 
             // Store polygons.
             for (int j = 0; j < npolys; ++j) {
-                int p = mesh.npolys * maxVerticesPerPoly * 2;
+                int p = mesh.numPolygons * maxVerticesPerPoly * 2;
                 int q = j * maxVerticesPerPoly;
                 if (maxVerticesPerPoly >= 0) System.arraycopy(polys, q, mesh.polys, p, maxVerticesPerPoly);
-                mesh.areas[mesh.npolys] = cont.area;
-                mesh.npolys++;
-                if (mesh.npolys > maxTris)
+                mesh.areas[mesh.numPolygons] = cont.area;
+                mesh.numPolygons++;
+                if (mesh.numPolygons > maxTris)
                     throw new RuntimeException("Buffer too small");
             }
         }
 
         // Remove edge vertices.
-        for (int i = 0; i < mesh.nvertices; ++i) {
+        for (int i = 0; i < mesh.numVertices; ++i) {
             if (vflags[i] != 0) {
                 if (!canRemoveVertex(mesh, i))
                     continue;
@@ -1603,14 +1603,14 @@ public class TileCacheBuilder {
                 // Remove vertex
                 // Note: mesh.nvertices is already decremented inside
                 // removeVertex()!
-                if (mesh.nvertices - i >= 0)
-                    System.arraycopy(vflags, i + 1, vflags, i, mesh.nvertices - i);
+                if (mesh.numVertices - i >= 0)
+                    System.arraycopy(vflags, i + 1, vflags, i, mesh.numVertices - i);
                 --i;
             }
         }
 
         // Calculate adjacency.
-        buildMeshAdjacency(mesh.polys, mesh.npolys, mesh.vertices, mesh.nvertices, lcset, maxVerticesPerPoly);
+        buildMeshAdjacency(mesh.polys, mesh.numPolygons, mesh.vertices, mesh.numVertices, lcset, maxVerticesPerPoly);
 
         return mesh;
     }

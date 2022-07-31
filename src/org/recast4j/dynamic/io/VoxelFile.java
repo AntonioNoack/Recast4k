@@ -88,7 +88,7 @@ public class VoxelFile {
         f.walkableHeight = config.walkableHeightWorld;
         f.walkableClimb = config.walkableClimbWorld;
         f.walkableSlopeAngle = config.walkableSlopeAngle;
-        f.cellSize = config.cs;
+        f.cellSize = config.cellSize;
         f.maxSimplificationError = config.maxSimplificationError;
         f.maxEdgeLen = config.maxEdgeLenWorld;
         f.minRegionArea = config.minRegionAreaWorld;

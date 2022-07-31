@@ -19,32 +19,35 @@ freely, subject to the following restrictions:
 package org.recast4j.recast;
 
 import org.joml.Vector3f;
+import org.recast4j.Vectors;
 
 import static org.recast4j.recast.RecastConstants.RC_NULL_AREA;
 
 public class Recast {
 
-    public static int[] calcGridSize(Vector3f bmin, Vector3f bmax, float cs) {
-        return new int[]{(int) ((bmax.x - bmin.x) / cs + 0.5f), (int) ((bmax.z - bmin.z) / cs + 0.5f)};
+    public static int calcGridSizeX(Vector3f bmin, Vector3f bmax, float cellSize) {
+        return (int) ((bmax.x - bmin.x) / cellSize + 0.5f);
     }
 
-    public static int[] calcTileCount(Vector3f bmin, Vector3f bmax, float cs, int tileSizeX, int tileSizeZ) {
-        int[] gwd = Recast.calcGridSize(bmin, bmax, cs);
-        int gw = gwd[0];
-        int gd = gwd[1];
-        int tw = (gw + tileSizeX - 1) / tileSizeX;
-        int td = (gd + tileSizeZ - 1) / tileSizeZ;
-        return new int[]{tw, td};
+    public static int calcGridSizeY(Vector3f bmin, Vector3f bmax, float cellSize) {
+        return (int) ((bmax.z - bmin.z) / cellSize + 0.5f);
     }
 
-    /// @par
-    ///
-    /// Modifies the area id of all triangles with a slope below the specified value.
-    ///
-    /// See the #rcConfig documentation for more information on the configuration parameters.
-    ///
-    /// @see rcHeightfield, rcClearUnwalkableTriangles, rcRasterizeTriangles
-    public static int[] markWalkableTriangles(Telemetry ctx, float walkableSlopeAngle, float[] vertices, int[] tris, int nt,
+    public static int calcTileCountX(Vector3f bmin, Vector3f bmax, float cellSize, int tileSizeX) {
+        int gwd = Recast.calcGridSizeX(bmin, bmax, cellSize);
+        return (gwd + tileSizeX - 1) / tileSizeX;
+    }
+
+    public static int calcTileCountY(Vector3f bmin, Vector3f bmax, float cellSize, int tileSizeZ) {
+        int gwd = Recast.calcGridSizeY(bmin, bmax, cellSize);
+        return (gwd + tileSizeZ - 1) / tileSizeZ;
+    }
+
+    /**
+     * Modifies the area id of all triangles with a slope below the specified value.
+     * See the rcConfig documentation for more information on the configuration parameters.
+     */
+    public static int[] markWalkableTriangles(float walkableSlopeAngle, float[] vertices, int[] tris, int nt,
                                               AreaModification areaMod) {
         int[] areas = new int[nt];
         float walkableThr = (float) Math.cos(walkableSlopeAngle / 180.0f * Math.PI);
@@ -61,19 +64,15 @@ public class Recast {
 
     static void calcTriNormal(float[] vertices, int v0, int v1, int v2, Vector3f norm) {
         Vector3f e0 = new Vector3f(), e1 = new Vector3f();
-        RecastVectors.sub(e0, vertices, v1 * 3, v0 * 3);
-        RecastVectors.sub(e1, vertices, v2 * 3, v0 * 3);
+        Vectors.sub(e0, vertices, v1 * 3, v0 * 3);
+        Vectors.sub(e1, vertices, v2 * 3, v0 * 3);
         e0.cross(e1, norm).normalize();
     }
 
-    /// @par
-    ///
-    /// Only sets the area id's for the unwalkable triangles. Does not alter the
-    /// area id's for walkable triangles.
-    ///
-    /// See the #rcConfig documentation for more information on the configuration parameters.
-    ///
-    /// @see rcHeightfield, rcClearUnwalkableTriangles, rcRasterizeTriangles
+    /**
+     * Only sets the area id's for the unwalkable triangles. Does not alter the area id's for walkable triangles.
+     * See the rcConfig documentation for more information on the configuration parameters.
+     */
     @SuppressWarnings("unused")
     public static void clearUnwalkableTriangles(float walkableSlopeAngle, float[] vertices,
                                                 int[] tris, int nt, int[] areas) {

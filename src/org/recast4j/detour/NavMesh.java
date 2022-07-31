@@ -22,10 +22,12 @@ import org.joml.Vector3f;
 import org.joml.Vector3i;
 import org.recast4j.Pair;
 import org.recast4j.Triple;
+import org.recast4j.Vectors;
 
 import java.util.*;
 
-import static org.recast4j.detour.DetourCommon.*;
+import static org.joml.Math.clamp;
+import static org.recast4j.Vectors.*;
 
 public class NavMesh {
 
@@ -52,16 +54,26 @@ public class NavMesh {
     /// The limit is given as a multiple of the character radius
     static float DT_RAY_CAST_LIMIT_PROPORTIONS = 50.0f;
 
-    /** Current initialization params. */
+    /**
+     * Current initialization params.
+     */
     private final NavMeshParams m_params;
 
-    /** Origin of the tile (0,0) */
+    /**
+     * Origin of the tile (0,0)
+     */
     private final Vector3f origin;
-    /** Dimensions of each tile. */
+    /**
+     * Dimensions of each tile.
+     */
     float m_tileWidth, m_tileHeight;
-    /** Max number of tiles. */
+    /**
+     * Max number of tiles.
+     */
     int m_maxTiles;
-    /** Tile hash lookup mask. */
+    /**
+     * Tile hash lookup mask.
+     */
     private final int tileLutMask;
     private final Map<Integer, List<MeshTile>> posLookup = new HashMap<>();
     private final LinkedList<MeshTile> availableTiles = new LinkedList<>();
@@ -186,6 +198,7 @@ public class NavMesh {
      * @param pos The world position for the query. [(x, y, z)]
      * @return 2-element int array with (tx,ty) tile location
      */
+    @SuppressWarnings("unused")
     public int[] calcTileLoc(Vector3f pos) {
         int tx = (int) Math.floor((pos.x - origin.x) / m_tileWidth);
         int ty = (int) Math.floor((pos.z - origin.z) / m_tileHeight);
@@ -193,7 +206,7 @@ public class NavMesh {
     }
 
     public int calcTileLocX(Vector3f pos) {
-       return (int) Math.floor((pos.x - origin.x) / m_tileWidth);
+        return (int) Math.floor((pos.x - origin.x) / m_tileWidth);
     }
 
     public int calcTileLocY(Vector3f pos) {
@@ -261,7 +274,7 @@ public class NavMesh {
 
     public NavMesh(NavMeshParams params, int maxVerticesPerPoly) {
         m_params = params;
-        origin = params.orig;
+        origin = params.origin;
         m_tileWidth = params.tileWidth;
         m_tileHeight = params.tileHeight;
         // Init tiles
@@ -279,7 +292,7 @@ public class NavMesh {
 
     private static NavMeshParams getNavMeshParams(MeshData data) {
         NavMeshParams params = new NavMeshParams();
-        copy(params.orig, data.header.bmin);
+        copy(params.origin, data.header.bmin);
         params.tileWidth = data.header.bmax.x - data.header.bmin.x;
         params.tileHeight = data.header.bmax.z - data.header.bmin.z;
         params.maxTiles = 1;
@@ -293,7 +306,7 @@ public class NavMesh {
             int nodeIndex = 0;
             Vector3f tbmin = tile.data.header.bmin;
             Vector3f tbmax = tile.data.header.bmax;
-            float qfac = tile.data.header.bvQuantFactor;
+            float qfac = tile.data.header.bvQuantizationFactor;
             // Calculate quantized box
             Vector3i bmin = new Vector3i();
             Vector3i bmax = new Vector3i();
@@ -707,11 +720,11 @@ public class NavMesh {
             // Find polygon to connect to.
             Vector3f p = new Vector3f(targetCon.posB);
             FindNearestPolyResult nearest = findNearestPolyInTile(tile, p, ext);
-            long ref = nearest.getNearestRef();
+            long ref = nearest.nearestRef;
             if (ref == 0) {
                 continue;
             }
-            Vector3f nearestPt = nearest.getNearestPos();
+            Vector3f nearestPt = nearest.nearestPos;
             // findNearestPoly may return too optimistic results, further check
             // to make sure.
 
@@ -893,12 +906,12 @@ public class NavMesh {
 
             // Find polygon to connect to.
             FindNearestPolyResult nearestPoly = findNearestPolyInTile(tile, con.posA, ext);
-            long ref = nearestPoly.getNearestRef();
+            long ref = nearestPoly.nearestRef;
             if (ref == 0) {
                 continue;
             }
             Vector3f p = con.posA; // First vertex
-            Vector3f nearestPt = nearestPoly.getNearestPos();
+            Vector3f nearestPt = nearestPoly.nearestPos;
             // findNearestPoly may return too optimistic results, further check
             // to make sure.
             if (sqr(nearestPt.x - p.x) + sqr(nearestPt.z - p.z) > sqr(con.rad)) {
@@ -1005,7 +1018,7 @@ public class NavMesh {
             }
         }
 
-        return vLerp(pmin, pmax, tmin);
+        return lerp(pmin, pmax, tmin);
     }
 
     Optional<Float> getPolyHeight(MeshTile tile, Poly poly, Vector3f pos) {
@@ -1086,7 +1099,7 @@ public class NavMesh {
             i = poly.vertices[1] * 3;
             Vector3f v1 = new Vector3f(tile.data.vertices[i], tile.data.vertices[i + 1], tile.data.vertices[i + 2]);
             Pair<Float, Float> dt = distancePtSegSqr2D(pos, v0, v1);
-            return new ClosestPointOnPolyResult(false, vLerp(v0, v1, dt.second));
+            return new ClosestPointOnPolyResult(false, lerp(v0, v1, dt.second));
         }
         // Outside poly that is not an offmesh connection.
         return new ClosestPointOnPolyResult(false, closestPointOnDetailEdges(tile, poly, pos, true));
@@ -1095,8 +1108,8 @@ public class NavMesh {
     FindNearestPolyResult findNearestPolyInTile(MeshTile tile, Vector3f center, Vector3f extents) {
         Vector3f nearestPt = null;
         boolean overPoly = false;
-        Vector3f bmin = vSub(center, extents);
-        Vector3f bmax = vAdd(center, extents);
+        Vector3f bmin = sub(center, extents);
+        Vector3f bmax = Vectors.add(center, extents);
 
         // Get nearby polygons from proximity grid.
         List<Long> polys = queryPolygonsInTile(tile, bmin, bmax);
@@ -1112,7 +1125,7 @@ public class NavMesh {
 
             // If a point is directly over a polygon and closer than
             // climb height, favor that instead of straight line nearest point.
-            Vector3f diff = vSub(center, closestPtPoly);
+            Vector3f diff = sub(center, closestPtPoly);
             if (posOverPoly) {
                 d = Math.abs(diff.y) - tile.data.header.walkableClimb;
                 d = d > 0 ? d * d : 0;

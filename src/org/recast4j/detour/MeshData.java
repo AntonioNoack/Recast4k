@@ -22,8 +22,8 @@ import org.joml.Vector3f;
 
 import static jdk.nashorn.internal.objects.NativeMath.max;
 import static jdk.nashorn.internal.objects.NativeMath.min;
-import static org.recast4j.detour.DetourCommon.clamp;
-import static org.recast4j.recast.RecastVectors.copy;
+import static org.joml.Math.clamp;
+import static org.recast4j.Vectors.copy;
 
 public class MeshData {
 
@@ -61,7 +61,7 @@ public class MeshData {
     public static void build(MeshData data) {
         data.bvTree = new BVNode[data.header.polyCount * 2];
         data.header.bvNodeCount = data.bvTree.length == 0 ? 0
-                : createBVTree(data, data.bvTree, data.header.bvQuantFactor);
+                : createBVTree(data, data.bvTree, data.header.bvQuantizationFactor);
     }
 
     private static int createBVTree(MeshData data, BVNode[] BVNodes, float quantFactor) {

@@ -18,6 +18,7 @@ freely, subject to the following restrictions:
 
 package org.recast4j.recast;
 
+import static org.joml.Math.clamp;
 import static org.recast4j.recast.RecastConstants.RC_NOT_CONNECTED;
 import static org.recast4j.recast.RecastConstants.RC_NULL_AREA;
 
@@ -26,20 +27,15 @@ public class RecastCompact {
     private final static int MAX_LAYERS = RC_NOT_CONNECTED - 1;
     private final static int MAX_HEIGHT = RecastConstants.SPAN_MAX_HEIGHT;
 
-    /// @par
-    ///
-    /// This is just the beginning of the process of fully building a compact heightfield.
-    /// Various filters may be applied, then the distance field and regions built.
-    /// E.g: #rcBuildDistanceField and #rcBuildRegions
-    ///
-    /// See the #rcConfig documentation for more information on the configuration parameters.
-    ///
-    /// @see rcAllocCompactHeightfield, rcHeightfield, rcCompactHeightfield, rcConfig
-
+    /**
+     * This is just the beginning of the process of fully building a compact heightfield.
+     * Various filters may be applied, then the distance field and regions built.
+     * E.g: rcBuildDistanceField and rcBuildRegions
+     */
     public static CompactHeightfield buildCompactHeightfield(Telemetry ctx, int walkableHeight, int walkableClimb,
                                                              Heightfield hf) {
 
-        ctx.startTimer("BUILD_COMPACTHEIGHTFIELD");
+        if (ctx != null) ctx.startTimer("BUILD_COMPACTHEIGHTFIELD");
 
         CompactHeightfield chf = new CompactHeightfield();
         int w = hf.width;
@@ -56,9 +52,9 @@ public class RecastCompact {
         chf.maxRegions = 0;
         chf.bmin.set(hf.bmin);
         chf.bmax.set(hf.bmax);
-        chf.bmax.y += walkableHeight * hf.ch;
-        chf.cs = hf.cs;
-        chf.ch = hf.ch;
+        chf.bmax.y += walkableHeight * hf.cellHeight;
+        chf.cellSize = hf.cellSize;
+        chf.cellHeight = hf.cellHeight;
         chf.cells = new CompactCell[w * h];
         chf.spans = new CompactSpan[spanCount];
         chf.areas = new int[spanCount];
@@ -81,10 +77,10 @@ public class RecastCompact {
                 c.count = 0;
                 while (s != null) {
                     if (s.area != RC_NULL_AREA) {
-                        int bot = s.smax;
-                        int top = s.next != null ? s.next.smin : MAX_HEIGHT;
-                        chf.spans[idx].y = RecastCommon.clamp(bot, 0, MAX_HEIGHT);
-                        chf.spans[idx].h = RecastCommon.clamp(top - bot, 0, MAX_HEIGHT);
+                        int bot = s.max;
+                        int top = s.next != null ? s.next.min : MAX_HEIGHT;
+                        chf.spans[idx].y = clamp(bot, 0, MAX_HEIGHT);
+                        chf.spans[idx].h = clamp(top - bot, 0, MAX_HEIGHT);
                         chf.areas[idx] = s.area;
                         idx++;
                         c.count++;
@@ -103,9 +99,9 @@ public class RecastCompact {
                     CompactSpan s = chf.spans[i];
 
                     for (int dir = 0; dir < 4; ++dir) {
-                        RecastCommon.SetCon(s, dir, RC_NOT_CONNECTED);
-                        int nx = x + RecastCommon.GetDirOffsetX(dir);
-                        int ny = y + RecastCommon.GetDirOffsetY(dir);
+                        RecastCommon.setCon(s, dir, RC_NOT_CONNECTED);
+                        int nx = x + RecastCommon.getDirOffsetX(dir);
+                        int ny = y + RecastCommon.getDirOffsetY(dir);
                         // First check that the neighbour cell is in bounds.
                         if (nx < 0 || ny < 0 || nx >= w || ny >= h)
                             continue;
@@ -127,7 +123,7 @@ public class RecastCompact {
                                     tooHighNeighbour = Math.max(tooHighNeighbour, lidx);
                                     continue;
                                 }
-                                RecastCommon.SetCon(s, dir, lidx);
+                                RecastCommon.setCon(s, dir, lidx);
                                 break;
                             }
                         }
@@ -141,7 +137,7 @@ public class RecastCompact {
             throw new RuntimeException("rcBuildCompactHeightfield: Heightfield has too many layers " + tooHighNeighbour
                     + " (max: " + MAX_LAYERS + ")");
         }
-        ctx.stopTimer("BUILD_COMPACTHEIGHTFIELD");
+        if (ctx != null) ctx.stopTimer("BUILD_COMPACTHEIGHTFIELD");
         return chf;
     }
 

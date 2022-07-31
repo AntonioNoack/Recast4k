@@ -23,7 +23,7 @@ import org.recast4j.recast.Span;
 
 import java.util.Set;
 
-import static org.recast4j.detour.DetourCommon.copy;
+import static org.recast4j.Vectors.copy;
 
 public class DynamicTileCheckpoint {
 
@@ -36,16 +36,16 @@ public class DynamicTileCheckpoint {
     }
 
     private Heightfield clone(Heightfield source) {
-        Heightfield clone = new Heightfield(source.width, source.height, copy(source.bmin), copy(source.bmax), source.cs,
-                source.ch, source.borderSize);
+        Heightfield clone = new Heightfield(source.width, source.height, copy(source.bmin), copy(source.bmax), source.cellSize,
+                source.cellHeight, source.borderSize);
         for (int z = 0, pz = 0; z < source.height; z++, pz += source.width) {
             for (int x = 0; x < source.width; x++) {
                 Span span = source.spans[pz + x];
                 Span prevCopy = null;
                 while (span != null) {
                     Span copy = new Span();
-                    copy.smin = span.smin;
-                    copy.smax = span.smax;
+                    copy.min = span.min;
+                    copy.max = span.max;
                     copy.area = span.area;
                     if (prevCopy == null) {
                         clone.spans[pz + x] = copy;

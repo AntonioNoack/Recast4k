@@ -19,8 +19,8 @@ package org.recast4j.detour;
 
 import org.joml.Vector3f;
 
-import static org.recast4j.detour.DetourCommon.pointInPolygon;
-import static org.recast4j.detour.DetourCommon.vDist2DSqr;
+import static org.recast4j.Vectors.pointInPolygon;
+import static org.recast4j.Vectors.dist2DSqr;
 
 public interface PolygonByCircleConstraint {
 
@@ -55,7 +55,7 @@ public interface PolygonByCircleConstraint {
             float radiusSqr = radius * radius;
             int outsideVertex = -1;
             for (int pv = 0; pv < vertices.length; pv += 3) {
-                if (vDist2DSqr(center, vertices, pv) > radiusSqr) {
+                if (dist2DSqr(center, vertices, pv) > radiusSqr) {
                     outsideVertex = pv;
                     break;
                 }

@@ -18,55 +18,43 @@ freely, subject to the following restrictions:
 
 package org.recast4j.recast;
 
-import java.util.List;
-
-import org.recast4j.recast.geom.ChunkyTriMesh.Node1;
 import org.recast4j.recast.geom.InputGeomProvider;
 import org.recast4j.recast.geom.TriMesh;
 
 public class RecastVoxelization {
 
     public static Heightfield buildSolidHeightfield(InputGeomProvider geomProvider, RecastBuilderConfig builderCfg,
-            Telemetry ctx) {
+                                                    Telemetry ctx) {
         RecastConfig cfg = builderCfg.cfg;
 
         // Allocate voxel heightfield where we rasterize our input data to.
-        Heightfield solid = new Heightfield(builderCfg.width, builderCfg.height, builderCfg.bmin, builderCfg.bmax, cfg.cs,
-                cfg.ch, cfg.borderSize);
+        Heightfield solid = new Heightfield(builderCfg.width, builderCfg.height, builderCfg.bmin, builderCfg.bmax, cfg.cellSize,
+                cfg.cellHeight, cfg.borderSize);
 
         // Allocate array that can hold triangle area types.
         // If you have multiple meshes you need to process, allocate
         // and array which can hold the max number of triangles you need to
         // process.
 
-        // Find triangles which are walkable based on their slope and rasterize
-        // them.
+        // Find triangles which are walkable based on their slope and rasterize them.
         // If your input data is multiple meshes, you can transform them here,
-        // calculate
-        // the are type for each of the meshes and rasterize them.
+        // calculate the are type for each of the meshes and rasterize them.
         for (TriMesh geom : geomProvider.meshes()) {
-            float[] vertices = geom.getVertices();
+            float[] vertices = geom.vertices;
             if (cfg.useTiles) {
-                float[] tbmin = new float[2];
-                float[] tbmax = new float[2];
-                tbmin[0] = builderCfg.bmin.x;
-                tbmin[1] = builderCfg.bmin.z;
-                tbmax[0] = builderCfg.bmax.x;
-                tbmax[1] = builderCfg.bmax.z;
-                List<Node1> nodes = geom.getChunksOverlappingRect(tbmin, tbmax);
-                for (Node1 node : nodes) {
-                    int[] tris = node.tris;
-                    int ntris = tris.length / 3;
-                    int[] m_triareas = Recast.markWalkableTriangles(ctx, cfg.walkableSlopeAngle, vertices, tris, ntris,
-                            cfg.walkableAreaMod);
-                    RecastRasterization.rasterizeTriangles(solid, vertices, tris, m_triareas, ntris, cfg.walkableClimb, ctx);
-                }
+                float[] bmin = {builderCfg.bmin.x, builderCfg.bmin.z};
+                float[] bmax = {builderCfg.bmax.x, builderCfg.bmax.z};
+                geom.foreachChunkOverlappingRect(bmin, bmax, node -> {
+                    int[] tris = node.triangles;
+                    int numTris = tris.length / 3;
+                    int[] triAreas = Recast.markWalkableTriangles(cfg.walkableSlopeAngle, vertices, tris, numTris, cfg.walkableAreaMod);
+                    RecastRasterization.rasterizeTriangles(solid, vertices, tris, triAreas, numTris, cfg.walkableClimb, ctx);
+                });
             } else {
-                int[] tris = geom.getTris();
-                int ntris = tris.length / 3;
-                int[] m_triareas = Recast.markWalkableTriangles(ctx, cfg.walkableSlopeAngle, vertices, tris, ntris,
-                        cfg.walkableAreaMod);
-                RecastRasterization.rasterizeTriangles(solid, vertices, tris, m_triareas, ntris, cfg.walkableClimb, ctx);
+                int[] tris = geom.triangles;
+                int numTris = tris.length / 3;
+                int[] triAreas = Recast.markWalkableTriangles(cfg.walkableSlopeAngle, vertices, tris, numTris, cfg.walkableAreaMod);
+                RecastRasterization.rasterizeTriangles(solid, vertices, tris, triAreas, numTris, cfg.walkableClimb, ctx);
             }
         }
 

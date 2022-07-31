@@ -110,34 +110,34 @@ public class VoxelQuery {
             Vector3f exit = new Vector3f(start.x + tMax * tx, start.y + tMax * ty, start.z + tMax * tz);
             float relStartX = entry.x - hf.bmin.x;
             float relStartZ = entry.z - hf.bmin.z;
-            int sx = (int) Math.floor(relStartX / hf.cs);
-            int sz = (int) Math.floor(relStartZ / hf.cs);
-            int ex = (int) Math.floor((exit.x - hf.bmin.x) / hf.cs);
-            int ez = (int) Math.floor((exit.z - hf.bmin.z) / hf.cs);
+            int sx = (int) Math.floor(relStartX / hf.cellSize);
+            int sz = (int) Math.floor(relStartZ / hf.cellSize);
+            int ex = (int) Math.floor((exit.x - hf.bmin.x) / hf.cellSize);
+            int ez = (int) Math.floor((exit.z - hf.bmin.z) / hf.cellSize);
             int dx = ex - sx;
             int dz = ez - sz;
             int stepX = dx < 0 ? -1 : 1;
             int stepZ = dz < 0 ? -1 : 1;
-            float xRem = (hf.cs + (relStartX % hf.cs)) % hf.cs;
-            float zRem = (hf.cs + (relStartZ % hf.cs)) % hf.cs;
-            float xOffest = Math.abs(tx < 0 ? xRem : hf.cs - xRem);
-            float zOffest = Math.abs(tz < 0 ? zRem : hf.cs - zRem);
+            float xRem = (hf.cellSize + (relStartX % hf.cellSize)) % hf.cellSize;
+            float zRem = (hf.cellSize + (relStartZ % hf.cellSize)) % hf.cellSize;
+            float xOffest = Math.abs(tx < 0 ? xRem : hf.cellSize - xRem);
+            float zOffest = Math.abs(tz < 0 ? zRem : hf.cellSize - zRem);
             tx = Math.abs(tx);
             tz = Math.abs(tz);
             float tMaxX = xOffest / tx;
             float tMaxZ = zOffest / tz;
-            float tDeltaX = hf.cs / tx;
-            float tDeltaZ = hf.cs / tz;
+            float tDeltaX = hf.cellSize / tx;
+            float tDeltaZ = hf.cellSize / tz;
             float t = 0;
             while (true) {
                 if (sx >= 0 && sx < hf.width && sz >= 0 && sz < hf.height) {
                     float y1 = start.y + ty * (tMin + t) - hf.bmin.y;
                     float y2 = start.y + ty * (tMin + Math.min(tMaxX, tMaxZ)) - hf.bmin.y;
-                    float ymin = Math.min(y1, y2) / hf.ch;
-                    float ymax = Math.max(y1, y2) / hf.ch;
+                    float ymin = Math.min(y1, y2) / hf.cellHeight;
+                    float ymax = Math.max(y1, y2) / hf.cellHeight;
                     Span span = hf.spans[sx + sz * hf.width];
                     while (span != null) {
-                        if (span.smin <= ymin && span.smax >= ymax) {
+                        if (span.min <= ymin && span.max >= ymax) {
                             return Optional.of(Math.min(1, tMin + t));
                         }
                         span = span.next;

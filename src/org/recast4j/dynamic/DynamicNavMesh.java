@@ -73,9 +73,9 @@ public class DynamicNavMesh {
         config.detailSampleMaxError = voxelFile.detailSampleMaxError;
         builder = new RecastBuilder();
         navMeshParams = new NavMeshParams();
-        navMeshParams.orig.x = voxelFile.bounds[0];
-        navMeshParams.orig.y = voxelFile.bounds[1];
-        navMeshParams.orig.z = voxelFile.bounds[2];
+        navMeshParams.origin.x = voxelFile.bounds[0];
+        navMeshParams.origin.y = voxelFile.bounds[1];
+        navMeshParams.origin.z = voxelFile.bounds[2];
         navMeshParams.tileWidth = voxelFile.cellSize * voxelFile.tileSizeX;
         navMeshParams.tileHeight = voxelFile.cellSize * voxelFile.tileSizeZ;
         navMeshParams.maxTiles = voxelFile.tiles.size();
@@ -94,7 +94,7 @@ public class DynamicNavMesh {
      * Voxel queries require checkpoints to be enabled in {@link DynamicNavMeshConfig}
      */
     public VoxelQuery voxelQuery() {
-        return new VoxelQuery(navMeshParams.orig, navMeshParams.tileWidth, navMeshParams.tileHeight, this::lookupHeightfield);
+        return new VoxelQuery(navMeshParams.origin, navMeshParams.tileWidth, navMeshParams.tileHeight, this::lookupHeightfield);
     }
 
     private Optional<Heightfield> lookupHeightfield(int x, int z) {
@@ -177,10 +177,10 @@ public class DynamicNavMesh {
         if (bounds == null) {
             return tiles.values();
         }
-        int minx = (int) Math.floor((bounds[0] - navMeshParams.orig.x) / navMeshParams.tileWidth);
-        int minz = (int) Math.floor((bounds[2] - navMeshParams.orig.z) / navMeshParams.tileHeight);
-        int maxx = (int) Math.floor((bounds[3] - navMeshParams.orig.x) / navMeshParams.tileWidth);
-        int maxz = (int) Math.floor((bounds[5] - navMeshParams.orig.z) / navMeshParams.tileHeight);
+        int minx = (int) Math.floor((bounds[0] - navMeshParams.origin.x) / navMeshParams.tileWidth);
+        int minz = (int) Math.floor((bounds[2] - navMeshParams.origin.z) / navMeshParams.tileHeight);
+        int maxx = (int) Math.floor((bounds[3] - navMeshParams.origin.x) / navMeshParams.tileWidth);
+        int maxz = (int) Math.floor((bounds[5] - navMeshParams.origin.z) / navMeshParams.tileHeight);
         List<DynamicTile> tiles = new ArrayList<>();
         for (int z = minz; z <= maxz; ++z) {
             for (int x = minx; x <= maxx; ++x) {

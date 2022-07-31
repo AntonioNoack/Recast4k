@@ -46,7 +46,7 @@ public class ConvexTrimeshCollider extends AbstractCollider {
     @Override
     public void rasterize(Heightfield hf, Telemetry telemetry) {
         RecastFilledVolumeRasterization.rasterizeConvex(hf, vertices, triangles, area,
-                (int) Math.floor(flagMergeThreshold / hf.ch), telemetry);
+                (int) Math.floor(flagMergeThreshold / hf.cellHeight), telemetry);
     }
 
 }

@@ -42,16 +42,19 @@ public class AreaModification {
      * @param mask
      *            Bitwise mask used when applying value. [Limit: &lt;= #RC_AREA_FLAGS_MASK]
      */
+    @SuppressWarnings("unused")
     public AreaModification(int value, int mask) {
         this.value = value;
         this.mask = mask;
     }
 
+    @SuppressWarnings("unused")
     public AreaModification(AreaModification other) {
         value = other.value;
         mask = other.mask;
     }
 
+    @SuppressWarnings("unused")
     public int getMaskedValue() {
         return value & mask;
     }

@@ -65,8 +65,8 @@ public class TileCacheWriter extends DetourWriter {
 
     private void writeCacheParams(OutputStream stream, TileCacheParams params, ByteOrder order) throws IOException {
         write(stream, params.orig, order);
-        write(stream, params.cs, order);
-        write(stream, params.ch, order);
+        write(stream, params.cellSize, order);
+        write(stream, params.cellHeight, order);
         write(stream, params.width, order);
         write(stream, params.height, order);
         write(stream, params.walkableHeight, order);

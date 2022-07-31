@@ -58,7 +58,7 @@ public class TrimeshCollider extends AbstractCollider {
     public void rasterize(Heightfield hf, Telemetry telemetry) {
         for (int i = 0; i < triangles.length; i += 3) {
             RecastRasterization.rasterizeTriangle(hf, vertices, triangles[i], triangles[i + 1], triangles[i + 2], area,
-                    (int) Math.floor(flagMergeThreshold / hf.ch), telemetry);
+                    (int) Math.floor(flagMergeThreshold / hf.cellHeight), telemetry);
         }
     }
 

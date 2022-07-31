@@ -52,7 +52,7 @@ public class RecastFilter {
                     // If current span is not walkable, but there is walkable
                     // span just below it, mark the span above it walkable too.
                     if (!walkable && previousWalkable) {
-                        if (Math.abs(s.smax - ps.smax) <= walkableClimb)
+                        if (Math.abs(s.max - ps.max) <= walkableClimb)
                             s.area = previousArea;
                     }
                     // Copy walkable flag so that it cannot propagate
@@ -90,19 +90,19 @@ public class RecastFilter {
                     if (s.area == RC_NULL_AREA)
                         continue;
 
-                    int bot = (s.smax);
-                    int top = s.next != null ? s.next.smin : SPAN_MAX_HEIGHT;
+                    int bot = (s.max);
+                    int top = s.next != null ? s.next.min : SPAN_MAX_HEIGHT;
 
                     // Find neighbours minimum height.
                     int minh = SPAN_MAX_HEIGHT;
 
                     // Min and max height of accessible neighbours.
-                    int asmin = s.smax;
-                    int asmax = s.smax;
+                    int asmin = s.max;
+                    int asmax = s.max;
 
                     for (int dir = 0; dir < 4; ++dir) {
-                        int dx = x + RecastCommon.GetDirOffsetX(dir);
-                        int dy = y + RecastCommon.GetDirOffsetY(dir);
+                        int dx = x + RecastCommon.getDirOffsetX(dir);
+                        int dy = y + RecastCommon.getDirOffsetY(dir);
                         // Skip neighbours which are out of bounds.
                         if (dx < 0 || dy < 0 || dx >= w || dy >= h) {
                             minh = Math.min(minh, -walkableClimb - bot);
@@ -112,15 +112,15 @@ public class RecastFilter {
                         // From minus infinity to the first span.
                         Span ns = solid.spans[dx + dy * w];
                         int nbot = -walkableClimb;
-                        int ntop = ns != null ? ns.smin : SPAN_MAX_HEIGHT;
+                        int ntop = ns != null ? ns.min : SPAN_MAX_HEIGHT;
                         // Skip neightbour if the gap between the spans is too small.
                         if (Math.min(top, ntop) - Math.max(bot, nbot) > walkableHeight)
                             minh = Math.min(minh, nbot - bot);
 
                         // Rest of the spans.
                         for (ns = solid.spans[dx + dy * w]; ns != null; ns = ns.next) {
-                            nbot = ns.smax;
-                            ntop = ns.next != null ? ns.next.smin : SPAN_MAX_HEIGHT;
+                            nbot = ns.max;
+                            ntop = ns.next != null ? ns.next.min : SPAN_MAX_HEIGHT;
                             // Skip neightbour if the gap between the spans is too small.
                             if (Math.min(top, ntop) - Math.max(bot, nbot) > walkableHeight) {
                                 minh = Math.min(minh, nbot - bot);
@@ -171,8 +171,8 @@ public class RecastFilter {
         for (int y = 0; y < h; ++y) {
             for (int x = 0; x < w; ++x) {
                 for (Span s = solid.spans[x + y * w]; s != null; s = s.next) {
-                    int bot = (s.smax);
-                    int top = s.next != null ? s.next.smin : SPAN_MAX_HEIGHT;
+                    int bot = (s.max);
+                    int top = s.next != null ? s.next.min : SPAN_MAX_HEIGHT;
                     if ((top - bot) <= walkableHeight)
                         s.area = RC_NULL_AREA;
                 }

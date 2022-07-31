@@ -44,9 +44,9 @@ public class CompactHeightfield {
     /** The maximum bounds in world space. [(x, y, z)] */
     public final Vector3f bmax = new Vector3f();
     /** The size of each cell. (On the xz-plane.) */
-    public float cs;
+    public float cellSize;
     /** The height of each cell. (The minimum increment along the y-axis.) */
-    public float ch;
+    public float cellHeight;
     /** Array of cells. [Size: #width*#height] */
     public CompactCell[] cells;
     /** Array of spans. [Size: #spanCount] */

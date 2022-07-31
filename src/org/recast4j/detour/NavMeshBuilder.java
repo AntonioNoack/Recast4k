@@ -23,7 +23,8 @@ import org.joml.Vector3f;
 import java.util.Arrays;
 import java.util.Comparator;
 
-import static org.recast4j.detour.DetourCommon.*;
+import static org.joml.Math.clamp;
+import static org.recast4j.Vectors.*;
 
 public class NavMeshBuilder {
 
@@ -136,7 +137,7 @@ public class NavMeshBuilder {
 
     private static int createBVTree(NavMeshDataCreateParams params, BVNode[] BVNodes) {
         // Build tree
-        float quantFactor = 1 / params.cs;
+        float quantFactor = 1 / params.cellSize;
         BVNode[] items = new BVNode[params.polyCount];
         for (int i = 0; i < params.polyCount; i++) {
             BVNode it = new BVNode();
@@ -165,12 +166,12 @@ public class NavMeshBuilder {
                 it.maxY = clamp((int) ((bmax.y - params.bmin.y) * quantFactor), 0, 0x7fffffff);
                 it.maxZ = clamp((int) ((bmax.z - params.bmin.z) * quantFactor), 0, 0x7fffffff);
             } else {
-                int p = i * params.nvp * 2;
+                int p = i * params.maxVerticesPerPolygon * 2;
                 it.minX = it.maxX = params.vertices[params.polys[p] * 3];
                 it.minY = it.maxY = params.vertices[params.polys[p] * 3 + 1];
                 it.minZ = it.maxZ = params.vertices[params.polys[p] * 3 + 2];
 
-                for (int j = 1; j < params.nvp; ++j) {
+                for (int j = 1; j < params.maxVerticesPerPolygon; ++j) {
                     if (params.polys[p + j] == MESH_NULL_IDX)
                         break;
                     int x = params.vertices[params.polys[p + j] * 3];
@@ -192,8 +193,8 @@ public class NavMeshBuilder {
                         it.maxZ = z;
                 }
                 // Remap y
-                it.minY = (int) Math.floor(it.minY * params.ch * quantFactor);
-                it.maxY = (int) Math.ceil(it.maxY * params.ch * quantFactor);
+                it.minY = (int) Math.floor(it.minY * params.cellHeight * quantFactor);
+                it.maxY = (int) Math.ceil(it.maxY * params.cellHeight * quantFactor);
             }
         }
 
@@ -249,7 +250,7 @@ public class NavMeshBuilder {
         if (params.polyCount == 0 || params.polys == null)
             return null;
 
-        int nvp = params.nvp;
+        int nvp = params.maxVerticesPerPolygon;
 
         // Classify off-mesh connection points. We store only the connections
         // whose start point is inside the tile.
@@ -274,7 +275,7 @@ public class NavMeshBuilder {
             } else {
                 for (int i = 0; i < params.vertCount; ++i) {
                     int iv = i * 3;
-                    float h = params.bmin.y + params.vertices[iv + 1] * params.ch;
+                    float h = params.bmin.y + params.vertices[iv + 1] * params.cellHeight;
                     hmin = Math.min(hmin, h);
                     hmax = Math.max(hmax, h);
                 }
@@ -397,7 +398,7 @@ public class NavMeshBuilder {
         header.detailMeshCount = params.polyCount;
         header.detailVertCount = uniqueDetailVertCount;
         header.detailTriCount = detailTriCount;
-        header.bvQuantFactor = 1.0f / params.cs;
+        header.bvQuantizationFactor = 1.0f / params.cellSize;
         header.offMeshBase = params.polyCount;
         header.walkableHeight = params.walkableHeight;
         header.walkableRadius = params.walkableRadius;
@@ -413,9 +414,9 @@ public class NavMeshBuilder {
         for (int i = 0; i < params.vertCount; ++i) {
             int iv = i * 3;
             int v = i * 3;
-            navVertices[v] = params.bmin.x + params.vertices[iv] * params.cs;
-            navVertices[v + 1] = params.bmin.y + params.vertices[iv + 1] * params.ch;
-            navVertices[v + 2] = params.bmin.z + params.vertices[iv + 2] * params.cs;
+            navVertices[v] = params.bmin.x + params.vertices[iv] * params.cellSize;
+            navVertices[v + 1] = params.bmin.y + params.vertices[iv + 1] * params.cellHeight;
+            navVertices[v + 2] = params.bmin.z + params.vertices[iv + 2] * params.cellSize;
         }
         // Off-mesh link vertices.
         int n = 0;

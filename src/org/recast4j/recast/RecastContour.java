@@ -56,33 +56,33 @@ public class RecastContour {
         // border vertices which are in between two areas to be removed.
         regs[0] = chf.spans[i].reg | (chf.areas[i] << 16);
 
-        if (RecastCommon.GetCon(s, dir) != RC_NOT_CONNECTED) {
-            int ax = x + RecastCommon.GetDirOffsetX(dir);
-            int ay = y + RecastCommon.GetDirOffsetY(dir);
-            int ai = chf.cells[ax + ay * chf.width].index + RecastCommon.GetCon(s, dir);
+        if (RecastCommon.getCon(s, dir) != RC_NOT_CONNECTED) {
+            int ax = x + RecastCommon.getDirOffsetX(dir);
+            int ay = y + RecastCommon.getDirOffsetY(dir);
+            int ai = chf.cells[ax + ay * chf.width].index + RecastCommon.getCon(s, dir);
             CompactSpan as = chf.spans[ai];
             ch = Math.max(ch, as.y);
             regs[1] = chf.spans[ai].reg | (chf.areas[ai] << 16);
-            if (RecastCommon.GetCon(as, dirp) != RC_NOT_CONNECTED) {
-                int ax2 = ax + RecastCommon.GetDirOffsetX(dirp);
-                int ay2 = ay + RecastCommon.GetDirOffsetY(dirp);
-                int ai2 = chf.cells[ax2 + ay2 * chf.width].index + RecastCommon.GetCon(as, dirp);
+            if (RecastCommon.getCon(as, dirp) != RC_NOT_CONNECTED) {
+                int ax2 = ax + RecastCommon.getDirOffsetX(dirp);
+                int ay2 = ay + RecastCommon.getDirOffsetY(dirp);
+                int ai2 = chf.cells[ax2 + ay2 * chf.width].index + RecastCommon.getCon(as, dirp);
                 CompactSpan as2 = chf.spans[ai2];
                 ch = Math.max(ch, as2.y);
                 regs[2] = chf.spans[ai2].reg | (chf.areas[ai2] << 16);
             }
         }
-        if (RecastCommon.GetCon(s, dirp) != RC_NOT_CONNECTED) {
-            int ax = x + RecastCommon.GetDirOffsetX(dirp);
-            int ay = y + RecastCommon.GetDirOffsetY(dirp);
-            int ai = chf.cells[ax + ay * chf.width].index + RecastCommon.GetCon(s, dirp);
+        if (RecastCommon.getCon(s, dirp) != RC_NOT_CONNECTED) {
+            int ax = x + RecastCommon.getDirOffsetX(dirp);
+            int ay = y + RecastCommon.getDirOffsetY(dirp);
+            int ai = chf.cells[ax + ay * chf.width].index + RecastCommon.getCon(s, dirp);
             CompactSpan as = chf.spans[ai];
             ch = Math.max(ch, as.y);
             regs[3] = chf.spans[ai].reg | (chf.areas[ai] << 16);
-            if (RecastCommon.GetCon(as, dir) != RC_NOT_CONNECTED) {
-                int ax2 = ax + RecastCommon.GetDirOffsetX(dir);
-                int ay2 = ay + RecastCommon.GetDirOffsetY(dir);
-                int ai2 = chf.cells[ax2 + ay2 * chf.width].index + RecastCommon.GetCon(as, dir);
+            if (RecastCommon.getCon(as, dir) != RC_NOT_CONNECTED) {
+                int ax2 = ax + RecastCommon.getDirOffsetX(dir);
+                int ay2 = ay + RecastCommon.getDirOffsetY(dir);
+                int ai2 = chf.cells[ax2 + ay2 * chf.width].index + RecastCommon.getCon(as, dir);
                 CompactSpan as2 = chf.spans[ai2];
                 ch = Math.max(ch, as2.y);
                 regs[2] = chf.spans[ai2].reg | (chf.areas[ai2] << 16);
@@ -144,10 +144,10 @@ public class RecastContour {
                 }
                 int r = 0;
                 CompactSpan s = chf.spans[i];
-                if (RecastCommon.GetCon(s, dir) != RC_NOT_CONNECTED) {
-                    int ax = x + RecastCommon.GetDirOffsetX(dir);
-                    int ay = y + RecastCommon.GetDirOffsetY(dir);
-                    int ai = chf.cells[ax + ay * chf.width].index + RecastCommon.GetCon(s, dir);
+                if (RecastCommon.getCon(s, dir) != RC_NOT_CONNECTED) {
+                    int ax = x + RecastCommon.getDirOffsetX(dir);
+                    int ay = y + RecastCommon.getDirOffsetY(dir);
+                    int ai = chf.cells[ax + ay * chf.width].index + RecastCommon.getCon(s, dir);
                     r = chf.spans[ai].reg;
                     if (area != chf.areas[ai])
                         isAreaBorder = true;
@@ -165,12 +165,12 @@ public class RecastContour {
                 dir = (dir + 1) & 0x3; // Rotate CW
             } else {
                 int ni = -1;
-                int nx = x + RecastCommon.GetDirOffsetX(dir);
-                int ny = y + RecastCommon.GetDirOffsetY(dir);
+                int nx = x + RecastCommon.getDirOffsetX(dir);
+                int ny = y + RecastCommon.getDirOffsetY(dir);
                 CompactSpan s = chf.spans[i];
-                if (RecastCommon.GetCon(s, dir) != RC_NOT_CONNECTED) {
+                if (RecastCommon.getCon(s, dir) != RC_NOT_CONNECTED) {
                     CompactCell nc = chf.cells[nx + ny * chf.width];
-                    ni = nc.index + RecastCommon.GetCon(s, dir);
+                    ni = nc.index + RecastCommon.getCon(s, dir);
                 }
                 if (ni == -1) {
                     // Should not happen.
@@ -489,15 +489,15 @@ public class RecastContour {
     }
 
     private static void mergeContours(Contour ca, Contour cb, int ia, int ib) {
-        int maxVertices = ca.nvertices + cb.nvertices + 2;
+        int maxVertices = ca.numVertices + cb.numVertices + 2;
         int[] vertices = new int[maxVertices * 4];
 
         int nv = 0;
 
         // Copy contour A.
-        for (int i = 0; i <= ca.nvertices; ++i) {
+        for (int i = 0; i <= ca.numVertices; ++i) {
             int dst = nv * 4;
-            int src = ((ia + i) % ca.nvertices) * 4;
+            int src = ((ia + i) % ca.numVertices) * 4;
             vertices[dst] = ca.vertices[src];
             vertices[dst + 1] = ca.vertices[src + 1];
             vertices[dst + 2] = ca.vertices[src + 2];
@@ -506,9 +506,9 @@ public class RecastContour {
         }
 
         // Copy contour B
-        for (int i = 0; i <= cb.nvertices; ++i) {
+        for (int i = 0; i <= cb.numVertices; ++i) {
             int dst = nv * 4;
-            int src = ((ib + i) % cb.nvertices) * 4;
+            int src = ((ib + i) % cb.numVertices) * 4;
             vertices[dst] = cb.vertices[src];
             vertices[dst + 1] = cb.vertices[src + 1];
             vertices[dst + 2] = cb.vertices[src + 2];
@@ -517,10 +517,10 @@ public class RecastContour {
         }
 
         ca.vertices = vertices;
-        ca.nvertices = nv;
+        ca.numVertices = nv;
 
         cb.vertices = null;
-        cb.nvertices = 0;
+        cb.numVertices = 0;
 
     }
 
@@ -529,7 +529,7 @@ public class RecastContour {
         int minx = contour.vertices[0];
         int minz = contour.vertices[2];
         int leftmost = 0;
-        for (int i = 1; i < contour.nvertices; i++) {
+        for (int i = 1; i < contour.numVertices; i++) {
             int x = contour.vertices[i * 4];
             int z = contour.vertices[i * 4 + 2];
             if (x < minx || (x == minx && z < minz)) {
@@ -566,9 +566,9 @@ public class RecastContour {
         }
         Arrays.sort(region.holes, new CompareHoles());
 
-        int maxVertices = region.outline.nvertices;
+        int maxVertices = region.outline.numVertices;
         for (int i = 0; i < region.nholes; i++)
-            maxVertices += region.holes[i].contour.nvertices;
+            maxVertices += region.holes[i].contour.numVertices;
 
         PotentialDiagonal[] diags = new PotentialDiagonal[maxVertices];
         for (int pd = 0; pd < maxVertices; pd++) {
@@ -582,7 +582,7 @@ public class RecastContour {
 
             int index = -1;
             int bestVertex = region.holes[i].leftmost;
-            for (int iter = 0; iter < hole.nvertices; iter++) {
+            for (int iter = 0; iter < hole.numVertices; iter++) {
                 // Find potential diagonals.
                 // The 'best' vertex must be in the cone described by 3 cosequtive vertices of the outline.
                 // ..o j-1
@@ -593,8 +593,8 @@ public class RecastContour {
                 // :
                 int ndiags = 0;
                 int corner = bestVertex * 4;
-                for (int j = 0; j < outline.nvertices; j++) {
-                    if (inCone(j, outline.nvertices, outline.vertices, corner, hole.vertices)) {
+                for (int j = 0; j < outline.numVertices; j++) {
+                    if (inCone(j, outline.numVertices, outline.vertices, corner, hole.vertices)) {
                         int dx = outline.vertices[j * 4] - hole.vertices[corner];
                         int dz = outline.vertices[j * 4 + 2] - hole.vertices[corner + 2];
                         diags[ndiags].vert = j;
@@ -608,10 +608,10 @@ public class RecastContour {
                 // Find a diagonal that is not intersecting the outline not the remaining holes.
                 for (int j = 0; j < ndiags; j++) {
                     int pt = diags[j].vert * 4;
-                    boolean intersect = intersectSegCountour(pt, corner, diags[j].vert, outline.nvertices, outline.vertices,
+                    boolean intersect = intersectSegCountour(pt, corner, diags[j].vert, outline.numVertices, outline.vertices,
                             outline.vertices, hole.vertices);
                     for (int k = i; k < region.nholes && !intersect; k++)
-                        intersect = intersectSegCountour(pt, corner, -1, region.holes[k].contour.nvertices,
+                        intersect = intersectSegCountour(pt, corner, -1, region.holes[k].contour.numVertices,
                                 region.holes[k].contour.vertices, outline.vertices, hole.vertices);
                     if (!intersect) {
                         index = diags[j].vert;
@@ -622,7 +622,7 @@ public class RecastContour {
                 if (index != -1)
                     break;
                 // All the potential diagonals for the current vertex were intersecting, try next vertex.
-                bestVertex = (bestVertex + 1) % hole.nvertices;
+                bestVertex = (bestVertex + 1) % hole.numVertices;
             }
 
             if (index == -1) {
@@ -658,14 +658,14 @@ public class RecastContour {
         cset.bmax.set(chf.bmax);
         if (borderSize > 0) {
             // If the heightfield was build with bordersize, remove the offset.
-            float pad = borderSize * chf.cs;
+            float pad = borderSize * chf.cellSize;
             cset.bmin.x += pad;
             cset.bmin.z += pad;
             cset.bmax.x -= pad;
             cset.bmax.z -= pad;
         }
-        cset.cs = chf.cs;
-        cset.ch = chf.ch;
+        cset.cellSize = chf.cellSize;
+        cset.cellHeight = chf.cellHeight;
         cset.width = chf.width - chf.borderSize * 2;
         cset.height = chf.height - chf.borderSize * 2;
         cset.borderSize = chf.borderSize;
@@ -688,10 +688,10 @@ public class RecastContour {
                     }
                     for (int dir = 0; dir < 4; ++dir) {
                         int r = 0;
-                        if (RecastCommon.GetCon(s, dir) != RC_NOT_CONNECTED) {
-                            int ax = x + RecastCommon.GetDirOffsetX(dir);
-                            int ay = y + RecastCommon.GetDirOffsetY(dir);
-                            int ai = chf.cells[ax + ay * w].index + RecastCommon.GetCon(s, dir);
+                        if (RecastCommon.getCon(s, dir) != RC_NOT_CONNECTED) {
+                            int ax = x + RecastCommon.getDirOffsetX(dir);
+                            int ay = y + RecastCommon.getDirOffsetY(dir);
+                            int ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, dir);
                             r = chf.spans[ai].reg;
                         }
                         if (r == chf.spans[i].reg)
@@ -737,9 +737,9 @@ public class RecastContour {
                     if (simplified.size() / 4 >= 3) {
 
                         Contour cont = new Contour();
-                        cset.conts.add(cont);
+                        cset.contours.add(cont);
 
-                        cont.nvertices = simplified.size() / 4;
+                        cont.numVertices = simplified.size() / 4;
                         cont.vertices = new int[simplified.size()];
                         for (int l = 0; l < cont.vertices.length; l++) {
                             cont.vertices[l] = simplified.get(l);
@@ -747,22 +747,22 @@ public class RecastContour {
 
                         if (borderSize > 0) {
                             // If the heightfield was build with bordersize, remove the offset.
-                            for (int j = 0; j < cont.nvertices; ++j) {
+                            for (int j = 0; j < cont.numVertices; ++j) {
                                 cont.vertices[j * 4] -= borderSize;
                                 cont.vertices[j * 4 + 2] -= borderSize;
                             }
                         }
 
-                        cont.nrvertices = vertices.size() / 4;
-                        cont.rvertices = new int[vertices.size()];
-                        for (int l = 0; l < cont.rvertices.length; l++) {
-                            cont.rvertices[l] = vertices.get(l);
+                        cont.numRawVertices = vertices.size() / 4;
+                        cont.rawVertices = new int[vertices.size()];
+                        for (int l = 0; l < cont.rawVertices.length; l++) {
+                            cont.rawVertices[l] = vertices.get(l);
                         }
                         if (borderSize > 0) {
                             // If the heightfield was build with bordersize, remove the offset.
-                            for (int j = 0; j < cont.nrvertices; ++j) {
-                                cont.rvertices[j * 4] -= borderSize;
-                                cont.rvertices[j * 4 + 2] -= borderSize;
+                            for (int j = 0; j < cont.numRawVertices; ++j) {
+                                cont.rawVertices[j * 4] -= borderSize;
+                                cont.rawVertices[j * 4 + 2] -= borderSize;
                             }
                         }
 
@@ -774,14 +774,14 @@ public class RecastContour {
         }
 
         // Merge holes if needed.
-        if (cset.conts.size() > 0) {
+        if (cset.contours.size() > 0) {
             // Calculate winding of all polygons.
-            int[] winding = new int[cset.conts.size()];
+            int[] winding = new int[cset.contours.size()];
             int nholes = 0;
-            for (int i = 0; i < cset.conts.size(); ++i) {
-                Contour cont = cset.conts.get(i);
+            for (int i = 0; i < cset.contours.size(); ++i) {
+                Contour cont = cset.contours.get(i);
                 // If the contour is wound backwards, it is a hole.
-                winding[i] = calcAreaOfPolygon2D(cont.vertices, cont.nvertices) < 0 ? -1 : 1;
+                winding[i] = calcAreaOfPolygon2D(cont.vertices, cont.numVertices) < 0 ? -1 : 1;
                 if (winding[i] < 0)
                     nholes++;
             }
@@ -795,8 +795,8 @@ public class RecastContour {
                     regions[i] = new ContourRegion();
                 }
 
-                for (int i = 0; i < cset.conts.size(); ++i) {
-                    Contour cont = cset.conts.get(i);
+                for (int i = 0; i < cset.contours.size(); ++i) {
+                    Contour cont = cset.contours.get(i);
                     // Positively would contours are outlines, negative holes.
                     if (winding[i] > 0) {
                         if (regions[cont.reg].outline != null) {
@@ -817,8 +817,8 @@ public class RecastContour {
                         regions[i].nholes = 0;
                     }
                 }
-                for (int i = 0; i < cset.conts.size(); ++i) {
-                    Contour cont = cset.conts.get(i);
+                for (int i = 0; i < cset.contours.size(); ++i) {
+                    Contour cont = cset.contours.get(i);
                     ContourRegion reg = regions[cont.reg];
                     if (winding[i] < 0)
                         reg.holes[reg.nholes++].contour = cont;

@@ -24,7 +24,7 @@ import org.recast4j.Pair;
 import java.util.Arrays;
 import java.util.Optional;
 
-import static org.recast4j.detour.DetourCommon.*;
+import static org.recast4j.Vectors.*;
 
 /**
  * Convex-convex intersection based on "Computational Geometry in C" by Joseph O'Rourke
@@ -68,8 +68,8 @@ public class ConvexConvexIntersection {
             copy(a1, p, 3 * ((ai + n - 1) % n)); // prev a
             copy(b1, q, 3 * ((bi + m - 1) % m)); // prev b
 
-            Vector3f A = vSub(a, a1);
-            Vector3f B = vSub(b, b1);
+            Vector3f A = sub(a, a1);
+            Vector3f B = sub(b, b1);
 
             float cross = B.x * A.z - A.x * B.z;// triArea2D({0, 0}, A, B);
             float aHB = triArea2D(b1, b, a);
@@ -92,7 +92,7 @@ public class ConvexConvexIntersection {
             /*-----Advance rules-----*/
 
             /* Special case: A & B overlap and oppositely oriented. */
-            if (code == Intersection.Overlap && vDot2D(A, B) < 0) {
+            if (code == Intersection.Overlap && dot2D(A, B) < 0) {
                 ii = addVertex(inters, ii, ip);
                 ii = addVertex(inters, ii, iq);
                 break;

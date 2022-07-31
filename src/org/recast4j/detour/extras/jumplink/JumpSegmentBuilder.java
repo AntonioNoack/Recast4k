@@ -6,7 +6,7 @@ import java.util.LinkedList;
 class JumpSegmentBuilder {
 
     JumpSegment[] build(JumpLinkBuilderConfig acfg, EdgeSampler es) {
-        int n = es.end.get(0).gsamples.length;
+        int n = es.end.get(0).samples.length;
         int[][] sampleGrid = new int[n][es.end.size()];
         for (int j = 0; j < es.end.size(); j++) {
             for (int i = 0; i < n; i++) {
@@ -18,7 +18,7 @@ class JumpSegmentBuilder {
         for (int j = 0; j < es.end.size(); j++) {
             for (int i = 0; i < n; i++) {
                 if (sampleGrid[i][j] == -1) {
-                    GroundSample p = es.end.get(j).gsamples[i];
+                    GroundSample p = es.end.get(j).samples[i];
                     if (!p.validTrajectory) {
                         sampleGrid[i][j] = -2;
                     } else {
@@ -65,7 +65,7 @@ class JumpSegmentBuilder {
             int i = ij[0];
             int j = ij[1];
             if (sampleGrid[i][j] == -1) {
-                GroundSample p = es.end.get(j).gsamples[i];
+                GroundSample p = es.end.get(j).samples[i];
                 sampleGrid[i][j] = region;
                 float h = p.p.y;
                 if (i < sampleGrid.length - 1) {
@@ -85,7 +85,7 @@ class JumpSegmentBuilder {
     }
 
     private void addNeighbour(EdgeSampler es, Deque<int[]> queue, float agentClimb, float h, int i, int j) {
-        GroundSample q = es.end.get(j).gsamples[i];
+        GroundSample q = es.end.get(j).samples[i];
         if (q.validTrajectory && Math.abs(q.p.y - h) < agentClimb) {
             queue.add(new int[] { i, j });
         }

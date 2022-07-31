@@ -37,7 +37,7 @@ public class SphereCollider extends AbstractCollider {
 
     @Override
     public void rasterize(Heightfield hf, Telemetry telemetry) {
-        RecastFilledVolumeRasterization.rasterizeSphere(hf, center, radius, area, (int) Math.floor(flagMergeThreshold / hf.ch),
+        RecastFilledVolumeRasterization.rasterizeSphere(hf, center, radius, area, (int) Math.floor(flagMergeThreshold / hf.cellHeight),
                 telemetry);
     }
 

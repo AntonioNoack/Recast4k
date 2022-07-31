@@ -2,6 +2,8 @@ package org.recast4j.detour.extras.jumplink;
 
 import org.joml.Vector3f;
 
+import static org.recast4j.Vectors.add;
+
 class EdgeSamplerFactory {
 
     EdgeSampler get(JumpLinkBuilderConfig acfg, JumpLinkType type, Edge edge) {
@@ -23,21 +25,21 @@ class EdgeSamplerFactory {
         es.start.height = acfg.agentClimb * 2;
         Vector3f offset = new Vector3f();
         trans2d(offset, es.az, es.ay, acfg.startDistance, -acfg.agentClimb);
-        vadd(es.start.p, edge.sp, offset);
-        vadd(es.start.q, edge.sq, offset);
+        add(es.start.p, edge.a, offset);
+        add(es.start.q, edge.b, offset);
 
         float dx = acfg.endDistance - 2 * acfg.agentRadius;
         float cs = acfg.cellSize;
-        int nsamples = Math.max(2, (int) Math.ceil(dx / cs));
+        int numSamples = Math.max(2, (int) Math.ceil(dx / cs));
 
-        for (int j = 0; j < nsamples; ++j) {
-            float v = (float) j / (float) (nsamples - 1);
+        for (int j = 0; j < numSamples; ++j) {
+            float v = (float) j / (float) (numSamples - 1);
             float ox = 2 * acfg.agentRadius + dx * v;
             trans2d(offset, es.az, es.ay, ox, acfg.minHeight);
             GroundSegment end = new GroundSegment();
             end.height = acfg.heightRange;
-            vadd(end.p, edge.sp, offset);
-            vadd(end.q, edge.sq, offset);
+            add(end.p, edge.a, offset);
+            add(end.q, edge.b, offset);
             es.end.add(end);
         }
         return es;
@@ -48,20 +50,16 @@ class EdgeSamplerFactory {
         es.start.height = acfg.agentClimb * 2;
         Vector3f offset = new Vector3f();
         trans2d(offset, es.az, es.ay, acfg.startDistance, -acfg.agentClimb);
-        vadd(es.start.p, edge.sp, offset);
-        vadd(es.start.q, edge.sq, offset);
+        add(es.start.p, edge.a, offset);
+        add(es.start.q, edge.b, offset);
 
         trans2d(offset, es.az, es.ay, acfg.endDistance, acfg.minHeight);
         GroundSegment end = new GroundSegment();
         end.height = acfg.heightRange;
-        vadd(end.p, edge.sp, offset);
-        vadd(end.q, edge.sq, offset);
+        add(end.p, edge.a, offset);
+        add(end.q, edge.b, offset);
         es.end.add(end);
         return es;
-    }
-
-    private void vadd(Vector3f dest, Vector3f v1, Vector3f v2) {
-        dest.set(v1).add(v2);
     }
 
     private void trans2d(Vector3f dst, Vector3f ax, Vector3f ay, float pt0, float pt1) {

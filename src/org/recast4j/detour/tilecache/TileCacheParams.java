@@ -22,7 +22,7 @@ import org.joml.Vector3f;
 
 public class TileCacheParams {
     public final Vector3f orig = new Vector3f();
-    public float cs, ch;
+    public float cellSize, cellHeight;
     public int width, height;
     public float walkableHeight;
     public float walkableRadius;

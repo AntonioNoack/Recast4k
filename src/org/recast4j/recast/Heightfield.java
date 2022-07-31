@@ -31,22 +31,21 @@ public class Heightfield {
     public final Vector3f bmin;
     /** The maximum bounds in world space. [(x, y, z)] */
     public final Vector3f bmax;
-    /** The size of each cell. (On the xz-plane.) */
-    public final float cs;
-    /** The height of each cell. (The minimum increment along the y-axis.) */
-    public final float ch;
+    public final float cellSize;
+    /** The minimum increment along the y-axis. */
+    public final float cellHeight;
     /** Heightfield of spans (width*height). */
     public final Span[] spans;
     /** Border size in cell units */
     public final int borderSize;
 
-    public Heightfield(int width, int height, Vector3f bmin, Vector3f bmax, float cs, float ch, int borderSize) {
+    public Heightfield(int width, int height, Vector3f bmin, Vector3f bmax, float cellSize, float cellHeight, int borderSize) {
         this.width = width;
         this.height = height;
         this.bmin = bmin;
         this.bmax = bmax;
-        this.cs = cs;
-        this.ch = ch;
+        this.cellSize = cellSize;
+        this.cellHeight = cellHeight;
         this.borderSize = borderSize;
         spans = new Span[width * height];
     }

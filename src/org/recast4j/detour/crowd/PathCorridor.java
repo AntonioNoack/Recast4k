@@ -25,7 +25,7 @@ import org.recast4j.detour.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.recast4j.detour.DetourCommon.*;
+import static org.recast4j.Vectors.*;
 
 /**
  * Represents a dynamic polygon corridor used to plan agent movement.
@@ -226,7 +226,7 @@ public class PathCorridor {
             int start = 0;
             for (StraightPathItem spi : path) {
                 if ((spi.getFlags() & NavMeshQuery.DT_STRAIGHTPATH_OFFMESH_CONNECTION) != 0
-                        || vDist2DSqr(spi.getPos(), pos) > MIN_TARGET_DIST) {
+                        || dist2DSqr(spi.getPos(), pos) > MIN_TARGET_DIST) {
                     break;
                 }
                 start++;
@@ -272,7 +272,7 @@ public class PathCorridor {
     public void optimizePathVisibility(Vector3f next, float pathOptimizationRange, NavMeshQuery navquery,
                                        QueryFilter filter) {
         // Clamp the ray to max distance.
-        float dist = vDist2D(pos, next);
+        float dist = dist2D(pos, next);
 
         // If too close to the goal, do not try to optimize.
         if (dist < 0.01f) {
@@ -284,8 +284,8 @@ public class PathCorridor {
         dist = Math.min(dist + 0.01f, pathOptimizationRange);
 
         // Adjust ray length.
-        Vector3f delta = vSub(next, pos);
-        Vector3f goal = vMad(pos, delta, pathOptimizationRange / dist);
+        Vector3f delta = sub(next, pos);
+        Vector3f goal = mad(pos, delta, pathOptimizationRange / dist);
 
         Result<RaycastHit> rc = navquery.raycast(path.get(0), pos, goal, filter, 0, 0);
         if (rc.succeeded()) {

@@ -25,7 +25,7 @@ public class RecastCommon {
     /// @param[in] dir The direction to check. [Limits: 0 <= value < 4]
     /// @return The neighbor connection data for the specified direction,
     /// or #RC_NOT_CONNECTED if there is no connection.
-    static int GetCon(CompactSpan s, int dir) {
+    static int getCon(CompactSpan s, int dir) {
         int shift = dir * 6;
         return (s.con >> shift) & 0x3f;
     }
@@ -36,7 +36,7 @@ public class RecastCommon {
     /// @param[in] dir The direction. [Limits: 0 <= value < 4]
     /// @return The width offset to apply to the current cell position to move
     /// in the direction.
-    static int GetDirOffsetX(int dir) {
+    static int getDirOffsetX(int dir) {
         return offset[dir & 0x03];
     }
 
@@ -44,7 +44,7 @@ public class RecastCommon {
     /// @param[in] dir The direction. [Limits: 0 <= value < 4]
     /// @return The height offset to apply to the current cell position to move
     /// in the direction.
-    static int GetDirOffsetY(int dir) {
+    static int getDirOffsetY(int dir) {
         return offset[(dir + 1) & 0x03];
     }
 
@@ -54,7 +54,7 @@ public class RecastCommon {
     /// @return The direction that represents the offset.
     private static final int[] dirs = {3, 0, -1, 2, 1};
 
-    static int rcGetDirForOffset(int x, int y) {
+    static int getDirForOffset(int x, int y) {
         return dirs[((y + 1) << 1) + x];
     }
 
@@ -62,14 +62,10 @@ public class RecastCommon {
     /// @param[in] s The span to update.
     /// @param[in] dir The direction to set. [Limits: 0 <= value < 4]
     /// @param[in] i The index of the neighbor span.
-    public static void SetCon(CompactSpan s, int dir, int i) {
+    public static void setCon(CompactSpan s, int dir, int i) {
         int shift = dir * 6;
         int con = s.con;
         s.con = (con & ~(0x3f << shift)) | ((i & 0x3f) << shift);
-    }
-
-    public static int clamp(int v, int min, int max) {
-        return Math.max(Math.min(max, v), min);
     }
 
 }

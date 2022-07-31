@@ -35,34 +35,34 @@ class NavMeshGroundSampler extends AbstractGroundSampler {
     }
 
     @Override
-    public void sample(JumpLinkBuilderConfig acfg, RecastBuilderResult result, EdgeSampler es) {
-        NavMeshQuery navMeshQuery = createNavMesh(result, acfg.agentRadius, acfg.agentHeight, acfg.agentClimb);
-        sampleGround(acfg, es, (pt, h) -> getNavMeshHeight(navMeshQuery, pt, acfg.cellSize, h));
+    public void sample(JumpLinkBuilderConfig jlc, RecastBuilderResult result, EdgeSampler es) {
+        NavMeshQuery navMeshQuery = createNavMesh(result, jlc.agentRadius, jlc.agentHeight, jlc.agentClimb);
+        sampleGround(jlc, es, (pt, h) -> getNavMeshHeight(navMeshQuery, pt, jlc.cellSize, h));
     }
 
     private NavMeshQuery createNavMesh(RecastBuilderResult r, float agentRadius, float agentHeight, float agentClimb) {
         NavMeshDataCreateParams params = new NavMeshDataCreateParams();
         params.vertices = r.mesh.vertices;
-        params.vertCount = r.mesh.nvertices;
+        params.vertCount = r.mesh.numVertices;
         params.polys = r.mesh.polys;
         params.polyAreas = r.mesh.areas;
         params.polyFlags = r.mesh.flags;
-        params.polyCount = r.mesh.npolys;
-        params.nvp = r.mesh.nvp;
+        params.polyCount = r.mesh.numPolygons;
+        params.maxVerticesPerPolygon = r.mesh.maxVerticesPerPolygon;
         params.detailMeshes = r.meshDetail.meshes;
         params.detailVertices = r.meshDetail.vertices;
-        params.detailVerticesCount = r.meshDetail.nvertices;
-        params.detailTris = r.meshDetail.tris;
-        params.detailTriCount = r.meshDetail.ntris;
+        params.detailVerticesCount = r.meshDetail.numVertices;
+        params.detailTris = r.meshDetail.triangles;
+        params.detailTriCount = r.meshDetail.numTriangles;
         params.walkableRadius = agentRadius;
         params.walkableHeight = agentHeight;
         params.walkableClimb = agentClimb;
         params.bmin = r.mesh.bmin;
         params.bmax = r.mesh.bmax;
-        params.cs = r.mesh.cs;
-        params.ch = r.mesh.ch;
+        params.cellSize = r.mesh.cs;
+        params.cellHeight = r.mesh.ch;
         params.buildBvTree = true;
-        return new NavMeshQuery(new NavMesh(NavMeshBuilder.createNavMeshData(params), params.nvp, 0));
+        return new NavMeshQuery(new NavMesh(NavMeshBuilder.createNavMeshData(params), params.maxVerticesPerPolygon, 0));
     }
 
     private Pair<Boolean, Float> getNavMeshHeight(NavMeshQuery navMeshQuery, Vector3f pt, float cs,

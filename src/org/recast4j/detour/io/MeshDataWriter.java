@@ -48,7 +48,7 @@ public class MeshDataWriter extends DetourWriter {
         write(stream, header.walkableClimb, order);
         write(stream, header.bmin, order);
         write(stream, header.bmax, order);
-        write(stream, header.bvQuantFactor, order);
+        write(stream, header.bvQuantizationFactor, order);
         writeVertices(stream, data.vertices, header.vertCount, order);
         writePolys(stream, data, order);
         writePolyDetails(stream, data, order);

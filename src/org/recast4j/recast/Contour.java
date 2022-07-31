@@ -24,11 +24,11 @@ public class Contour {
     /** Simplified contour vertex and connection data. [Size: 4 * #nvertices] */
     public int[] vertices;
     /** The number of vertices in the simplified contour. */
-    public int nvertices;
+    public int numVertices;
     /** Raw contour vertex and connection data. [Size: 4 * #nrvertices] */
-    public int[] rvertices;
+    public int[] rawVertices;
     /** The number of vertices in the raw contour. */
-    public int nrvertices;
+    public int numRawVertices;
     /** The region id of the contour. */
     public int area;
     /** The area id of the contour. */

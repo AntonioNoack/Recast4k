@@ -17,7 +17,7 @@ public class EdgeSampler {
 
     public EdgeSampler(Edge edge, Trajectory trajectory) {
         this.trajectory = trajectory;
-        ax.set(edge.sq).sub(edge.sp).normalize();
+        ax.set(edge.b).sub(edge.a).normalize();
         az.set(ax.z, 0, -ax.x).normalize();
         ay.set(0f, 1f, 0f);
     }

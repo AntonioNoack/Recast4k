@@ -17,8 +17,8 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.io;
 
-import static org.recast4j.detour.DetourCommon.ilog2;
-import static org.recast4j.detour.DetourCommon.nextPow2;
+import static org.recast4j.Vectors.ilog2;
+import static org.recast4j.Vectors.nextPow2;
 
 import java.io.IOException;
 import java.io.InputStream;

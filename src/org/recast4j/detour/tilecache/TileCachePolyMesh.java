@@ -20,8 +20,8 @@ package org.recast4j.detour.tilecache;
 
 public class TileCachePolyMesh {
     int nvp;
-    int nvertices; /// < Number of vertices.
-    int npolys; /// < Number of polygons.
+    int numVertices;
+    int numPolygons;
     int[] vertices; /// < Vertices of the mesh, 3 elements per vertex.
     int[] polys; /// < Polygons of the mesh, nvp*2 elements per polygon.
     int[] flags; /// < Per polygon flags.

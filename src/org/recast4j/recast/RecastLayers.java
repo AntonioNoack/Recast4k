@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.recast4j.detour.DetourCommon.overlapRange;
+import static org.recast4j.Vectors.overlapRange;
 import static org.recast4j.recast.RecastCommon.*;
 import static org.recast4j.recast.RecastConstants.RC_NOT_CONNECTED;
 import static org.recast4j.recast.RecastConstants.RC_NULL_AREA;
@@ -36,13 +36,13 @@ public class RecastLayers {
         int id;
         int layerId;
         boolean base;
-        int ymin, ymax;
+        int yMin, yMax;
         List<Integer> layers;
         List<Integer> neis;
 
         LayerRegion(int i) {
             id = i;
-            ymin = 0xFFFF;
+            yMin = 0xFFFF;
             layerId = 0xff;
             layers = new ArrayList<>();
             neis = new ArrayList<>();
@@ -62,14 +62,14 @@ public class RecastLayers {
 
     public static HeightfieldLayer[] buildHeightfieldLayers(Telemetry ctx, CompactHeightfield chf, int walkableHeight) {
 
-        ctx.startTimer("RC_TIMER_BUILD_LAYERS");
+        if(ctx != null) ctx.startTimer("RC_TIMER_BUILD_LAYERS");
         int w = chf.width;
         int h = chf.height;
         int borderSize = chf.borderSize;
         int[] srcReg = new int[chf.spanCount];
         Arrays.fill(srcReg, 0xFF);
-        int nsweeps = chf.width;// Math.max(chf.width, chf.height);
-        SweepSpan[] sweeps = new SweepSpan[nsweeps];
+        int numSweeps = chf.width;// Math.max(chf.width, chf.height);
+        SweepSpan[] sweeps = new SweepSpan[numSweeps];
         for (int i = 0; i < sweeps.length; i++) {
             sweeps[i] = new SweepSpan();
         }
@@ -92,10 +92,10 @@ public class RecastLayers {
                     int sid = 0xFF;
                     // -x
 
-                    if (GetCon(s, 0) != RC_NOT_CONNECTED) {
-                        int ax = x + GetDirOffsetX(0);
-                        int ay = y + GetDirOffsetY(0);
-                        int ai = chf.cells[ax + ay * w].index + GetCon(s, 0);
+                    if (getCon(s, 0) != RC_NOT_CONNECTED) {
+                        int ax = x + getDirOffsetX(0);
+                        int ay = y + getDirOffsetY(0);
+                        int ai = chf.cells[ax + ay * w].index + getCon(s, 0);
                         if (chf.areas[ai] != RC_NULL_AREA && srcReg[ai] != 0xff)
                             sid = srcReg[ai];
                     }
@@ -107,10 +107,10 @@ public class RecastLayers {
                     }
 
                     // -y
-                    if (GetCon(s, 3) != RC_NOT_CONNECTED) {
-                        int ax = x + GetDirOffsetX(3);
-                        int ay = y + GetDirOffsetY(3);
-                        int ai = chf.cells[ax + ay * w].index + GetCon(s, 3);
+                    if (getCon(s, 3) != RC_NOT_CONNECTED) {
+                        int ax = x + getDirOffsetX(3);
+                        int ay = y + getDirOffsetY(3);
+                        int ai = chf.cells[ax + ay * w].index + getCon(s, 3);
                         int nr = srcReg[ai];
                         if (nr != 0xff) {
                             // Set neighbour when first valid neighbour is
@@ -161,11 +161,11 @@ public class RecastLayers {
             }
         }
         int nregs = regId;
-        LayerRegion[] regs = new LayerRegion[nregs];
+        LayerRegion[] regions = new LayerRegion[nregs];
 
         // Construct regions
         for (int i = 0; i < nregs; ++i) {
-            regs[i] = new LayerRegion(i);
+            regions[i] = new LayerRegion(i);
         }
 
         // Find region neighbours and overlapping regions.
@@ -182,21 +182,21 @@ public class RecastLayers {
                     if (ri == 0xff)
                         continue;
 
-                    regs[ri].ymin = Math.min(regs[ri].ymin, s.y);
-                    regs[ri].ymax = Math.max(regs[ri].ymax, s.y);
+                    regions[ri].yMin = Math.min(regions[ri].yMin, s.y);
+                    regions[ri].yMax = Math.max(regions[ri].yMax, s.y);
 
                     // Collect all region layers.
                     lregs.add(ri);
 
                     // Update neighbours
                     for (int dir = 0; dir < 4; ++dir) {
-                        if (GetCon(s, dir) != RC_NOT_CONNECTED) {
-                            int ax = x + GetDirOffsetX(dir);
-                            int ay = y + GetDirOffsetY(dir);
-                            int ai = chf.cells[ax + ay * w].index + GetCon(s, dir);
+                        if (getCon(s, dir) != RC_NOT_CONNECTED) {
+                            int ax = x + getDirOffsetX(dir);
+                            int ay = y + getDirOffsetY(dir);
+                            int ai = chf.cells[ax + ay * w].index + getCon(s, dir);
                             int rai = srcReg[ai];
                             if (rai != 0xff && rai != ri)
-                                addUnique(regs[ri].neis, rai);
+                                addUnique(regions[ri].neis, rai);
                         }
                     }
 
@@ -206,8 +206,8 @@ public class RecastLayers {
                 for (int i = 0; i < lregs.size() - 1; ++i) {
                     for (int j = i + 1; j < lregs.size(); ++j) {
                         if (lregs.get(i).intValue() != lregs.get(j).intValue()) {
-                            LayerRegion ri = regs[lregs.get(i)];
-                            LayerRegion rj = regs[lregs.get(j)];
+                            LayerRegion ri = regions[lregs.get(i)];
+                            LayerRegion rj = regions[lregs.get(j)];
                             addUnique(ri.layers, lregs.get(j));
                             addUnique(rj.layers, lregs.get(i));
                         }
@@ -223,7 +223,7 @@ public class RecastLayers {
         List<Integer> stack = new ArrayList<>();
 
         for (int i = 0; i < nregs; ++i) {
-            LayerRegion root = regs[i];
+            LayerRegion root = regions[i];
             // Skip already visited.
             if (root.layerId != 0xff)
                 continue;
@@ -236,32 +236,32 @@ public class RecastLayers {
 
             while (!stack.isEmpty()) {
                 // Pop front
-                LayerRegion reg = regs[stack.remove(0)];
+                LayerRegion reg = regions[stack.remove(0)];
 
                 for (int nei : reg.neis) {
-                    LayerRegion regn = regs[nei];
+                    LayerRegion region = regions[nei];
                     // Skip already visited.
-                    if (regn.layerId != 0xff)
+                    if (region.layerId != 0xff)
                         continue;
                     // Skip if the neighbour is overlapping root region.
                     if (contains(root.layers, nei))
                         continue;
                     // Skip if the height range would become too large.
-                    int ymin = Math.min(root.ymin, regn.ymin);
-                    int ymax = Math.max(root.ymax, regn.ymax);
-                    if ((ymax - ymin) >= 255)
+                    int yMin = Math.min(root.yMin, region.yMin);
+                    int yMax = Math.max(root.yMax, region.yMax);
+                    if ((yMax - yMin) >= 255)
                         continue;
 
                     // Deepen
                     stack.add(nei);
 
                     // Mark layer id
-                    regn.layerId = layerId;
+                    region.layerId = layerId;
                     // Merge current layers to root.
-                    for (int layer : regn.layers)
+                    for (int layer : region.layers)
                         addUnique(root.layers, layer);
-                    root.ymin = Math.min(root.ymin, regn.ymin);
-                    root.ymax = Math.max(root.ymax, regn.ymax);
+                    root.yMin = Math.min(root.yMin, region.yMin);
+                    root.yMax = Math.max(root.yMax, region.yMax);
                 }
             }
 
@@ -272,7 +272,7 @@ public class RecastLayers {
         int mergeHeight = walkableHeight * 4;
 
         for (int i = 0; i < nregs; ++i) {
-            LayerRegion ri = regs[i];
+            LayerRegion ri = regions[i];
             if (!ri.base)
                 continue;
 
@@ -284,16 +284,16 @@ public class RecastLayers {
                 for (int j = 0; j < nregs; ++j) {
                     if (i == j)
                         continue;
-                    LayerRegion rj = regs[j];
+                    LayerRegion rj = regions[j];
                     if (!rj.base)
                         continue;
 
                     // Skip if the regions are not close to each other.
-                    if (!overlapRange(ri.ymin, ri.ymax + mergeHeight, rj.ymin, rj.ymax + mergeHeight))
+                    if (!overlapRange(ri.yMin, ri.yMax + mergeHeight, rj.yMin, rj.yMax + mergeHeight))
                         continue;
                     // Skip if the height range would become too large.
-                    int ymin = Math.min(ri.ymin, rj.ymin);
-                    int ymax = Math.max(ri.ymax, rj.ymax);
+                    int ymin = Math.min(ri.yMin, rj.yMin);
+                    int ymax = Math.max(ri.yMax, rj.yMax);
                     if ((ymax - ymin) >= 255)
                         continue;
 
@@ -303,7 +303,7 @@ public class RecastLayers {
                     // Iterate over all regions which have the same layerId as
                     // 'rj'
                     for (int k = 0; k < nregs; ++k) {
-                        if (regs[k].layerId != rj.layerId)
+                        if (regions[k].layerId != rj.layerId)
                             continue;
                         // Check if region 'k' is overlapping region 'ri'
                         // Index to 'regs' is the same as region id.
@@ -327,7 +327,7 @@ public class RecastLayers {
 
                 // Merge
                 for (int j = 0; j < nregs; ++j) {
-                    LayerRegion rj = regs[j];
+                    LayerRegion rj = regions[j];
                     if (rj.layerId == oldId) {
                         rj.base = false;
                         // Remap layerIds.
@@ -336,8 +336,8 @@ public class RecastLayers {
                         for (int layer : rj.layers)
                             addUnique(ri.layers, layer);
                         // Update height bounds.
-                        ri.ymin = Math.min(ri.ymin, rj.ymin);
-                        ri.ymax = Math.max(ri.ymax, rj.ymax);
+                        ri.yMin = Math.min(ri.yMin, rj.yMin);
+                        ri.yMax = Math.max(ri.yMax, rj.yMax);
                     }
                 }
             }
@@ -349,7 +349,7 @@ public class RecastLayers {
         // Find number of unique layers.
         layerId = 0;
         for (int i = 0; i < nregs; ++i)
-            remap[regs[i].layerId] = 1;
+            remap[regions[i].layerId] = 1;
         for (int i = 0; i < 256; ++i) {
             if (remap[i] != 0)
                 remap[i] = layerId++;
@@ -358,7 +358,7 @@ public class RecastLayers {
         }
         // Remap ids.
         for (int i = 0; i < nregs; ++i)
-            regs[i].layerId = remap[regs[i].layerId];
+            regions[i].layerId = remap[regions[i].layerId];
 
         // No layers, return empty.
         if (layerId == 0) {
@@ -375,10 +375,10 @@ public class RecastLayers {
         // Build contracted bbox for layers.
         Vector3f bmin = new Vector3f(chf.bmin);
         Vector3f bmax = new Vector3f(chf.bmax);
-        bmin.x += borderSize * chf.cs;
-        bmin.z += borderSize * chf.cs;
-        bmax.x -= borderSize * chf.cs;
-        bmax.z -= borderSize * chf.cs;
+        bmin.x += borderSize * chf.cellSize;
+        bmin.z += borderSize * chf.cellSize;
+        bmax.x -= borderSize * chf.cellSize;
+        bmax.z -= borderSize * chf.cellSize;
 
         HeightfieldLayer[] lset = new HeightfieldLayer[layerId];
         for (int i = 0; i < lset.length; i++) {
@@ -400,30 +400,30 @@ public class RecastLayers {
             // Find layer height bounds.
             int hmin = 0, hmax = 0;
             for (int j = 0; j < nregs; ++j) {
-                if (regs[j].base && regs[j].layerId == curId) {
-                    hmin = regs[j].ymin;
-                    hmax = regs[j].ymax;
+                if (regions[j].base && regions[j].layerId == curId) {
+                    hmin = regions[j].yMin;
+                    hmax = regions[j].yMax;
                 }
             }
 
             layer.width = lw;
             layer.height = lh;
-            layer.cs = chf.cs;
-            layer.ch = chf.ch;
+            layer.cellSize = chf.cellSize;
+            layer.cellHeight = chf.cellHeight;
 
             // Adjust the bbox to fit the heightfield.
             layer.bmin.set(bmin);
             layer.bmax.set(bmax);
-            layer.bmin.y = bmin.y + hmin * chf.ch;
-            layer.bmax.y = bmin.y + hmax * chf.ch;
-            layer.hmin = hmin;
-            layer.hmax = hmax;
+            layer.bmin.y = bmin.y + hmin * chf.cellHeight;
+            layer.bmax.y = bmin.y + hmax * chf.cellHeight;
+            layer.minH = hmin;
+            layer.maxH = hmax;
 
             // Update usable data region.
-            layer.minx = layer.width;
-            layer.maxx = 0;
-            layer.miny = layer.height;
-            layer.maxy = 0;
+            layer.minX = layer.width;
+            layer.maxX = 0;
+            layer.minY = layer.height;
+            layer.maxY = 0;
 
             // Copy height and area from compact heightfield.
             for (int y = 0; y < lh; ++y) {
@@ -437,15 +437,15 @@ public class RecastLayers {
                         if (srcReg[j] == 0xff)
                             continue;
                         // Skip of does nto belong to current layer.
-                        int lid = regs[srcReg[j]].layerId;
+                        int lid = regions[srcReg[j]].layerId;
                         if (lid != curId)
                             continue;
 
                         // Update data bounds.
-                        layer.minx = Math.min(layer.minx, x);
-                        layer.maxx = Math.max(layer.maxx, x);
-                        layer.miny = Math.min(layer.miny, y);
-                        layer.maxy = Math.max(layer.maxy, y);
+                        layer.minX = Math.min(layer.minX, x);
+                        layer.maxX = Math.max(layer.maxX, x);
+                        layer.minY = Math.min(layer.minY, y);
+                        layer.maxY = Math.max(layer.maxY, y);
 
                         // Store height and area type.
                         int idx = x + y * lw;
@@ -456,11 +456,11 @@ public class RecastLayers {
                         char portal = 0;
                         char con = 0;
                         for (int dir = 0; dir < 4; ++dir) {
-                            if (GetCon(s, dir) != RC_NOT_CONNECTED) {
-                                int ax = cx + GetDirOffsetX(dir);
-                                int ay = cy + GetDirOffsetY(dir);
-                                int ai = chf.cells[ax + ay * w].index + GetCon(s, dir);
-                                int alid = srcReg[ai] != 0xff ? regs[srcReg[ai]].layerId : 0xff;
+                            if (getCon(s, dir) != RC_NOT_CONNECTED) {
+                                int ax = cx + getDirOffsetX(dir);
+                                int ay = cy + getDirOffsetY(dir);
+                                int ai = chf.cells[ax + ay * w].index + getCon(s, dir);
+                                int alid = srcReg[ai] != 0xff ? regions[srcReg[ai]].layerId : 0xff;
                                 // Portal mask
                                 if (chf.areas[ai] != RC_NULL_AREA && lid != alid) {
                                     portal |= (1 << dir);
@@ -484,10 +484,10 @@ public class RecastLayers {
                 }
             }
 
-            if (layer.minx > layer.maxx)
-                layer.minx = layer.maxx = 0;
-            if (layer.miny > layer.maxy)
-                layer.miny = layer.maxy = 0;
+            if (layer.minX > layer.maxX)
+                layer.minX = layer.maxX = 0;
+            if (layer.minY > layer.maxY)
+                layer.minY = layer.maxY = 0;
         }
 
         // ctx->stopTimer(RC_TIMER_BUILD_LAYERS);

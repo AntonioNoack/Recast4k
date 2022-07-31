@@ -25,8 +25,7 @@ class QueryData {
     Node lastBestNode;
     float lastBestNodeCost;
     long startRef, endRef;
-    Vector3f startPos = new Vector3f();
-    Vector3f endPos = new Vector3f();
+    Vector3f startPos = new Vector3f(), endPos = new Vector3f();
     QueryFilter filter;
     int options;
     float raycastLimitSqr;

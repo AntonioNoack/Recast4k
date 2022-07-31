@@ -39,7 +39,7 @@ public class CylinderCollider extends AbstractCollider {
 
     @Override
     public void rasterize(Heightfield hf, Telemetry telemetry) {
-        RecastFilledVolumeRasterization.rasterizeCylinder(hf, start, end, radius, area, (int) Math.floor(flagMergeThreshold / hf.ch),
+        RecastFilledVolumeRasterization.rasterizeCylinder(hf, start, end, radius, area, (int) Math.floor(flagMergeThreshold / hf.cellHeight),
                 telemetry);
     }
 

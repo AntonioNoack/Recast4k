@@ -58,8 +58,8 @@ public class RecastBuilderConfig {
         this.bmin.set(bmin);
         this.bmax.set(bmax);
         if (cfg.useTiles) {
-            float tsx = cfg.tileSizeX * cfg.cs;
-            float tsz = cfg.tileSizeZ * cfg.cs;
+            float tsx = cfg.tileSizeX * cfg.cellSize;
+            float tsz = cfg.tileSizeZ * cfg.cellSize;
             this.bmin.x += tileX * tsx;
             this.bmin.z += tileZ * tsz;
             this.bmax.x = this.bmin.x + tsx;
@@ -87,16 +87,15 @@ public class RecastBuilderConfig {
             // you will need to pass in data from neighbour terrain tiles too! In a simple case, just pass in all the 8
             // neighbours,
             // or use the bounding box below to only pass in a sliver of each of the 8 neighbours.
-            this.bmin.x -= cfg.borderSize * cfg.cs;
-            this.bmin.z -= cfg.borderSize * cfg.cs;
-            this.bmax.x += cfg.borderSize * cfg.cs;
-            this.bmax.z += cfg.borderSize * cfg.cs;
+            this.bmin.x -= cfg.borderSize * cfg.cellSize;
+            this.bmin.z -= cfg.borderSize * cfg.cellSize;
+            this.bmax.x += cfg.borderSize * cfg.cellSize;
+            this.bmax.z += cfg.borderSize * cfg.cellSize;
             width = cfg.tileSizeX + cfg.borderSize * 2;
             height = cfg.tileSizeZ + cfg.borderSize * 2;
         } else {
-            int[] wh = Recast.calcGridSize(this.bmin, this.bmax, cfg.cs);
-            width = wh[0];
-            height = wh[1];
+            width = Recast.calcGridSizeX(this.bmin, this.bmax, cfg.cellSize);
+            height = Recast.calcGridSizeY(this.bmin, this.bmax, cfg.cellSize);
         }
     }
 

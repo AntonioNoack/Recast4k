@@ -21,7 +21,6 @@ package org.recast4j.dynamic.collider;
 import org.joml.Vector3f;
 import org.recast4j.recast.Heightfield;
 import org.recast4j.recast.RecastFilledVolumeRasterization;
-import org.recast4j.recast.RecastVectors;
 import org.recast4j.recast.Telemetry;
 
 public class BoxCollider extends AbstractCollider {
@@ -58,8 +57,7 @@ public class BoxCollider extends AbstractCollider {
 
     @Override
     public void rasterize(Heightfield hf, Telemetry telemetry) {
-        RecastFilledVolumeRasterization.rasterizeBox(hf, center, halfEdges, area, (int) Math.floor(flagMergeThreshold / hf.ch),
-                telemetry);
+        RecastFilledVolumeRasterization.rasterizeBox(hf, center, halfEdges, area, (int) Math.floor(flagMergeThreshold / hf.cellHeight), telemetry);
     }
 
 }

@@ -19,7 +19,9 @@ freely, subject to the following restrictions:
 package org.recast4j.recast;
 
 import org.joml.Vector3f;
+import org.recast4j.Vectors;
 
+import static org.joml.Math.clamp;
 import static org.recast4j.recast.RecastConstants.SPAN_MAX_HEIGHT;
 
 public class RecastRasterization {
@@ -41,8 +43,8 @@ public class RecastRasterization {
         int idx = x + y * hf.width;
 
         Span s = new Span();
-        s.smin = smin;
-        s.smax = smax;
+        s.min = smin;
+        s.max = smax;
         s.area = area;
         s.next = null;
 
@@ -56,22 +58,22 @@ public class RecastRasterization {
 
         // Insert and merge spans.
         while (cur != null) {
-            if (cur.smin > s.smax) {
+            if (cur.min > s.max) {
                 // Current span is further than the new span, break.
                 break;
-            } else if (cur.smax < s.smin) {
+            } else if (cur.max < s.min) {
                 // Current span is before the new span advance.
                 prev = cur;
                 cur = cur.next;
             } else {
                 // Merge spans.
-                if (cur.smin < s.smin)
-                    s.smin = cur.smin;
-                if (cur.smax > s.smax)
-                    s.smax = cur.smax;
+                if (cur.min < s.min)
+                    s.min = cur.min;
+                if (cur.max > s.max)
+                    s.max = cur.max;
 
                 // Merge flags.
-                if (Math.abs(s.smax - cur.smax) <= flagMergeThr)
+                if (Math.abs(s.max - cur.max) <= flagMergeThr)
                     s.area = Math.max(s.area, cur.area);
 
                 // Remove current span.
@@ -109,28 +111,28 @@ public class RecastRasterization {
                 buf[out1 + m * 3] = buf[in + j * 3] + (buf[in + i * 3] - buf[in + j * 3]) * s;
                 buf[out1 + m * 3 + 1] = buf[in + j * 3 + 1] + (buf[in + i * 3 + 1] - buf[in + j * 3 + 1]) * s;
                 buf[out1 + m * 3 + 2] = buf[in + j * 3 + 2] + (buf[in + i * 3 + 2] - buf[in + j * 3 + 2]) * s;
-                RecastVectors.copy(buf, out2 + n * 3, buf, out1 + m * 3);
+                Vectors.copy(buf, out2 + n * 3, buf, out1 + m * 3);
                 m++;
                 n++;
                 // add the i'th point to the right polygon. Do NOT add points that are on the dividing line
                 // since these were already added above
                 if (d[i] > 0) {
-                    RecastVectors.copy(buf, out1 + m * 3, buf, in + i * 3);
+                    Vectors.copy(buf, out1 + m * 3, buf, in + i * 3);
                     m++;
                 } else if (d[i] < 0) {
-                    RecastVectors.copy(buf, out2 + n * 3, buf, in + i * 3);
+                    Vectors.copy(buf, out2 + n * 3, buf, in + i * 3);
                     n++;
                 }
             } else // same side
             {
                 // add the i'th point to the right polygon. Addition is done even for points on the dividing line
                 if (d[i] >= 0) {
-                    RecastVectors.copy(buf, out1 + m * 3, buf, in + i * 3);
+                    Vectors.copy(buf, out1 + m * 3, buf, in + i * 3);
                     m++;
                     if (d[i] != 0)
                         continue;
                 }
-                RecastVectors.copy(buf, out2 + n * 3, buf, in + i * 3);
+                Vectors.copy(buf, out2 + n * 3, buf, in + i * 3);
                 n++;
             }
         }
@@ -145,12 +147,12 @@ public class RecastRasterization {
         float by = bmax.y - bmin.y;
 
         // Calculate the bounding box of the triangle.
-        RecastVectors.copy(tmin, vertices, v0 * 3);
-        RecastVectors.copy(tmax, vertices, v0 * 3);
-        RecastVectors.min(tmin, vertices, v1 * 3);
-        RecastVectors.min(tmin, vertices, v2 * 3);
-        RecastVectors.max(tmax, vertices, v1 * 3);
-        RecastVectors.max(tmax, vertices, v2 * 3);
+        Vectors.copy(tmin, vertices, v0 * 3);
+        Vectors.copy(tmax, vertices, v0 * 3);
+        Vectors.min(tmin, vertices, v1 * 3);
+        Vectors.min(tmin, vertices, v2 * 3);
+        Vectors.max(tmax, vertices, v1 * 3);
+        Vectors.max(tmax, vertices, v2 * 3);
 
         // If the triangle does not touch the bbox of the heightfield, skip the triagle.
         if (!overlapBounds(bmin, bmax, tmin, tmax))
@@ -160,8 +162,8 @@ public class RecastRasterization {
         int y0 = (int) ((tmin.z - bmin.z) * ics);
         int y1 = (int) ((tmax.z - bmin.z) * ics);
         // use -1 rather than 0 to cut the polygon properly at the start of the tile
-        y0 = RecastCommon.clamp(y0, -1, h - 1);
-        y1 = RecastCommon.clamp(y1, 0, h - 1);
+        y0 = clamp(y0, -1, h - 1);
+        y1 = clamp(y1, 0, h - 1);
 
         // Clip the triangle into all grid cells it touches.
         float[] buf = new float[7 * 3 * 4];
@@ -170,9 +172,9 @@ public class RecastRasterization {
         int p1 = inrow + 7 * 3;
         int p2 = p1 + 7 * 3;
 
-        RecastVectors.copy(buf, 0, vertices, v0 * 3);
-        RecastVectors.copy(buf, 3, vertices, v1 * 3);
-        RecastVectors.copy(buf, 6, vertices, v2 * 3);
+        Vectors.copy(buf, 0, vertices, v0 * 3);
+        Vectors.copy(buf, 3, vertices, v1 * 3);
+        Vectors.copy(buf, 6, vertices, v2 * 3);
         int nvrow, nvIn = 3;
 
         for (int y = y0; y <= y1; ++y) {
@@ -204,8 +206,8 @@ public class RecastRasterization {
             if (x1 < 0 || x0 >= w) {
                 continue;
             }
-            x0 = RecastCommon.clamp(x0, -1, w - 1);
-            x1 = RecastCommon.clamp(x1, 0, w - 1);
+            x0 = clamp(x0, -1, w - 1);
+            x1 = clamp(x1, 0, w - 1);
 
             int nv, nv2 = nvrow;
             for (int x = x0; x <= x1; ++x) {
@@ -245,8 +247,8 @@ public class RecastRasterization {
                     smax = by;
 
                 // Snap the span to the heightfield height grid.
-                int ismin = RecastCommon.clamp((int) Math.floor(smin * ich), 0, SPAN_MAX_HEIGHT);
-                int ismax = RecastCommon.clamp((int) Math.ceil(smax * ich), ismin + 1, SPAN_MAX_HEIGHT);
+                int ismin = clamp((int) Math.floor(smin * ich), 0, SPAN_MAX_HEIGHT);
+                int ismax = clamp((int) Math.ceil(smax * ich), ismin + 1, SPAN_MAX_HEIGHT);
 
                 addSpan(hf, x, y, ismin, ismax, area, flagMergeThr);
             }
@@ -263,9 +265,9 @@ public class RecastRasterization {
 
         ctx.startTimer("RASTERIZE_TRIANGLES");
 
-        float ics = 1.0f / solid.cs;
-        float ich = 1.0f / solid.ch;
-        rasterizeTri(vertices, v0, v1, v2, area, solid, solid.bmin, solid.bmax, solid.cs, ics, ich, flagMergeThr);
+        float ics = 1.0f / solid.cellSize;
+        float ich = 1.0f / solid.cellHeight;
+        rasterizeTri(vertices, v0, v1, v2, area, solid, solid.bmin, solid.bmax, solid.cellSize, ics, ich, flagMergeThr);
 
         ctx.stopTimer("RASTERIZE_TRIANGLES");
     }
@@ -280,15 +282,15 @@ public class RecastRasterization {
 
         ctx.startTimer("RASTERIZE_TRIANGLES");
 
-        float ics = 1.0f / solid.cs;
-        float ich = 1.0f / solid.ch;
+        float ics = 1.0f / solid.cellSize;
+        float ich = 1.0f / solid.cellHeight;
         // Rasterize triangles.
         for (int i = 0; i < nt; ++i) {
             int v0 = tris[i * 3];
             int v1 = tris[i * 3 + 1];
             int v2 = tris[i * 3 + 2];
             // Rasterize.
-            rasterizeTri(vertices, v0, v1, v2, areas[i], solid, solid.bmin, solid.bmax, solid.cs, ics, ich, flagMergeThr);
+            rasterizeTri(vertices, v0, v1, v2, areas[i], solid, solid.bmin, solid.bmax, solid.cellSize, ics, ich, flagMergeThr);
         }
 
         ctx.stopTimer("RASTERIZE_TRIANGLES");
@@ -304,15 +306,15 @@ public class RecastRasterization {
                                           Telemetry ctx) {
         ctx.startTimer("RASTERIZE_TRIANGLES");
 
-        float ics = 1.0f / solid.cs;
-        float ich = 1.0f / solid.ch;
+        float ics = 1.0f / solid.cellSize;
+        float ich = 1.0f / solid.cellHeight;
         // Rasterize triangles.
         for (int i = 0; i < nt; ++i) {
             int v0 = (i * 3);
             int v1 = (i * 3 + 1);
             int v2 = (i * 3 + 2);
             // Rasterize.
-            rasterizeTri(vertices, v0, v1, v2, areas[i], solid, solid.bmin, solid.bmax, solid.cs, ics, ich, flagMergeThr);
+            rasterizeTri(vertices, v0, v1, v2, areas[i], solid, solid.bmin, solid.bmax, solid.cellSize, ics, ich, flagMergeThr);
         }
         ctx.stopTimer("RASTERIZE_TRIANGLES");
     }

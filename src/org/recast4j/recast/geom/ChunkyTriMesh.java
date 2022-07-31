@@ -18,6 +18,8 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.recast.geom;
 
+import org.recast4j.Callback;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -31,7 +33,7 @@ public class ChunkyTriMesh {
     }
 
     public static class Node1 extends Node0 {
-        public int[] tris;
+        public int[] triangles;
     }
 
     private static class CompareItemX implements Comparator<Node0> {
@@ -49,22 +51,23 @@ public class ChunkyTriMesh {
     }
 
     List<Node1> nodes;
-    int ntris;
+    int numTriangles;
     int maxTrisPerChunk;
 
-    private void calcExtends(Node0[] items, int imin, int imax, Node1 dst) {
+    private void calcExtends(Node0[] items, int startIndex, int endIndex, Node1 dst) {
 
-        dst.minX = items[imin].minX;
-        dst.minY = items[imin].minY;
-        dst.maxX = items[imin].maxX;
-        dst.maxY = items[imin].maxY;
+        Node0 n = items[startIndex];
+        dst.minX = n.minX;
+        dst.minY = n.minY;
+        dst.maxX = n.maxX;
+        dst.maxY = n.maxY;
 
-        for (int i = imin + 1; i < imax; ++i) {
-            Node0 it = items[i];
-            dst.minX = Math.min(dst.minX, it.minX);
-            dst.minY = Math.min(dst.minY, it.minY);
-            dst.maxX = Math.min(dst.maxX, it.maxX);
-            dst.maxY = Math.min(dst.maxY, it.maxY);
+        for (int i = startIndex + 1; i < endIndex; ++i) {
+            n = items[i];
+            dst.minX = Math.min(dst.minX, n.minX);
+            dst.minY = Math.min(dst.minY, n.minY);
+            dst.maxX = Math.min(dst.maxX, n.maxX);
+            dst.maxY = Math.min(dst.maxY, n.maxY);
         }
     }
 
@@ -72,64 +75,64 @@ public class ChunkyTriMesh {
         return y > x ? 1 : 0;
     }
 
-    private void subdivide(Node0[] items, int imin, int imax, int trisPerChunk, List<Node1> nodes, int[] inTris) {
-        int inum = imax - imin;
+    private void subdivide(Node0[] items, int startIndex, int endIndex, int trisPerChunk, List<Node1> nodes, int[] inTris) {
+        int length = endIndex - startIndex;
 
         Node1 node = new Node1();
         nodes.add(node);
 
-        if (inum <= trisPerChunk) {
+        if (length <= trisPerChunk) {
 
             // Leaf
-            calcExtends(items, imin, imax, node);
+            calcExtends(items, startIndex, endIndex, node);
 
             // Copy triangles.
             node.i = nodes.size();
-            node.tris = new int[inum * 3];
+            node.triangles = new int[length * 3];
 
             int dst = 0;
-            for (int i = imin; i < imax; ++i) {
+            for (int i = startIndex; i < endIndex; ++i) {
                 int src = items[i].i * 3;
-                node.tris[dst++] = inTris[src];
-                node.tris[dst++] = inTris[src + 1];
-                node.tris[dst++] = inTris[src + 2];
+                node.triangles[dst++] = inTris[src];
+                node.triangles[dst++] = inTris[src + 1];
+                node.triangles[dst++] = inTris[src + 2];
             }
         } else {
 
             // Split
-            calcExtends(items, imin, imax, node);
+            calcExtends(items, startIndex, endIndex, node);
             int axis = longestAxis(node.maxX - node.minX, node.maxY - node.minY);
 
             if (axis == 0) {
-                Arrays.sort(items, imin, imax, new CompareItemX());
+                Arrays.sort(items, startIndex, endIndex, new CompareItemX());
                 // Sort along x-axis
             } else if (axis == 1) {
-                Arrays.sort(items, imin, imax, new CompareItemY());
+                Arrays.sort(items, startIndex, endIndex, new CompareItemY());
                 // Sort along y-axis
             }
 
-            int isplit = imin + inum / 2;
+            int splitIndex = startIndex + length / 2;
 
             // Left
-            subdivide(items, imin, isplit, trisPerChunk, nodes, inTris);
+            subdivide(items, startIndex, splitIndex, trisPerChunk, nodes, inTris);
             // Right
-            subdivide(items, isplit, imax, trisPerChunk, nodes, inTris);
+            subdivide(items, splitIndex, endIndex, trisPerChunk, nodes, inTris);
 
             // Negative index means escape.
             node.i = -nodes.size();
         }
     }
 
-    public ChunkyTriMesh(float[] vertices, int[] tris, int ntris, int trisPerChunk) {
-        int nchunks = (ntris + trisPerChunk - 1) / trisPerChunk;
+    public ChunkyTriMesh(float[] vertices, int[] tris, int numTris, int trisPerChunk) {
+        int numChunks = (numTris + trisPerChunk - 1) / trisPerChunk;
 
-        nodes = new ArrayList<>(nchunks);
-        this.ntris = ntris;
+        nodes = new ArrayList<>(numChunks);
+        this.numTriangles = numTris;
 
         // Build tree
-        Node0[] items = new Node0[ntris];
+        Node0[] items = new Node0[numTris];
 
-        for (int i = 0; i < ntris; i++) {
+        for (int i = 0; i < numTris; i++) {
             int t = i * 3;
             Node0 it = items[i] = new Node0();
             it.i = i;
@@ -154,7 +157,7 @@ public class ChunkyTriMesh {
             }
         }
 
-        subdivide(items, 0, ntris, trisPerChunk, nodes, tris);
+        subdivide(items, 0, numTris, trisPerChunk, nodes, tris);
 
         // Calc max tris per node.
         maxTrisPerChunk = 0;
@@ -163,15 +166,15 @@ public class ChunkyTriMesh {
             if (!isLeaf) {
                 continue;
             }
-            if (node.tris.length / 3 > maxTrisPerChunk) {
-                maxTrisPerChunk = node.tris.length / 3;
+            if (node.triangles.length / 3 > maxTrisPerChunk) {
+                maxTrisPerChunk = node.triangles.length / 3;
             }
         }
 
     }
 
-    private boolean checkOverlapRect(float[] amin, float[] amax, Node1 b) {
-        return !(amin[0] > b.maxX) && !(amax[0] < b.minX) && !(amin[1] > b.maxY) && !(amax[1] < b.minY);
+    private boolean checkOverlapRect(float[] aMin, float[] aMax, Node1 b) {
+        return !(aMin[0] > b.maxX) && !(aMax[0] < b.minX) && !(aMin[1] > b.maxY) && !(aMax[1] < b.minY);
     }
 
     public List<Node1> getChunksOverlappingRect(float[] bmin, float[] bmax) {
@@ -194,6 +197,19 @@ public class ChunkyTriMesh {
             }
         }
         return ids;
+    }
+
+    public void foreachChunkOverlappingRect(float[] bmin, float[] bmax, Callback<Node1> callback) {
+        // Traverse tree
+        int i = 0;
+        while (i < nodes.size()) {
+            Node1 node = nodes.get(i);
+            boolean overlap = checkOverlapRect(bmin, bmax, node);
+            boolean isLeafNode = node.i >= 0;
+            boolean x = isLeafNode && overlap;
+            if (x) callback.call(node);
+            i = x ? i + 1 : -node.i;
+        }
     }
 
 }

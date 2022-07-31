@@ -25,7 +25,7 @@ import org.recast4j.detour.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.recast4j.detour.DetourCommon.*;
+import static org.recast4j.Vectors.*;
 
 public class LocalBoundary {
 

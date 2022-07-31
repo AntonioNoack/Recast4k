@@ -21,7 +21,6 @@ package org.recast4j.recast;
 public class ConvexVolume {
 
     public float[] vertices;
-    public float hmin;
-    public float hmax;
+    public float minH, maxH;
     public AreaModification areaMod;
 }

@@ -8,7 +8,7 @@ public class NavMeshParamReader {
 
     public NavMeshParams read(ByteBuffer bb) {
         NavMeshParams params = new NavMeshParams();
-        params.orig.set(bb.getFloat(), bb.getFloat(), bb.getFloat());
+        params.origin.set(bb.getFloat(), bb.getFloat(), bb.getFloat());
         params.tileWidth = bb.getFloat();
         params.tileHeight = bb.getFloat();
         params.maxTiles = bb.getInt();

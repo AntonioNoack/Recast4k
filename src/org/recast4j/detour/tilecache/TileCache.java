@@ -31,7 +31,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.recast4j.detour.DetourCommon.*;
+import static org.recast4j.Vectors.*;
 
 public class TileCache {
 
@@ -46,16 +46,16 @@ public class TileCache {
     private final int m_tileBits; /// < Number of tile bits in the tile ID.
 
     private final NavMesh m_navmesh;
-    private final TileCacheParams m_params;
-    private final TileCacheStorageParams m_storageParams;
+    private final TileCacheParams params;
+    private final TileCacheStorageParams storageParams;
 
-    private final TileCacheMeshProcess m_tmproc;
+    private final TileCacheMeshProcess tmProcess;
 
-    private final List<TileCacheObstacle> m_obstacles = new ArrayList<>();
-    private TileCacheObstacle m_nextFreeObstacle;
+    private final List<TileCacheObstacle> obstacles = new ArrayList<>();
+    private TileCacheObstacle nextFreeObstacle;
 
-    private final List<ObstacleRequest> m_reqs = new ArrayList<>();
-    private final List<Long> m_update = new ArrayList<>();
+    private final List<ObstacleRequest> requests = new ArrayList<>();
+    private final List<Long> update = new ArrayList<>();
 
     private final TileCacheBuilder builder = new TileCacheBuilder();
     private final TileCacheLayerHeaderReader tileReader = new TileCacheLayerHeaderReader();
@@ -100,37 +100,38 @@ public class TileCache {
 
     public TileCache(TileCacheParams params, TileCacheStorageParams storageParams, NavMesh navmesh,
                      TileCacheMeshProcess tmprocs) {
-        m_params = params;
-        m_storageParams = storageParams;
+        this.params = params;
+        this.storageParams = storageParams;
         m_navmesh = navmesh;
-        m_tmproc = tmprocs;
+        tmProcess = tmprocs;
 
-        m_tileLutSize = nextPow2(m_params.maxTiles / 4);
+        m_tileLutSize = nextPow2(this.params.maxTiles / 4);
         if (m_tileLutSize == 0) {
             m_tileLutSize = 1;
         }
         m_tileLutMask = m_tileLutSize - 1;
-        m_tiles = new CompressedTile[m_params.maxTiles];
+        m_tiles = new CompressedTile[this.params.maxTiles];
         m_posLookup = new CompressedTile[m_tileLutSize];
-        for (int i = m_params.maxTiles - 1; i >= 0; --i) {
+        for (int i = this.params.maxTiles - 1; i >= 0; --i) {
             m_tiles[i] = new CompressedTile(i);
             m_tiles[i].next = m_nextFreeTile;
             m_nextFreeTile = m_tiles[i];
         }
-        m_tileBits = ilog2(nextPow2(m_params.maxTiles));
+        m_tileBits = ilog2(nextPow2(this.params.maxTiles));
         m_saltBits = Math.min(31, 32 - m_tileBits);
         if (m_saltBits < 10) {
             throw new RuntimeException("Too few salt bits: " + m_saltBits);
         }
     }
 
+    @SuppressWarnings("unused")
     public CompressedTile getTileByRef(long ref) {
         if (ref == 0) {
             return null;
         }
         int tileIndex = decodeTileIdTile(ref);
         int tileSalt = decodeTileIdSalt(ref);
-        if (tileIndex >= m_params.maxTiles) {
+        if (tileIndex >= params.maxTiles) {
             return null;
         }
         CompressedTile tile = m_tiles[tileIndex];
@@ -185,15 +186,16 @@ public class TileCache {
         return encodeObstacleId(ob.salt, idx);
     }
 
+    @SuppressWarnings("unused")
     public TileCacheObstacle getObstacleByRef(long ref) {
         if (ref == 0) {
             return null;
         }
         int idx = decodeObstacleIdObstacle(ref);
-        if (idx >= m_obstacles.size()) {
+        if (idx >= obstacles.size()) {
             return null;
         }
-        TileCacheObstacle ob = m_obstacles.get(idx);
+        TileCacheObstacle ob = obstacles.get(idx);
         int salt = decodeObstacleIdSalt(ref);
         if (ob.salt != salt) {
             return null;
@@ -204,8 +206,8 @@ public class TileCache {
     public long addTile(byte[] data, int flags) throws IOException {
         // Make sure the data is in right format.
         ByteBuffer buf = ByteBuffer.wrap(data);
-        buf.order(m_storageParams.byteOrder);
-        TileCacheLayerHeader header = tileReader.read(buf, m_storageParams.cCompatibility);
+        buf.order(storageParams.byteOrder);
+        TileCacheLayerHeader header = tileReader.read(buf, storageParams.cCompatibility);
         // Make sure the location is free.
         if (getTileAt(header.tx, header.ty, header.tlayer) != null) {
             return 0;
@@ -241,13 +243,14 @@ public class TileCache {
         return (i + 3) & (~3);
     }
 
+    @SuppressWarnings("unused")
     public void removeTile(long ref) {
         if (ref == 0) {
             throw new RuntimeException("Invalid tile ref");
         }
         int tileIndex = decodeTileIdTile(ref);
         int tileSalt = decodeTileIdSalt(ref);
-        if (tileIndex >= m_params.maxTiles) {
+        if (tileIndex >= params.maxTiles) {
             throw new RuntimeException("Invalid tile index");
         }
         CompressedTile tile = m_tiles[tileIndex];
@@ -289,7 +292,8 @@ public class TileCache {
 
     }
 
-    // Cylinder obstacle
+    /** Cylinder obstacle */
+    @SuppressWarnings("unused")
     public long addObstacle(Vector3f pos, float radius, float height) {
         TileCacheObstacle ob = allocObstacle();
         ob.type = TileCacheObstacleType.CYLINDER;
@@ -301,7 +305,8 @@ public class TileCache {
         return addObstacleRequest(ob).ref;
     }
 
-    // Aabb obstacle
+    /** Aabb obstacle */
+    @SuppressWarnings("unused")
     public long addBoxObstacle(float[] bmin, float[] bmax) {
         TileCacheObstacle ob = allocObstacle();
         ob.type = TileCacheObstacleType.BOX;
@@ -312,7 +317,8 @@ public class TileCache {
         return addObstacleRequest(ob).ref;
     }
 
-    // Box obstacle: can be rotated in Y
+    /** Box obstacle: can be rotated in Y */
+    @SuppressWarnings("unused")
     public long addBoxObstacle(Vector3f center, float[] extents, float yRadians) {
         TileCacheObstacle ob = allocObstacle();
         ob.type = TileCacheObstacleType.ORIENTED_BOX;
@@ -329,10 +335,11 @@ public class TileCache {
         ObstacleRequest req = new ObstacleRequest();
         req.action = ObstacleRequestAction.REQUEST_ADD;
         req.ref = getObstacleRef(ob);
-        m_reqs.add(req);
+        requests.add(req);
         return req;
     }
 
+    @SuppressWarnings("unused")
     public void removeObstacle(long ref) {
         if (ref == 0) {
             return;
@@ -341,16 +348,16 @@ public class TileCache {
         ObstacleRequest req = new ObstacleRequest();
         req.action = ObstacleRequestAction.REQUEST_REMOVE;
         req.ref = ref;
-        m_reqs.add(req);
+        requests.add(req);
     }
 
     private TileCacheObstacle allocObstacle() {
-        TileCacheObstacle o = m_nextFreeObstacle;
+        TileCacheObstacle o = nextFreeObstacle;
         if (o == null) {
-            o = new TileCacheObstacle(m_obstacles.size());
-            m_obstacles.add(o);
+            o = new TileCacheObstacle(obstacles.size());
+            obstacles.add(o);
         } else {
-            m_nextFreeObstacle = o.next;
+            nextFreeObstacle = o.next;
         }
         o.state = ObstacleState.DT_OBSTACLE_PROCESSING;
         o.touched.clear();
@@ -361,12 +368,12 @@ public class TileCache {
 
     List<Long> queryTiles(Vector3f bmin, Vector3f bmax) {
         List<Long> results = new ArrayList<>();
-        float tw = m_params.width * m_params.cs;
-        float th = m_params.height * m_params.cs;
-        int tx0 = (int) Math.floor((bmin.x - m_params.orig.x) / tw);
-        int tx1 = (int) Math.floor((bmax.x - m_params.orig.x) / tw);
-        int ty0 = (int) Math.floor((bmin.z - m_params.orig.z) / th);
-        int ty1 = (int) Math.floor((bmax.z - m_params.orig.z) / th);
+        float tw = params.width * params.cellSize;
+        float th = params.height * params.cellSize;
+        int tx0 = (int) Math.floor((bmin.x - params.orig.x) / tw);
+        int tx1 = (int) Math.floor((bmax.x - params.orig.x) / tw);
+        int ty0 = (int) Math.floor((bmin.z - params.orig.z) / th);
+        int ty1 = (int) Math.floor((bmax.z - params.orig.z) / th);
         for (int ty = ty0; ty <= ty1; ++ty) {
             for (int tx = tx0; tx <= tx1; ++tx) {
                 List<Long> tiles = getTilesAt(tx, ty);
@@ -392,14 +399,14 @@ public class TileCache {
      * continue processing obstacle requests and tile rebuilds.
      */
     public boolean update() {
-        if (m_update.isEmpty()) {
+        if (update.isEmpty()) {
             // Process requests.
-            for (ObstacleRequest req : m_reqs) {
+            for (ObstacleRequest req : requests) {
                 int idx = decodeObstacleIdObstacle(req.ref);
-                if (idx >= m_obstacles.size()) {
+                if (idx >= obstacles.size()) {
                     continue;
                 }
-                TileCacheObstacle ob = m_obstacles.get(idx);
+                TileCacheObstacle ob = obstacles.get(idx);
                 int salt = decodeObstacleIdSalt(req.ref);
                 if (ob.salt != salt) {
                     continue;
@@ -414,8 +421,8 @@ public class TileCache {
                     // Add tiles to update list.
                     ob.pending.clear();
                     for (long j : ob.touched) {
-                        if (!contains(m_update, j)) {
-                            m_update.add(j);
+                        if (!contains(update, j)) {
+                            update.add(j);
                         }
                         ob.pending.add(j);
                     }
@@ -425,25 +432,25 @@ public class TileCache {
                     // Add tiles to update list.
                     ob.pending.clear();
                     for (long j : ob.touched) {
-                        if (!contains(m_update, j)) {
-                            m_update.add(j);
+                        if (!contains(update, j)) {
+                            update.add(j);
                         }
                         ob.pending.add(j);
                     }
                 }
             }
 
-            m_reqs.clear();
+            requests.clear();
         }
 
         // Process updates
-        if (!m_update.isEmpty()) {
-            long ref = m_update.remove(0);
+        if (!update.isEmpty()) {
+            long ref = update.remove(0);
             // Build mesh
             buildNavMeshTile(ref);
 
             // Update obstacle states.
-            for (TileCacheObstacle ob : m_obstacles) {
+            for (TileCacheObstacle ob : obstacles) {
                 if (ob.state == ObstacleState.DT_OBSTACLE_PROCESSING
                         || ob.state == ObstacleState.DT_OBSTACLE_REMOVING) {
                     // Remove handled tile from pending list.
@@ -461,20 +468,20 @@ public class TileCache {
                                 ob.salt++;
                             }
                             // Return obstacle to free list.
-                            ob.next = m_nextFreeObstacle;
-                            m_nextFreeObstacle = ob;
+                            ob.next = nextFreeObstacle;
+                            nextFreeObstacle = ob;
                         }
                     }
                 }
             }
         }
-        return m_update.isEmpty() && m_reqs.isEmpty();
+        return update.isEmpty() && requests.isEmpty();
 
     }
 
     public void buildNavMeshTile(long ref) {
         int idx = decodeTileIdTile(ref);
-        if (idx > m_params.maxTiles) {
+        if (idx > params.maxTiles) {
             throw new RuntimeException("Invalid tile index");
         }
         CompressedTile tile = m_tiles[idx];
@@ -482,24 +489,24 @@ public class TileCache {
         if (tile.salt != salt) {
             throw new RuntimeException("Invalid tile salt");
         }
-        int walkableClimbVx = (int) (m_params.walkableClimb / m_params.ch);
+        int walkableClimbVx = (int) (params.walkableClimb / params.cellHeight);
 
         // Decompress tile layer data.
         TileCacheLayer layer = decompressTile(tile);
 
         // Rasterize obstacles.
-        for (TileCacheObstacle ob : m_obstacles) {
+        for (TileCacheObstacle ob : obstacles) {
             if (ob.state == ObstacleState.DT_OBSTACLE_EMPTY || ob.state == ObstacleState.DT_OBSTACLE_REMOVING) {
                 continue;
             }
             if (contains(ob.touched, ref)) {
                 if (ob.type == TileCacheObstacleType.CYLINDER) {
-                    builder.markCylinderArea(layer, tile.header.bmin, m_params.cs, m_params.ch, ob.pos, ob.radius,
+                    builder.markCylinderArea(layer, tile.header.bmin, params.cellSize, params.cellHeight, ob.pos, ob.radius,
                             ob.height, 0);
                 } else if (ob.type == TileCacheObstacleType.BOX) {
-                    builder.markBoxArea(layer, tile.header.bmin, m_params.cs, m_params.ch, ob.bmin, ob.bmax, 0);
+                    builder.markBoxArea(layer, tile.header.bmin, params.cellSize, params.cellHeight, ob.bmin, ob.bmax, 0);
                 } else if (ob.type == TileCacheObstacleType.ORIENTED_BOX) {
-                    builder.markBoxArea(layer, tile.header.bmin, m_params.cs, m_params.ch, ob.center, ob.extents,
+                    builder.markBoxArea(layer, tile.header.bmin, params.cellSize, params.cellHeight, ob.center, ob.extents,
                             ob.rotAux, 0);
                 }
             }
@@ -507,34 +514,34 @@ public class TileCache {
         // Build navmesh
         builder.buildTileCacheRegions(layer, walkableClimbVx);
         TileCacheContourSet lcset = builder.buildTileCacheContours(layer, walkableClimbVx,
-                m_params.maxSimplificationError);
+                params.maxSimplificationError);
         TileCachePolyMesh polyMesh = builder.buildTileCachePolyMesh(lcset, m_navmesh.maxVerticesPerPoly);
         // Early out if the mesh tile is empty.
-        if (polyMesh.npolys == 0) {
+        if (polyMesh.numPolygons == 0) {
             m_navmesh.removeTile(m_navmesh.getTileRefAt(tile.header.tx, tile.header.ty, tile.header.tlayer));
             return;
         }
         NavMeshDataCreateParams params = new NavMeshDataCreateParams();
         params.vertices = polyMesh.vertices;
-        params.vertCount = polyMesh.nvertices;
+        params.vertCount = polyMesh.numVertices;
         params.polys = polyMesh.polys;
         params.polyAreas = polyMesh.areas;
         params.polyFlags = polyMesh.flags;
-        params.polyCount = polyMesh.npolys;
-        params.nvp = m_navmesh.maxVerticesPerPoly;
-        params.walkableHeight = m_params.walkableHeight;
-        params.walkableRadius = m_params.walkableRadius;
-        params.walkableClimb = m_params.walkableClimb;
+        params.polyCount = polyMesh.numPolygons;
+        params.maxVerticesPerPolygon = m_navmesh.maxVerticesPerPoly;
+        params.walkableHeight = this.params.walkableHeight;
+        params.walkableRadius = this.params.walkableRadius;
+        params.walkableClimb = this.params.walkableClimb;
         params.tileX = tile.header.tx;
         params.tileZ = tile.header.ty;
         params.tileLayer = tile.header.tlayer;
-        params.cs = m_params.cs;
-        params.ch = m_params.ch;
+        params.cellSize = this.params.cellSize;
+        params.cellHeight = this.params.cellHeight;
         params.buildBvTree = false;
         params.bmin = tile.header.bmin;
         params.bmax = tile.header.bmax;
-        if (m_tmproc != null) {
-            m_tmproc.process(params);
+        if (tmProcess != null) {
+            tmProcess.process(params);
         }
         MeshData meshData = NavMeshBuilder.createNavMeshData(params);
         // Remove existing tile.
@@ -546,12 +553,12 @@ public class TileCache {
     }
 
     public TileCacheLayer decompressTile(CompressedTile tile) {
-        return builder.decompressTileCacheLayer(tile.data, m_storageParams.byteOrder,
-                m_storageParams.cCompatibility);
+        return builder.decompressTileCacheLayer(tile.data, storageParams.byteOrder,
+                storageParams.cCompatibility);
     }
 
     void calcTightTileBounds(TileCacheLayerHeader header, Vector3f bmin, Vector3f bmax) {
-        float cs = m_params.cs;
+        float cs = params.cellSize;
         bmin.x = header.bmin.x + header.minx * cs;
         bmin.y = header.bmin.y;
         bmin.z = header.bmin.z + header.miny * cs;
@@ -583,11 +590,11 @@ public class TileCache {
     }
 
     public TileCacheParams getParams() {
-        return m_params;
+        return params;
     }
 
     public int getTileCount() {
-        return m_params.maxTiles;
+        return params.maxTiles;
     }
 
     public CompressedTile getTile(int i) {

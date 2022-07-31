@@ -29,10 +29,10 @@ public class RecastConfig {
     public final int tileSizeZ;
 
     /** The xz-plane cell size to use for fields. [Limit: &gt; 0] [Units: wu] **/
-    public final float cs;
+    public final float cellSize;
 
     /** The y-axis cell size to use for fields. [Limit: &gt; 0] [Units: wu] **/
-    public final float ch;
+    public final float cellHeight;
 
     /** The maximum slope that is considered walkable. [Limits: 0 &lt;= value &lt; 90] [Units: Degrees] **/
     public final float walkableSlopeAngle;
@@ -142,18 +142,18 @@ public class RecastConfig {
         this.tileSizeZ = tileSizeZ;
         this.borderSize = borderSize;
         this.partitionType = partitionType;
-        cs = cellSize;
-        ch = cellHeight;
+        this.cellSize = cellSize;
+        this.cellHeight = cellHeight;
         walkableSlopeAngle = agentMaxSlope;
-        walkableHeight = (int) Math.ceil(agentHeight / ch);
+        walkableHeight = (int) Math.ceil(agentHeight / this.cellHeight);
         walkableHeightWorld = agentHeight;
-        walkableClimb = (int) Math.floor(agentMaxClimb / ch);
+        walkableClimb = (int) Math.floor(agentMaxClimb / this.cellHeight);
         walkableClimbWorld = agentMaxClimb;
-        walkableRadius = (int) Math.ceil(agentRadius / cs);
+        walkableRadius = (int) Math.ceil(agentRadius / this.cellSize);
         walkableRadiusWorld = agentRadius;
-        this.minRegionArea = Math.round(minRegionArea / (cs * cs));
+        this.minRegionArea = Math.round(minRegionArea / (this.cellSize * this.cellSize));
         minRegionAreaWorld = minRegionArea;
-        this.mergeRegionArea = Math.round(mergeRegionArea / (cs * cs));
+        this.mergeRegionArea = Math.round(mergeRegionArea / (this.cellSize * this.cellSize));
         mergeRegionAreaWorld = mergeRegionArea;
         maxEdgeLen = (int) (edgeMaxLen / cellSize);
         maxEdgeLenWorld = edgeMaxLen;

@@ -19,10 +19,12 @@ freely, subject to the following restrictions:
 package org.recast4j.recast;
 
 import org.joml.Vector3f;
+import org.recast4j.Vectors;
 
+import static org.joml.Math.clamp;
 import static org.recast4j.recast.RecastConstants.SPAN_MAX_HEIGHT;
-import static org.recast4j.recast.RecastVectors.dot;
-import static org.recast4j.recast.RecastVectors.normalize;
+import static org.recast4j.Vectors.dot;
+import static org.recast4j.Vectors.normalize;
 
 import java.util.function.Function;
 
@@ -65,10 +67,9 @@ public class RecastFilledVolumeRasterization {
         ctx.stopTimer("RASTERIZE_CYLINDER");
     }
 
-    public static void rasterizeBox(Heightfield hf, Vector3f center, float[][] halfEdges, int area, int flagMergeThr,
-                                    Telemetry ctx) {
+    public static void rasterizeBox(Heightfield hf, Vector3f center, float[][] halfEdges, int area, int flagMergeThr, Telemetry ctx) {
 
-        ctx.startTimer("RASTERIZE_BOX");
+        if(ctx != null) ctx.startTimer("RASTERIZE_BOX");
         float[][] normals = {{halfEdges[0][0], halfEdges[0][1], halfEdges[0][2]},
                 {halfEdges[1][0], halfEdges[1][1], halfEdges[1][2]}, {halfEdges[2][0], halfEdges[2][1], halfEdges[2][2]}};
         normalize(normals[0]);
@@ -99,17 +100,15 @@ public class RecastFilledVolumeRasterization {
             planes[i][0] = m * normals[i % 3][0];
             planes[i][1] = m * normals[i % 3][1];
             planes[i][2] = m * normals[i % 3][2];
-            planes[i][3] = vertices[vi * 3] * planes[i][0] + vertices[vi * 3 + 1] * planes[i][1]
-                    + vertices[vi * 3 + 2] * planes[i][2];
+            planes[i][3] = vertices[vi * 3] * planes[i][0] + vertices[vi * 3 + 1] * planes[i][1] + vertices[vi * 3 + 2] * planes[i][2];
         }
         rasterizationFilledShape(hf, bounds, area, flagMergeThr, rectangle -> intersectBox(rectangle, vertices, planes));
-        ctx.stopTimer("RASTERIZE_BOX");
+        if(ctx != null) ctx.stopTimer("RASTERIZE_BOX");
     }
 
-    public static void rasterizeConvex(Heightfield hf, float[] vertices, int[] triangles, int area, int flagMergeThr,
-                                       Telemetry ctx) {
+    public static void rasterizeConvex(Heightfield hf, float[] vertices, int[] triangles, int area, int flagMergeThr, Telemetry ctx) {
 
-        ctx.startTimer("RASTERIZE_CONVEX");
+        if(ctx != null) ctx.startTimer("RASTERIZE_CONVEX");
         float[] bounds = new float[]{vertices[0], vertices[1], vertices[2], vertices[0], vertices[1], vertices[2]};
         for (int i = 0; i < vertices.length; i += 3) {
             bounds[0] = Math.min(bounds[0], vertices[i]);
@@ -155,16 +154,15 @@ public class RecastFilledVolumeRasterization {
         }
         rasterizationFilledShape(hf, bounds, area, flagMergeThr,
                 rectangle -> intersectConvex(rectangle, triangles, vertices, planes, triBounds));
-        ctx.stopTimer("RASTERIZE_CONVEX");
+        if(ctx != null) ctx.stopTimer("RASTERIZE_CONVEX");
     }
 
     private static void plane(float[][] planes, int p, Vector3f v1, Vector3f v2, float[] vertices, int vert) {
-        RecastVectors.cross(new Vector3f(planes[p]), v1, v2);
+        Vectors.cross(new Vector3f(planes[p]), v1, v2);
         planes[p][3] = planes[p][0] * vertices[vert] + planes[p][1] * vertices[vert + 1] + planes[p][2] * vertices[vert + 2];
     }
 
-    private static void rasterizationFilledShape(Heightfield hf, float[] bounds, int area, int flagMergeThr,
-                                                 Function<float[], float[]> intersection) {
+    private static void rasterizationFilledShape(Heightfield hf, float[] bounds, int area, int flagMergeThr, Function<float[], float[]> intersection) {
 
         if (!overlapBounds(hf.bmin, hf.bmax, bounds)) {
             return;
@@ -178,8 +176,8 @@ public class RecastFilledVolumeRasterization {
         if (bounds[3] <= bounds[0] || bounds[4] <= bounds[1] || bounds[5] <= bounds[2]) {
             return;
         }
-        float ics = 1.0f / hf.cs;
-        float ich = 1.0f / hf.ch;
+        float ics = 1.0f / hf.cellSize;
+        float ich = 1.0f / hf.cellHeight;
         int xMin = (int) ((bounds[0] - hf.bmin.x) * ics);
         int zMin = (int) ((bounds[2] - hf.bmin.z) * ics);
         int xMax = Math.min(hf.width - 1, (int) ((bounds[3] - hf.bmin.x) * ics));
@@ -188,17 +186,17 @@ public class RecastFilledVolumeRasterization {
         rectangle[4] = hf.bmin.y;
         for (int x = xMin; x <= xMax; x++) {
             for (int z = zMin; z <= zMax; z++) {
-                rectangle[0] = x * hf.cs + hf.bmin.x;
-                rectangle[1] = z * hf.cs + hf.bmin.z;
-                rectangle[2] = rectangle[0] + hf.cs;
-                rectangle[3] = rectangle[1] + hf.cs;
+                rectangle[0] = x * hf.cellSize + hf.bmin.x;
+                rectangle[1] = z * hf.cellSize + hf.bmin.z;
+                rectangle[2] = rectangle[0] + hf.cellSize;
+                rectangle[3] = rectangle[1] + hf.cellSize;
                 float[] h = intersection.apply(rectangle);
                 if (h != null) {
                     int smin = (int) Math.floor((h[0] - hf.bmin.y) * ich);
                     int smax = (int) Math.ceil((h[1] - hf.bmin.y) * ich);
                     if (smin != smax) {
-                        int ismin = RecastCommon.clamp(smin, 0, SPAN_MAX_HEIGHT);
-                        int ismax = RecastCommon.clamp(smax, ismin + 1, SPAN_MAX_HEIGHT);
+                        int ismin = clamp(smin, 0, SPAN_MAX_HEIGHT);
+                        int ismax = clamp(smax, ismin + 1, SPAN_MAX_HEIGHT);
                         RecastRasterization.addSpan(hf, x, z, ismin, ismax, area, flagMergeThr);
                     }
                 }
@@ -615,10 +613,6 @@ public class RecastFilledVolumeRasterization {
 
     private static float lenSqr(float dx, float dy, float dz) {
         return dx * dx + dy * dy + dz * dz;
-    }
-
-    public static float clamp(float v, float min, float max) {
-        return Math.max(Math.min(max, v), min);
     }
 
     private static boolean overlapBounds(Vector3f amin, Vector3f amax, float[] bounds) {

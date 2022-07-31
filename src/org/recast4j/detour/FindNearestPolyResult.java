@@ -21,32 +21,20 @@ package org.recast4j.detour;
 import org.joml.Vector3f;
 
 public class FindNearestPolyResult {
-    private final long nearestRef;
-    private final Vector3f nearestPos;
-    private final boolean overPoly;
-
-    public FindNearestPolyResult(long nearestRef, Vector3f nearestPos, boolean overPoly) {
-        this.nearestRef = nearestRef;
-        this.nearestPos = nearestPos;
-        this.overPoly = overPoly;
-    }
-
     /**
      * Returns the reference id of the nearest polygon. 0 if no polygon is found.
      */
-    public long getNearestRef() {
-        return nearestRef;
-    }
-
+    public final long nearestRef;
     /**
-     * Returns the nearest point on the polygon. [opt] [(x, y, z)]. Unchanged if no polygon is found.
+     * Returns the nearest point on the polygon. [opt]. Unchanged if no polygon is found.
      */
-    public Vector3f getNearestPos() {
-        return nearestPos;
-    }
+    public final Vector3f nearestPos;
+    public final boolean isOverPoly;
 
-    public boolean isOverPoly() {
-        return overPoly;
+    public FindNearestPolyResult(long nearestRef, Vector3f nearestPos, boolean isOverPoly) {
+        this.nearestRef = nearestRef;
+        this.nearestPos = nearestPos;
+        this.isOverPoly = isOverPoly;
     }
 
 }

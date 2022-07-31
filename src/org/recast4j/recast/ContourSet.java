@@ -23,25 +23,34 @@ import org.joml.Vector3f;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Represents a group of related contours. */
+/**
+ * Represents a group of related contours.
+ */
 public class ContourSet {
 
-    /** A list of the contours in the set. */
-    public final List<Contour> conts = new ArrayList<>();
-    /** The minimum bounds in world space. [(x, y, z)] */
-    public final Vector3f bmin = new Vector3f();
-    /** The maximum bounds in world space. [(x, y, z)] */
-    final Vector3f bmax = new Vector3f();
-    /** The size of each cell. (On the xz-plane.) */
-    public float cs;
-    /** The height of each cell. (The minimum increment along the y-axis.) */
-    public float ch;
-    /** The width of the set. (Along the x-axis in cell units.) */
+    /**
+     * A list of the contours in the set.
+     */
+    public final List<Contour> contours = new ArrayList<>();
+    /**
+     * The bounds in world space.
+     */
+    public final Vector3f bmin = new Vector3f(), bmax = new Vector3f();
+    public float cellSize, cellHeight;
+    /**
+     * The width of the set. (Along the x-axis in cell units.)
+     */
     public int width;
-    /** The height of the set. (Along the z-axis in cell units.) */
+    /**
+     * The height of the set. (Along the z-axis in cell units.)
+     */
     public int height;
-    /** The AABB border size used to generate the source data from which the contours were derived. */
+    /**
+     * The AABB border size used to generate the source data from which the contours were derived.
+     */
     public int borderSize;
-    /** The max edge error that this contour set was simplified with. */
+    /**
+     * The max edge error that this contour set was simplified with.
+     */
     public float maxError;
 }

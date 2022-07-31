@@ -82,7 +82,7 @@ public class MeshDataReader {
         header.walkableClimb = buf.getFloat();
         header.bmin.set(buf.getFloat(), buf.getFloat(), buf.getFloat());
         header.bmax.set(buf.getFloat(), buf.getFloat(), buf.getFloat());
-        header.bvQuantFactor = buf.getFloat();
+        header.bvQuantizationFactor = buf.getFloat();
         data.vertices = readVertices(buf, header.vertCount);
         data.polys = readPolys(buf, header, maxVertPerPoly);
         if (cCompatibility) {

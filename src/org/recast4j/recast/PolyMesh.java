@@ -41,32 +41,20 @@ public class PolyMesh {
      * The area id assigned to each polygon. [Length: #maxpolys]
      */
     public int[] areas;
-    /**
-     * The number of vertices.
-     */
-    public int nvertices;
-    /**
-     * The number of polygons.
-     */
-    public int npolys;
-    /**
-     * The maximum number of vertices per polygon.
-     */
-    public int nvp;
-    /**
-     * The number of allocated polygons.
-     */
-    public int maxpolys;
+    public int numVertices;
+    public int numPolygons;
+    public int maxVerticesPerPolygon;
+    public int numAllocatedPolygons;
     /**
      * The user defined flags for each polygon. [Length: #maxpolys]
      */
     public int[] flags;
     /**
-     * The minimum bounds in world space. [(x, y, z)]
+     * The minimum bounds in world space.
      */
     public final Vector3f bmin = new Vector3f();
     /**
-     * The maximum bounds in world space. [(x, y, z)]
+     * The maximum bounds in world space.
      */
     public final Vector3f bmax = new Vector3f();
     /**

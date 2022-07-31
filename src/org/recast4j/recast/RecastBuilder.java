@@ -18,17 +18,16 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.recast;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.joml.Vector3f;
 import org.recast4j.recast.RecastConstants.PartitionType;
 import org.recast4j.recast.geom.ConvexVolumeProvider;
 import org.recast4j.recast.geom.InputGeomProvider;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class RecastBuilder {
 
@@ -48,7 +47,7 @@ public class RecastBuilder {
     }
 
     public static class RecastBuilderResult {
-        
+
         public final int tileX;
         public final int tileZ;
         public final CompactHeightfield compactHeightField;
@@ -76,9 +75,8 @@ public class RecastBuilder {
     public List<RecastBuilderResult> buildTiles(InputGeomProvider geom, RecastConfig cfg, Executor executor) {
         Vector3f bmin = geom.getMeshBoundsMin();
         Vector3f bmax = geom.getMeshBoundsMax();
-        int[] twh = Recast.calcTileCount(bmin, bmax, cfg.cs, cfg.tileSizeX, cfg.tileSizeZ);
-        int tw = twh[0];
-        int th = twh[1];
+        int tw = Recast.calcTileCountX(bmin, bmax, cfg.cellSize, cfg.tileSizeX);
+        int th = Recast.calcTileCountY(bmin, bmax, cfg.cellSize, cfg.tileSizeZ);
         if (executor != null) {
             return buildMultiThread(geom, cfg, bmin, bmax, tw, th, executor);
         } else {
@@ -262,7 +260,7 @@ public class RecastBuilder {
         // (Optional) Mark areas.
         if (volumeProvider != null) {
             for (ConvexVolume vol : volumeProvider.convexVolumes()) {
-                RecastArea.markConvexPolyArea(ctx, vol.vertices, vol.hmin, vol.hmax, vol.areaMod, chf);
+                RecastArea.markConvexPolyArea(ctx, vol.vertices, vol.minH, vol.maxH, vol.areaMod, chf);
             }
         }
         return chf;

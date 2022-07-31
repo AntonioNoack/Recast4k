@@ -39,7 +39,7 @@ public class CapsuleCollider extends AbstractCollider {
 
     @Override
     public void rasterize(Heightfield hf, Telemetry telemetry) {
-        RecastFilledVolumeRasterization.rasterizeCapsule(hf, start, end, radius, area, (int) Math.floor(flagMergeThreshold / hf.ch),
+        RecastFilledVolumeRasterization.rasterizeCapsule(hf, start, end, radius, area, (int) Math.floor(flagMergeThreshold / hf.cellHeight),
                 telemetry);
     }
 

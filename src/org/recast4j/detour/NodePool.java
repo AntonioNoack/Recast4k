@@ -25,20 +25,16 @@ import java.util.Map;
 
 public class NodePool {
 
-    private final Map<Long, List<Node>> map = new HashMap<>();
-    private final ArrayList<Node> list = new ArrayList<>();
-
-    public NodePool() {
-
-    }
+    public final Map<Long, List<Node>> nodeMap = new HashMap<>();
+    public final ArrayList<Node> nodeList = new ArrayList<>();
 
     public void clear() {
-        list.clear();
-        map.clear();
+        nodeList.clear();
+        nodeMap.clear();
     }
 
     List<Node> findNodes(long id) {
-        List<Node> nodes = map.get(id);
+        List<Node> nodes = nodeMap.get(id);
         if (nodes == null) {
             nodes = new ArrayList<>();
         }
@@ -46,7 +42,7 @@ public class NodePool {
     }
 
     Node findNode(long id) {
-        List<Node> nodes = map.get(id);
+        List<Node> nodes = nodeMap.get(id);
         if (nodes != null && !nodes.isEmpty()) {
             return nodes.get(0);
         }
@@ -54,7 +50,7 @@ public class NodePool {
     }
 
     Node getNode(long id, int state) {
-        List<Node> nodes = map.get(id);
+        List<Node> nodes = nodeMap.get(id);
         if (nodes != null) {
             for (Node node : nodes) {
                 if (node.state == state) {
@@ -66,11 +62,11 @@ public class NodePool {
     }
 
     protected Node create(long id, int state) {
-        Node node = new Node(list.size() + 1);
+        Node node = new Node(nodeList.size() + 1);
         node.id = id;
         node.state = state;
-        list.add(node);
-        List<Node> nodes = map.computeIfAbsent(id, k -> new ArrayList<>());
+        nodeList.add(node);
+        List<Node> nodes = nodeMap.computeIfAbsent(id, k -> new ArrayList<>());
         nodes.add(node);
         return node;
     }
@@ -80,15 +76,11 @@ public class NodePool {
     }
 
     public Node getNodeAtIdx(int idx) {
-        return idx != 0 ? list.get(idx - 1) : null;
+        return idx != 0 ? nodeList.get(idx - 1) : null;
     }
 
     public Node getNode(long ref) {
         return getNode(ref, 0);
-    }
-
-    public Map<Long, List<Node>> getNodeMap() {
-        return map;
     }
 
 }

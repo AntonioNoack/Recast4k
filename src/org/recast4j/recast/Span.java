@@ -22,9 +22,9 @@ package org.recast4j.recast;
 public class Span {
 
     /** The lower limit of the span. [Limit: &lt; smax] */
-    public int smin;
+    public int min;
     /** The upper limit of the span. [Limit: &lt;= SPAN_MAX_HEIGHT] */
-    public int smax;
+    public int max;
     /** The area id assigned to the span. */
     public int area;
     /** The next span higher up in column. */
