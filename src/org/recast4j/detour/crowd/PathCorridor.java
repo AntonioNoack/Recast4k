@@ -225,8 +225,8 @@ public class PathCorridor {
             // Prune points in the beginning of the path which are too close.
             int start = 0;
             for (StraightPathItem spi : path) {
-                if ((spi.getFlags() & NavMeshQuery.DT_STRAIGHTPATH_OFFMESH_CONNECTION) != 0
-                        || dist2DSqr(spi.getPos(), pos) > MIN_TARGET_DIST) {
+                if ((spi.flags & NavMeshQuery.DT_STRAIGHTPATH_OFFMESH_CONNECTION) != 0
+                        || dist2DSqr(spi.pos, pos) > MIN_TARGET_DIST) {
                     break;
                 }
                 start++;
@@ -235,7 +235,7 @@ public class PathCorridor {
             // Prune points after an off-mesh connection.
             for (int i = start; i < path.size(); i++) {
                 StraightPathItem spi = path.get(i);
-                if ((spi.getFlags() & NavMeshQuery.DT_STRAIGHTPATH_OFFMESH_CONNECTION) != 0) {
+                if ((spi.flags & NavMeshQuery.DT_STRAIGHTPATH_OFFMESH_CONNECTION) != 0) {
                     end = i + 1;
                     break;
                 }

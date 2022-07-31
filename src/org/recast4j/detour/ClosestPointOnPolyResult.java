@@ -22,26 +22,12 @@ import org.joml.Vector3f;
 
 public class ClosestPointOnPolyResult {
 
-    private final boolean posOverPoly;
-    private final Vector3f closest;
+    public final boolean isPosOverPoly;
+    public final Vector3f pos;
 
-    public ClosestPointOnPolyResult(boolean posOverPoly, Vector3f closest) {
-        this.posOverPoly = posOverPoly;
-        this.closest = closest;
-    }
-
-    /**
-     * Returns true if the position is over the polygon.
-     */
-    public boolean isPosOverPoly() {
-        return posOverPoly;
-    }
-
-    /**
-     * Returns the closest point on the polygon. [(x, y, z)]
-     */
-    public Vector3f getClosest() {
-        return closest;
+    public ClosestPointOnPolyResult(boolean isPosOverPoly, Vector3f pos) {
+        this.isPosOverPoly = isPosOverPoly;
+        this.pos = pos;
     }
 
 }

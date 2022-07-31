@@ -22,8 +22,7 @@ import org.joml.Vector3f;
 
 public class FindDistanceToWallResult {
     public final float distance;
-    public final Vector3f position;
-    public final Vector3f normal;
+    public final Vector3f position, normal;
 
     public FindDistanceToWallResult(float distance, Vector3f position, Vector3f normal) {
         this.distance = distance;

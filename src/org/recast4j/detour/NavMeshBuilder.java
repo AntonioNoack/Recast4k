@@ -547,7 +547,7 @@ public class NavMeshBuilder {
         // Store Off-Mesh connections.
         n = 0;
         for (int i = 0; i < params.offMeshConCount; ++i) {
-            // Only store connections which start from this tile.
+            // Only store connections, which start from this tile.
             if (offMeshConClass[i * 2] == 0xff) {
                 OffMeshConnection con = new OffMeshConnection();
                 offMeshCons[n] = con;

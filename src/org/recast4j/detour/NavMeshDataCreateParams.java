@@ -20,7 +20,9 @@ package org.recast4j.detour;
 
 import org.joml.Vector3f;
 
-/** Represents the source data used to build an navigation mesh tile. */
+/**
+ * Represents the source data used to build an navigation mesh tile.
+ */
 public class NavMeshDataCreateParams {
 
     /// @name Polygon Mesh Attributes
@@ -28,19 +30,33 @@ public class NavMeshDataCreateParams {
     /// See #rcPolyMesh for details related to these attributes.
     /// @{
 
-    /** The polygon mesh vertices. [(x, y, z) * #vertCount] [Unit: vx] */
+    /**
+     * The polygon mesh vertices. [(x, y, z) * #vertCount] [Unit: vx]
+     */
     public int[] vertices;
-    /** The number vertices in the polygon mesh. [Limit: >= 3] */
+    /**
+     * The number vertices in the polygon mesh. [Limit: >= 3]
+     */
     public int vertCount;
-    /** The polygon data. [Size: #polyCount * 2 * #nvp] */
+    /**
+     * The polygon data. [Size: #polyCount * 2 * #nvp]
+     */
     public int[] polys;
-    /** The user defined flags assigned to each polygon. [Size: #polyCount] */
+    /**
+     * The user defined flags assigned to each polygon. [Size: #polyCount]
+     */
     public int[] polyFlags;
-    /** The user defined area ids assigned to each polygon. [Size: #polyCount] */
+    /**
+     * The user defined area ids assigned to each polygon. [Size: #polyCount]
+     */
     public int[] polyAreas;
-    /** Number of polygons in the mesh. [Limit: >= 1] */
+    /**
+     * Number of polygons in the mesh. [Limit: >= 1]
+     */
     public int polyCount;
-    /** Number maximum number of vertices per polygon. [Limit: >= 3] */
+    /**
+     * Number maximum number of vertices per polygon. [Limit: >= 3]
+     */
     public int maxVerticesPerPolygon;
 
     /// @}
@@ -48,15 +64,25 @@ public class NavMeshDataCreateParams {
     /// See #rcPolyMeshDetail for details related to these attributes.
     /// @{
 
-    /** The height detail sub-mesh data. [Size: 4 * #polyCount] */
+    /**
+     * The height detail sub-mesh data. [Size: 4 * #polyCount]
+     */
     public int[] detailMeshes;
-    /** The detail mesh vertices. [Size: 3 * #detailVerticesCount] */
+    /**
+     * The detail mesh vertices. [Size: 3 * #detailVerticesCount]
+     */
     public float[] detailVertices;
-    /** The number of vertices in the detail mesh. */
+    /**
+     * The number of vertices in the detail mesh.
+     */
     public int detailVerticesCount;
-    /** The detail mesh triangles. [Size: 4 * #detailTriCount] */
+    /**
+     * The detail mesh triangles. [Size: 4 * #detailTriCount]
+     */
     public int[] detailTris;
-    /** The number of triangles in the detail mesh. */
+    /**
+     * The number of triangles in the detail mesh.
+     */
     public int detailTriCount;
 
     /// @}
@@ -66,9 +92,13 @@ public class NavMeshDataCreateParams {
     /// at least one of which resides within a navigation mesh polygon.
     /// @{
 
-    /** Off-mesh connection vertices. [(ax, ay, az, bx, by, bz) * #offMeshConCount] */
+    /**
+     * Off-mesh connection vertices. [(ax, ay, az, bx, by, bz) * #offMeshConCount]
+     */
     public float[] offMeshConVertices;
-    /** Off-mesh connection radii. [Size: #offMeshConCount] */
+    /**
+     * Off-mesh connection radii. [Size: #offMeshConCount]
+     */
     public float[] offMeshConRad;
     /**
      * User defined flags assigned to the off-mesh connections. [Size: #offMeshConCount]
@@ -93,35 +123,53 @@ public class NavMeshDataCreateParams {
     /// @note The tile grid/layer data can be left at zero if the destination is a single tile mesh.
     /// @{
 
-    /** The user defined id of the tile. */
+    /**
+     * The user defined id of the tile.
+     */
     public int userId;
-    /** The tile's x-grid location within the multi-tile destination mesh. (Along the x-axis.) */
+    /**
+     * The tile's x-grid location within the multi-tile destination mesh. (Along the x-axis.)
+     */
     public int tileX;
-    /** The tile's y-grid location within the multi-tile desitation mesh. (Along the z-axis.) */
+    /**
+     * The tile's y-grid location within the multi-tile desitation mesh. (Along the z-axis.)
+     */
     public int tileZ;
-    /** The tile's layer within the layered destination mesh. [Limit: >= 0] (Along the y-axis.) */
+    /**
+     * The tile's layer within the layered destination mesh. [Limit: >= 0] (Along the y-axis.)
+     */
     public int tileLayer;
 
-    public Vector3f bmin; /// < The minimum bounds of the tile. [(x, y, z)]
-    public Vector3f bmax; /// < The maximum bounds of the tile. [(x, y, z)]
+    public Vector3f bmin, bmax; /// < The bounds of the tile. [(x, y, z)]
 
     /* General Configuration Attributes */
 
-    /** The agent height. */
+    /**
+     * The agent height.
+     */
     public float walkableHeight;
-    /** The agent radius. */
+    /**
+     * The agent radius.
+     */
     public float walkableRadius;
-    /** The agent maximum traversable ledge. (Up/Down) */
+    /**
+     * The agent maximum traversable ledge. (Up/Down)
+     */
     public float walkableClimb;
-    /** The xz-plane cell size of the polygon mesh. [Limit: > 0] */
+    /**
+     * The xz-plane cell size of the polygon mesh. [Limit: > 0]
+     */
     public float cellSize;
-    /** The y-axis cell height of the polygon mesh. [Limit: > 0] */
+    /**
+     * The y-axis cell height of the polygon mesh. [Limit: > 0]
+     */
     public float cellHeight;
 
     /**
      * True if a bounding volume tree should be built for the tile.
+     *
      * @note The BVTree is not normally needed for layered navigation meshes.
-     * */
+     */
     public boolean buildBvTree;
 
 

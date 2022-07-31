@@ -122,8 +122,7 @@ public class CrowdAgent {
         if (corners.isEmpty())
             return false;
 
-        boolean offMeshConnection = (corners.get(corners.size() - 1).getFlags()
-                & NavMeshQuery.DT_STRAIGHTPATH_OFFMESH_CONNECTION) != 0;
+        boolean offMeshConnection = (corners.get(corners.size() - 1).flags & NavMeshQuery.DT_STRAIGHTPATH_OFFMESH_CONNECTION) != 0;
         if (offMeshConnection) {
             float distSq = dist2DSqr(npos, corners.get(corners.size() - 1).pos);
             return distSq < radius * radius;
@@ -135,7 +134,7 @@ public class CrowdAgent {
         if (corners.isEmpty())
             return range;
 
-        boolean endOfPath = (corners.get(corners.size() - 1).getFlags() & NavMeshQuery.DT_STRAIGHTPATH_END) != 0;
+        boolean endOfPath = (corners.get(corners.size() - 1).flags & NavMeshQuery.DT_STRAIGHTPATH_END) != 0;
         if (endOfPath)
             return Math.min(dist2D(npos, corners.get(corners.size() - 1).pos), range);
 

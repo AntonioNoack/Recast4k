@@ -21,8 +21,6 @@ package org.recast4j.detour;
 import org.recast4j.FloatArrayList;
 import org.recast4j.LongArrayList;
 
-import java.util.List;
-
 public class FindPolysAroundResult {
     public final LongArrayList refs;
     public final LongArrayList parentRefs;

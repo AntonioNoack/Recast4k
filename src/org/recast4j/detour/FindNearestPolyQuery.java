@@ -24,8 +24,8 @@ public class FindNearestPolyQuery implements PolyQuery {
     public void process(MeshTile tile, Poly poly, long ref) {
         // Find the nearest polygon amongst the nearby polygons.
         Result<ClosestPointOnPolyResult> closest = query.closestPointOnPoly(ref, center);
-        boolean posOverPoly = closest.result.isPosOverPoly();
-        Vector3f closestPtPoly = closest.result.getClosest();
+        boolean posOverPoly = closest.result.isPosOverPoly;
+        Vector3f closestPtPoly = closest.result.pos;
 
         // If a point is directly over a polygon and closer than
         // climb height, favor that instead of straight line nearest point.

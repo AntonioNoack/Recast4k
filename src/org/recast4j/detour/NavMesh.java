@@ -1115,15 +1115,15 @@ public class NavMesh {
         // Get nearby polygons from proximity grid.
         LongArrayList polys = queryPolygonsInTile(tile, bmin, bmax);
 
-        // Find nearest polygon amongst the nearby polygons.
+        // Find the nearest polygon amongst the nearby polygons.
         long nearest = 0;
         float nearestDistanceSqr = Float.MAX_VALUE;
         for (int i = 0, l = polys.getSize(); i < l; i++) {
             long ref = polys.get(i);
             float d;
             ClosestPointOnPolyResult cpp = closestPointOnPoly(ref, center);
-            boolean posOverPoly = cpp.isPosOverPoly();
-            Vector3f closestPtPoly = cpp.getClosest();
+            boolean posOverPoly = cpp.isPosOverPoly;
+            Vector3f closestPtPoly = cpp.pos;
 
             // If a point is directly over a polygon and closer than
             // climb height, favor that instead of straight line nearest point.

@@ -52,9 +52,9 @@ public class CrowdAgentParams {
     /// [Limits: 0 <= value < #DT_CROWD_MAX_OBSTAVOIDANCE_PARAMS]
     public int obstacleAvoidanceType;
 
-    /// The index of the query filter used by this agent.
+    /** The index of the query filter used by this agent. */
     public int queryFilterType;
 
-    /// User defined data attached to the agent.
+    /** User defined data attached to the agent. */
     public Object userData;
 }

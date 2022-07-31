@@ -522,7 +522,7 @@ public class Crowd {
                         Result<ClosestPointOnPolyResult> cr = navQuery.closestPointOnPoly(reqPath.get(reqPath.getSize() - 1),
                                 ag.targetPos);
                         if (cr.succeeded()) {
-                            reqPos = cr.result.getClosest();
+                            reqPos = cr.result.pos;
                         } else {
                             reqPath = new LongArrayList();
                         }
@@ -648,7 +648,7 @@ public class Crowd {
                             // the last polygon.
                             Result<ClosestPointOnPolyResult> cr = navQuery.closestPointOnPoly(res.get(res.getSize() - 1), targetPos);
                             if (cr.succeeded()) {
-                                targetPos = cr.result.getClosest();
+                                targetPos = cr.result.pos;
                             } else {
                                 valid = false;
                             }
@@ -824,7 +824,7 @@ public class Crowd {
 
                 // Adjust the path over the off-mesh connection.
                 long[] refs = new long[2];
-                if (ag.corridor.moveOverOffmeshConnection(ag.corners.get(ag.corners.size() - 1).getRef(), refs, anim.startPos, anim.endPos, navQuery)) {
+                if (ag.corridor.moveOverOffmeshConnection(ag.corners.get(ag.corners.size() - 1).ref, refs, anim.startPos, anim.endPos, navQuery)) {
                     copy(anim.initPos, ag.npos);
                     anim.polyRef = refs[1];
                     anim.active = true;

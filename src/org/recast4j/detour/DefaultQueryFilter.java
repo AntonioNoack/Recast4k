@@ -47,8 +47,7 @@ import org.joml.Vector3f;
  */
 public class DefaultQueryFilter implements QueryFilter {
 
-    public int excludeFlags;
-    public int includeFlags;
+    public int excludeFlags, includeFlags;
     private final float[] areaCosts = new float[NavMesh.DT_MAX_AREAS];
 
     public DefaultQueryFilter() {

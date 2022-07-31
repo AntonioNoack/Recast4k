@@ -37,17 +37,17 @@ public class Node {
     /** Cost of reaching the given node. */
     public float cost;
     /** Total cost of reaching the goal via the given node including heuristics. */
-    float total;
+    public float total;
     /** Index to parent node. */
     public int parentIndex;
     /**
      * extra state information. A polyRef can have multiple nodes with different extra info. see DT_MAX_STATES_PER_NODE
      */
-    int state;
+    public int state;
     /** Node flags. A combination of dtNodeFlags. */
-    int flags;
+    public int flags;
     /** Polygon ref the node corresponds to. */
-    long id;
+    public long id;
     /** Shortcut found by raycast. */
     LongArrayList shortcut;
 
