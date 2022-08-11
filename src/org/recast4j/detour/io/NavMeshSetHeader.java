@@ -26,10 +26,7 @@ public class NavMeshSetHeader {
     static final int NAVMESHSET_VERSION_RECAST4J_1 = 0x8801;
     static final int NAVMESHSET_VERSION_RECAST4J = 0x8802;
 
-    int magic;
-    int version;
-    int numTiles;
+    int magic, version, numTiles, maxVerticesPerPoly;
     NavMeshParams params = new NavMeshParams();
-    int maxVerticesPerPoly;
 
 }

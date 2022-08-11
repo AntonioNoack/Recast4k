@@ -95,15 +95,15 @@ public class LocalBoundary {
                 long poly = polygons.get(i);
                 Result<GetPolyWallSegmentsResult> result = navquery.getPolyWallSegments(poly, false, filter);
                 if (result.succeeded()) {
-                    GetPolyWallSegmentsResult gpws = result.result;
-                    for (int k = 0, l = gpws.segmentRefs.getSize(); k < l; ++k) {
-                        float[] s = gpws.segmentVertices.get(k);
+                    GetPolyWallSegmentsResult res2 = result.result;
+                    for (int k = 0, l = res2.segmentRefs.getSize(); k < l; ++k) {
+                        float[] s = res2.segmentVertices.get(k);
                         // Skip too distant segments.
-                        Pair<Float, Float> distseg = distancePtSegSqr2D(pos, s, 0, 3);
-                        if (distseg.first > sqr(collisionQueryRange)) {
+                        Pair<Float, Float> distSeg = distancePtSegSqr2D(pos, s, 0, 3);
+                        if (distSeg.first > sqr(collisionQueryRange)) {
                             continue;
                         }
-                        addSegment(distseg.first, s);
+                        addSegment(distSeg.first, s);
                     }
                 }
             }
@@ -111,10 +111,7 @@ public class LocalBoundary {
     }
 
     public boolean isValid(NavMeshQuery navMeshQuery, QueryFilter filter) {
-        if (polygons.isEmpty()) {
-            return false;
-        }
-
+        if (polygons.isEmpty()) return false;
         // Check, that all polygons still pass query filter.
         for (int i = 0, l0 = polygons.getSize(); i < l0; i++) {
             long ref = polygons.get(i);
@@ -122,7 +119,6 @@ public class LocalBoundary {
                 return false;
             }
         }
-
         return true;
     }
 }

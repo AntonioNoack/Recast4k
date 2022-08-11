@@ -46,8 +46,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
     public Result<LongArrayList> findPath(long startRef, long endRef, Vector3f startPos, Vector3f endPos,
                                           QueryFilter filter) {
         // Validate input
-        if (!nav.isValidPolyRef(startRef) || !nav.isValidPolyRef(endRef) || Objects.isNull(startPos)
-                || !isFinite(startPos) || Objects.isNull(endPos) || !isFinite(endPos) || Objects.isNull(filter)) {
+        if (!nav.isValidPolyRef(startRef) || !nav.isValidPolyRef(endRef) || !isFinite(startPos) || !isFinite(endPos)) {
             return Result.invalidParam();
         }
 
@@ -64,31 +63,31 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
         copy(startNode.pos, startPos);
         startNode.parentIndex = 0;
         startNode.cost = 0;
-        startNode.total = startPos.distance(endPos) * H_SCALE;
-        startNode.id = startRef;
-        startNode.flags = Node.DT_NODE_OPEN;
+        startNode.totalCost = startPos.distance(endPos) * H_SCALE;
+        startNode.polygonRef = startRef;
+        startNode.flags = Node.OPEN;
         openList.offer(startNode);
 
         Node lastBestNode = startNode;
-        float lastBestNodeCost = startNode.total;
+        float lastBestNodeCost = startNode.totalCost;
 
         Status status = Status.SUCCESS;
 
         while (!openList.isEmpty()) {
             // Remove node from open list and put it in closed list.
             Node bestNode = openList.poll();
-            bestNode.flags &= ~Node.DT_NODE_OPEN;
-            bestNode.flags |= Node.DT_NODE_CLOSED;
+            bestNode.flags &= ~Node.OPEN;
+            bestNode.flags |= Node.CLOSED;
 
             // Reached the goal, stop searching.
-            if (bestNode.id == endRef) {
+            if (bestNode.polygonRef == endRef) {
                 lastBestNode = bestNode;
                 break;
             }
 
             // Get current poly and tile.
             // The API input has been cheked already, skip checking internal data.
-            long bestRef = bestNode.id;
+            long bestRef = bestNode.polygonRef;
             Pair<MeshTile, Poly> tileAndPoly = nav.getTileAndPolyByRefUnsafe(bestRef);
             MeshTile bestTile = tileAndPoly.first;
             Poly bestPoly = tileAndPoly.second;
@@ -98,7 +97,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
             MeshTile parentTile = null;
             Poly parentPoly = null;
             if (bestNode.parentIndex != 0) {
-                parentRef = nodePool.getNodeAtIdx(bestNode.parentIndex).id;
+                parentRef = nodePool.getNodeAtIdx(bestNode.parentIndex).polygonRef;
             }
             if (parentRef != 0) {
                 tileAndPoly = nav.getTileAndPolyByRefUnsafe(parentRef);
@@ -106,8 +105,8 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
                 parentPoly = tileAndPoly.second;
             }
 
-            for (int i = bestTile.polyLinks[bestPoly.index]; i != NavMesh.DT_NULL_LINK; i = bestTile.links.get(i).next) {
-                long neighbourRef = bestTile.links.get(i).ref;
+            for (int i = bestTile.polyLinks[bestPoly.index]; i != NavMesh.DT_NULL_LINK; i = bestTile.links.get(i).indexOfNextLink) {
+                long neighbourRef = bestTile.links.get(i).neighborRef;
 
                 // Skip invalid ids and do not expand back to where we came from.
                 if (neighbourRef == 0 || neighbourRef == parentRef) {
@@ -163,28 +162,28 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
                 float total = cost + heuristic;
 
                 // The node is already in open list and the new result is worse, skip.
-                if ((neighbourNode.flags & Node.DT_NODE_OPEN) != 0 && total >= neighbourNode.total) {
+                if ((neighbourNode.flags & Node.OPEN) != 0 && total >= neighbourNode.totalCost) {
                     continue;
                 }
                 // The node is already visited and process, and the new result is worse, skip.
-                if ((neighbourNode.flags & Node.DT_NODE_CLOSED) != 0 && total >= neighbourNode.total) {
+                if ((neighbourNode.flags & Node.CLOSED) != 0 && total >= neighbourNode.totalCost) {
                     continue;
                 }
 
                 // Add or update the node.
                 neighbourNode.parentIndex = nodePool.getNodeIdx(bestNode);
-                neighbourNode.id = neighbourRef;
-                neighbourNode.flags = (neighbourNode.flags & ~Node.DT_NODE_CLOSED);
+                neighbourNode.polygonRef = neighbourRef;
+                neighbourNode.flags = (neighbourNode.flags & ~Node.CLOSED);
                 neighbourNode.cost = cost;
-                neighbourNode.total = total;
+                neighbourNode.totalCost = total;
 
-                if ((neighbourNode.flags & Node.DT_NODE_OPEN) != 0) {
+                if ((neighbourNode.flags & Node.OPEN) != 0) {
                     // Already in open, update node location.
                     openList.remove(neighbourNode);
                     openList.offer(neighbourNode);
                 } else {
                     // Put the node in open list.
-                    neighbourNode.flags |= Node.DT_NODE_OPEN;
+                    neighbourNode.flags |= Node.OPEN;
                     openList.offer(neighbourNode);
                 }
 
@@ -197,7 +196,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
         }
 
         LongArrayList path = getPathToNode(lastBestNode);
-        if (lastBestNode.id != endRef) {
+        if (lastBestNode.polygonRef != endRef) {
             status = Status.PARTIAL_RESULT;
         }
         return Result.of(status, path);
@@ -227,11 +226,11 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
 
             // Remove node from open list and put it in closed list.
             Node bestNode = openList.poll();
-            bestNode.flags &= ~Node.DT_NODE_OPEN;
-            bestNode.flags |= Node.DT_NODE_CLOSED;
+            bestNode.flags &= ~Node.OPEN;
+            bestNode.flags |= Node.CLOSED;
 
             // Reached the goal, stop searching.
-            if (bestNode.id == queryData.endRef) {
+            if (bestNode.polygonRef == queryData.endRef) {
                 queryData.lastBestNode = bestNode;
                 queryData.status = Status.SUCCESS;
                 return Result.of(queryData.status, iter);
@@ -240,7 +239,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
             // Get current poly and tile.
             // The API input has been cheked already, skip checking internal
             // data.
-            long bestRef = bestNode.id;
+            long bestRef = bestNode.polygonRef;
             Result<Pair<MeshTile, Poly>> tileAndPoly = nav.getTileAndPolyByRef(bestRef);
             if (tileAndPoly.failed()) {
                 queryData.status = Status.FAILURE;
@@ -256,9 +255,9 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
             Node parentNode = null;
             if (bestNode.parentIndex != 0) {
                 parentNode = nodePool.getNodeAtIdx(bestNode.parentIndex);
-                parentRef = parentNode.id;
+                parentRef = parentNode.polygonRef;
                 if (parentNode.parentIndex != 0) {
-                    grandpaRef = nodePool.getNodeAtIdx(parentNode.parentIndex).id;
+                    grandpaRef = nodePool.getNodeAtIdx(parentNode.parentIndex).polygonRef;
                 }
             }
             if (parentRef != 0) {
@@ -281,8 +280,8 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
                 }
             }
 
-            for (int i = bestTile.polyLinks[bestPoly.index]; i != NavMesh.DT_NULL_LINK; i = bestTile.links.get(i).next) {
-                long neighbourRef = bestTile.links.get(i).ref;
+            for (int i = bestTile.polyLinks[bestPoly.index]; i != NavMesh.DT_NULL_LINK; i = bestTile.links.get(i).indexOfNextLink) {
+                long neighbourRef = bestTile.links.get(i).neighborRef;
 
                 // Skip invalid ids and do not expand back to where we came
                 // from.
@@ -329,7 +328,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
                     Result<RaycastHit> rayHit = raycast(parentRef, parentNode.pos, neighbourNode.pos, queryData.filter,
                             DT_RAYCAST_USE_COSTS, grandpaRef);
                     if (rayHit.succeeded()) {
-                        foundShortCut = rayHit.result.t >= 1.0f;
+                        foundShortCut = rayHit.result.t >= 1f;
                         if (foundShortCut) {
                             // shortcut found using raycast. Using shorter cost
                             // instead
@@ -361,32 +360,32 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
 
                 // The node is already in open list and the new result is worse,
                 // skip.
-                if ((neighbourNode.flags & Node.DT_NODE_OPEN) != 0 && total >= neighbourNode.total) {
+                if ((neighbourNode.flags & Node.OPEN) != 0 && total >= neighbourNode.totalCost) {
                     continue;
                 }
                 // The node is already visited and process, and the new result
                 // is worse, skip.
-                if ((neighbourNode.flags & Node.DT_NODE_CLOSED) != 0 && total >= neighbourNode.total) {
+                if ((neighbourNode.flags & Node.CLOSED) != 0 && total >= neighbourNode.totalCost) {
                     continue;
                 }
 
                 // Add or update the node.
                 neighbourNode.parentIndex = foundShortCut ? bestNode.parentIndex : nodePool.getNodeIdx(bestNode);
-                neighbourNode.id = neighbourRef;
-                neighbourNode.flags = (neighbourNode.flags & ~(Node.DT_NODE_CLOSED | Node.DT_NODE_PARENT_DETACHED));
+                neighbourNode.polygonRef = neighbourRef;
+                neighbourNode.flags = (neighbourNode.flags & ~(Node.CLOSED | Node.PARENT_DETACHED));
                 neighbourNode.cost = cost;
-                neighbourNode.total = total;
+                neighbourNode.totalCost = total;
                 if (foundShortCut) {
-                    neighbourNode.flags = (neighbourNode.flags | Node.DT_NODE_PARENT_DETACHED);
+                    neighbourNode.flags = (neighbourNode.flags | Node.PARENT_DETACHED);
                 }
 
-                if ((neighbourNode.flags & Node.DT_NODE_OPEN) != 0) {
+                if ((neighbourNode.flags & Node.OPEN) != 0) {
                     // Already in open, update node location.
                     openList.remove(neighbourNode);
                     openList.offer(neighbourNode);
                 } else {
                     // Put the node in open list.
-                    neighbourNode.flags |= Node.DT_NODE_OPEN;
+                    neighbourNode.flags |= Node.OPEN;
                     openList.offer(neighbourNode);
                 }
 
@@ -406,10 +405,10 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
         return Result.of(queryData.status, iter);
     }
 
-    /// Finalizes and returns the results of a sliced path query.
-    /// @param[out] path An ordered list of polygon references representing the path. (Start to end.)
-    /// [(polyRef) * @p pathCount]
-    /// @returns The status flags for the query.
+    /**
+     * Finalizes and returns the results of a sliced path query.
+     * @returns An ordered list of polygon references representing the path. (Start to end.)
+     * */
     @Override
     public Result<LongArrayList> finalizeSlicedFindPath() {
 
@@ -425,7 +424,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
             path.add(queryData.startRef);
         } else {
             // Reverse the path.
-            if (queryData.lastBestNode.id != queryData.endRef) {
+            if (queryData.lastBestNode.polygonRef != queryData.endRef) {
                 queryData.status = Status.PARTIAL_RESULT;
             }
 
@@ -436,9 +435,9 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
                 Node next = nodePool.getNodeAtIdx(node.parentIndex);
                 node.parentIndex = nodePool.getNodeIdx(prev);
                 prev = node;
-                int nextRay = node.flags & Node.DT_NODE_PARENT_DETACHED; // keep track of whether parent is not adjacent
+                int nextRay = node.flags & Node.PARENT_DETACHED; // keep track of whether parent is not adjacent
                 // (i.e. due to raycast shortcut)
-                node.flags = (node.flags & ~Node.DT_NODE_PARENT_DETACHED) | prevRay; // and store it in the reversed
+                node.flags = (node.flags & ~Node.PARENT_DETACHED) | prevRay; // and store it in the reversed
                 // path's node
                 prevRay = nextRay;
                 node = next;
@@ -448,17 +447,17 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
             node = prev;
             do {
                 Node next = nodePool.getNodeAtIdx(node.parentIndex);
-                if ((node.flags & Node.DT_NODE_PARENT_DETACHED) != 0) {
-                    Result<RaycastHit> iresult = raycast(node.id, node.pos, next.pos, queryData.filter, 0, 0);
+                if ((node.flags & Node.PARENT_DETACHED) != 0) {
+                    Result<RaycastHit> iresult = raycast(node.polygonRef, node.pos, next.pos, queryData.filter, 0, 0);
                     if (iresult.succeeded()) {
                         path.addAll(iresult.result.path);
                     }
                     // raycast ends on poly boundary and the path might include the next poly boundary.
-                    if (path.get(path.getSize() - 1) == next.id) {
+                    if (path.get(path.getSize() - 1) == next.polygonRef) {
                         path.remove(path.getSize() - 1); // remove to avoid duplicates
                     }
                 } else {
-                    path.add(node.id);
+                    path.add(node.polygonRef);
                 }
 
                 node = next;
@@ -472,13 +471,12 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
         return Result.of(status, path);
     }
 
-    /// Finalizes and returns the results of an incomplete sliced path query, returning the path to the furthest
-    /// polygon on the existing path that was visited during the search.
-    /// @param[in] existing An array of polygon references for the existing path.
-    /// @param[in] existingSize The number of polygon in the @p existing array.
-    /// @param[out] path An ordered list of polygon references representing the path. (Start to end.)
-    /// [(polyRef) * @p pathCount]
-    /// @returns The status flags for the query.
+    /**
+     * Finalizes and returns the results of an incomplete sliced path query, returning the path
+     * to the furthest polygon on the existing path that was visited during the search.
+     * @param existing An array of polygon references for the existing path.
+     * @returns An ordered list of polygon references representing the path. (Start to end.)
+     * */
     @Override
     public Result<LongArrayList> finalizeSlicedFindPathPartial(LongArrayList existing) {
 
@@ -516,9 +514,9 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
                 Node next = nodePool.getNodeAtIdx(node.parentIndex);
                 node.parentIndex = nodePool.getNodeIdx(prev);
                 prev = node;
-                int nextRay = node.flags & Node.DT_NODE_PARENT_DETACHED; // keep track of whether parent is not adjacent
+                int nextRay = node.flags & Node.PARENT_DETACHED; // keep track of whether parent is not adjacent
                 // (i.e. due to raycast shortcut)
-                node.flags = (node.flags & ~Node.DT_NODE_PARENT_DETACHED) | prevRay; // and store it in the reversed
+                node.flags = (node.flags & ~Node.PARENT_DETACHED) | prevRay; // and store it in the reversed
                 // path's node
                 prevRay = nextRay;
                 node = next;
@@ -528,17 +526,17 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
             node = prev;
             do {
                 Node next = nodePool.getNodeAtIdx(node.parentIndex);
-                if ((node.flags & Node.DT_NODE_PARENT_DETACHED) != 0) {
-                    Result<RaycastHit> iresult = raycast(node.id, node.pos, next.pos, queryData.filter, 0, 0);
+                if ((node.flags & Node.PARENT_DETACHED) != 0) {
+                    Result<RaycastHit> iresult = raycast(node.polygonRef, node.pos, next.pos, queryData.filter, 0, 0);
                     if (iresult.succeeded()) {
                         path.addAll(iresult.result.path);
                     }
                     // raycast ends on poly boundary, and the path might include the next poly boundary.
-                    if (path.get(path.getSize() - 1) == next.id) {
+                    if (path.get(path.getSize() - 1) == next.polygonRef) {
                         path.remove(path.getSize() - 1); // remove to avoid duplicates
                     }
                 } else {
-                    path.add(node.id);
+                    path.add(node.polygonRef);
                 }
 
                 node = next;
@@ -568,9 +566,9 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
         copy(startNode.pos, centerPos);
         startNode.parentIndex = 0;
         startNode.cost = 0;
-        startNode.total = 0;
-        startNode.id = startRef;
-        startNode.flags = Node.DT_NODE_OPEN;
+        startNode.totalCost = 0;
+        startNode.polygonRef = startRef;
+        startNode.flags = Node.OPEN;
         openList.offer(startNode);
 
         float radiusSqr = sqr(maxRadius);
@@ -579,12 +577,12 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
         VectorPtr bestvi = null;
         while (!openList.isEmpty()) {
             Node bestNode = openList.poll();
-            bestNode.flags &= ~Node.DT_NODE_OPEN;
-            bestNode.flags |= Node.DT_NODE_CLOSED;
+            bestNode.flags &= ~Node.OPEN;
+            bestNode.flags |= Node.CLOSED;
 
             // Get poly and tile.
             // The API input has been cheked already, skip checking internal data.
-            long bestRef = bestNode.id;
+            long bestRef = bestNode.polygonRef;
             Pair<MeshTile, Poly> tileAndPoly = nav.getTileAndPolyByRefUnsafe(bestRef);
             MeshTile bestTile = tileAndPoly.first;
             Poly bestPoly = tileAndPoly.second;
@@ -592,23 +590,23 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
             // Get parent poly and tile.
             long parentRef = 0;
             if (bestNode.parentIndex != 0) {
-                parentRef = nodePool.getNodeAtIdx(bestNode.parentIndex).id;
+                parentRef = nodePool.getNodeAtIdx(bestNode.parentIndex).polygonRef;
             }
 
             // Hit test walls.
             for (int i = 0, j = bestPoly.vertCount - 1; i < bestPoly.vertCount; j = i++) {
                 // Skip non-solid edges.
-                if ((bestPoly.neis[j] & NavMesh.DT_EXT_LINK) != 0) {
+                if ((bestPoly.neighborData[j] & NavMesh.DT_EXT_LINK) != 0) {
                     // Tile border.
                     boolean solid = true;
-                    for (int k = bestTile.polyLinks[bestPoly.index]; k != NavMesh.DT_NULL_LINK; k = bestTile.links.get(k).next) {
+                    for (int k = bestTile.polyLinks[bestPoly.index]; k != NavMesh.DT_NULL_LINK; k = bestTile.links.get(k).indexOfNextLink) {
                         Link link = bestTile.links.get(k);
-                        if (link.edge == j) {
-                            if (link.ref != 0) {
-                                Pair<MeshTile, Poly> linkTileAndPoly = nav.getTileAndPolyByRefUnsafe(link.ref);
+                        if (link.indexOfPolyEdge == j) {
+                            if (link.neighborRef != 0) {
+                                Pair<MeshTile, Poly> linkTileAndPoly = nav.getTileAndPolyByRefUnsafe(link.neighborRef);
                                 MeshTile neiTile = linkTileAndPoly.first;
                                 Poly neiPoly = linkTileAndPoly.second;
-                                if (filter.passFilter(link.ref, neiTile, neiPoly)) {
+                                if (filter.passFilter(link.neighborRef, neiTile, neiPoly)) {
                                     solid = false;
                                 }
                             }
@@ -618,9 +616,9 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
                     if (!solid) {
                         continue;
                     }
-                } else if (bestPoly.neis[j] != 0) {
+                } else if (bestPoly.neighborData[j] != 0) {
                     // Internal edge
-                    int idx = (bestPoly.neis[j] - 1);
+                    int idx = (bestPoly.neighborData[j] - 1);
                     long ref = nav.getPolyRefBase(bestTile) | idx;
                     if (filter.passFilter(ref, bestTile, bestTile.data.polygons[idx])) {
                         continue;
@@ -650,9 +648,9 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
                 bestvi = new VectorPtr(vs, vi);
             }
 
-            for (int i = bestTile.polyLinks[bestPoly.index]; i != NavMesh.DT_NULL_LINK; i = bestTile.links.get(i).next) {
+            for (int i = bestTile.polyLinks[bestPoly.index]; i != NavMesh.DT_NULL_LINK; i = bestTile.links.get(i).indexOfNextLink) {
                 Link link = bestTile.links.get(i);
-                long neighbourRef = link.ref;
+                long neighbourRef = link.neighborRef;
                 // Skip invalid neighbours and do not follow back to parent.
                 if (neighbourRef == 0 || neighbourRef == parentRef) {
                     continue;
@@ -669,8 +667,8 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
                 }
 
                 // Calc distance to the edge.
-                int va = bestPoly.vertices[link.edge] * 3;
-                int vb = bestPoly.vertices[(link.edge + 1) % bestPoly.vertCount] * 3;
+                int va = bestPoly.vertices[link.indexOfPolyEdge] * 3;
+                int vb = bestPoly.vertices[(link.indexOfPolyEdge + 1) % bestPoly.vertCount] * 3;
                 Pair<Float, Float> distseg = distancePtSegSqr2D(centerPos, bestTile.data.vertices, va, vb);
                 float distSqr = distseg.first;
                 // If the circle is not touching the next polygon, skip it.
@@ -684,7 +682,7 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
 
                 Node neighbourNode = nodePool.getNode(neighbourRef);
 
-                if ((neighbourNode.flags & Node.DT_NODE_CLOSED) != 0) {
+                if ((neighbourNode.flags & Node.CLOSED) != 0) {
                     continue;
                 }
 
@@ -697,23 +695,23 @@ public class LegacyNavMeshQuery extends NavMeshQuery {
                     }
                 }
 
-                float total = bestNode.total + bestNode.pos.distance(neighbourNode.pos);
+                float total = bestNode.totalCost + bestNode.pos.distance(neighbourNode.pos);
 
                 // The node is already in open list, and the new result is worse, skip.
-                if ((neighbourNode.flags & Node.DT_NODE_OPEN) != 0 && total >= neighbourNode.total) {
+                if ((neighbourNode.flags & Node.OPEN) != 0 && total >= neighbourNode.totalCost) {
                     continue;
                 }
 
-                neighbourNode.id = neighbourRef;
-                neighbourNode.flags = (neighbourNode.flags & ~Node.DT_NODE_CLOSED);
+                neighbourNode.polygonRef = neighbourRef;
+                neighbourNode.flags = (neighbourNode.flags & ~Node.CLOSED);
                 neighbourNode.parentIndex = nodePool.getNodeIdx(bestNode);
-                neighbourNode.total = total;
+                neighbourNode.totalCost = total;
 
-                if ((neighbourNode.flags & Node.DT_NODE_OPEN) != 0) {
+                if ((neighbourNode.flags & Node.OPEN) != 0) {
                     openList.remove(neighbourNode);
                     openList.offer(neighbourNode);
                 } else {
-                    neighbourNode.flags |= Node.DT_NODE_OPEN;
+                    neighbourNode.flags |= Node.OPEN;
                     openList.offer(neighbourNode);
                 }
             }

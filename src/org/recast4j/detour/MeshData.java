@@ -79,8 +79,7 @@ public class MeshData {
     private static int createBVTree(MeshData data, BVNode[] BVNodes, float quantFactor) {
         BVNode[] items = new BVNode[data.header.polyCount];
         for (int i = 0; i < data.header.polyCount; i++) {
-            BVNode it = new BVNode();
-            items[i] = it;
+            BVNode it = items[i] = new BVNode();
             it.index = i;
             Vector3f bmin = new Vector3f();
             copy(bmin, data.vertices, data.polygons[i].vertices[0] * 3);

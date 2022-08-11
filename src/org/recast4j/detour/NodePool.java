@@ -63,7 +63,7 @@ public class NodePool {
 
     protected Node create(long id, int state) {
         Node node = new Node(nodeList.size() + 1);
-        node.id = id;
+        node.polygonRef = id;
         node.state = state;
         nodeList.add(node);
         List<Node> nodes = nodeMap.computeIfAbsent(id, k -> new ArrayList<>());

@@ -24,6 +24,7 @@ import org.recast4j.recast.Heightfield;
 import org.recast4j.recast.RecastFilledVolumeRasterization;
 import org.recast4j.recast.Telemetry;
 
+@SuppressWarnings("unused")
 public class ConvexTrimeshCollider extends AbstractCollider {
 
     private final float[] vertices;

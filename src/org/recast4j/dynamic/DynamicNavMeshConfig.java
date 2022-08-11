@@ -28,7 +28,6 @@ public class DynamicNavMeshConfig {
     public final int tileSizeZ;
     public final float cellSize;
     public PartitionType partitionType = PartitionType.WATERSHED;
-    public AreaModification walkableAreaModification = new AreaModification(1);
     public float walkableHeight;
     public float walkableSlopeAngle;
     public float walkableRadius;

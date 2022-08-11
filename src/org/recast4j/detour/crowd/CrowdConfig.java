@@ -44,7 +44,7 @@ public class CrowdConfig {
     /**
      * Min time between target re-planning (in seconds)
      */
-    public float targetReplanDelay = 1.0f;
+    public float targetReplanDelay = 1f;
     /**
      * Max number of sliced path finding iterations executed per topology optimization per agent
      */

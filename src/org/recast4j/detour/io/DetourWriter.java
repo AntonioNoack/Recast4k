@@ -18,11 +18,9 @@ freely, subject to the following restrictions:
 package org.recast4j.detour.io;
 
 import org.joml.Vector3f;
-import org.joml.Vector3i;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 public abstract class DetourWriter {
@@ -35,12 +33,6 @@ public abstract class DetourWriter {
         write(stream, Float.floatToIntBits(value.x), order);
         write(stream, Float.floatToIntBits(value.y), order);
         write(stream, Float.floatToIntBits(value.z), order);
-    }
-
-    protected void write(OutputStream stream, Vector3i value, ByteOrder order) throws IOException {
-        write(stream, value.x, order);
-        write(stream, value.y, order);
-        write(stream, value.z, order);
     }
 
     protected void write(OutputStream stream, short value, ByteOrder order) throws IOException {
@@ -83,13 +75,6 @@ public abstract class DetourWriter {
 
     protected void write(OutputStream stream, byte value) throws IOException {
         stream.write(value);
-    }
-
-    protected void write(OutputStream stream, ByteBuffer data) throws IOException {
-        data.position(0);
-        byte[] buffer = new byte[data.remaining()];
-        data.get(buffer);
-        stream.write(buffer);
     }
 
 }

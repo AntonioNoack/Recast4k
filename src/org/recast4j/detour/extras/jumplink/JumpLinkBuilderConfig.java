@@ -2,14 +2,10 @@ package org.recast4j.detour.extras.jumplink;
 
 public class JumpLinkBuilderConfig {
 
-    final float cellSize;
-    final float cellHeight;
-    final float agentClimb;
-    final float agentRadius;
+    final float cellSize, cellHeight, agentHeight;
+    final float agentClimb, agentRadius;
     final float groundTolerance;
-    final float agentHeight;
-    final float startDistance;
-    final float endDistance;
+    final float startDistance, endDistance;
     final float jumpHeight;
     final float minHeight;
     final float heightRange;

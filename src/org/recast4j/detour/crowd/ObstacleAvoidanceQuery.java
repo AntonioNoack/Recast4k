@@ -27,8 +27,10 @@ import static org.recast4j.Vectors.*;
 
 public class ObstacleAvoidanceQuery {
 
-    private static final int DT_MAX_PATTERN_DIVS = 32; /// < Max numver of adaptive divs.
-    private static final int DT_MAX_PATTERN_RINGS = 4; /// < Max number of adaptive rings.
+    /** Max numver of adaptive divs. */
+    private static final int DT_MAX_PATTERN_DIVS = 32;
+    /** Max number of adaptive rings. */
+    private static final int DT_MAX_PATTERN_RINGS = 4;
 
     static class ObstacleCircle {
         /**
@@ -83,7 +85,7 @@ public class ObstacleAvoidanceQuery {
 
         public ObstacleAvoidanceParams() {
             velBias = 0.4f;
-            weightDesVel = 2.0f;
+            weightDesVel = 2f;
             weightCurVel = 0.75f;
             weightSide = 0.75f;
             weightToi = 2.5f;
@@ -198,33 +200,30 @@ public class ObstacleAvoidanceQuery {
         float r = r0 + r1;
         float c = dot2D(s, s) - r * r;
         float a = dot2D(v, v);
-        if (a < EPS)
-            return new SweepCircleCircleResult(false, 0f, 0f); // not moving
-
+        if (a < EPS) return null; // not moving
         // Overlap, calc time to exit.
         float b = dot2D(v, s);
         float d = b * b - a * c;
-        if (d < 0.0f)
-            return new SweepCircleCircleResult(false, 0f, 0f); // no intersection.
-        a = 1.0f / a;
+        if (d < 0f) return null; // no intersection.
+        a = 1f / a;
         float rd = (float) Math.sqrt(d);
-        return new SweepCircleCircleResult(true, (b - rd) * a, (b + rd) * a);
+        return new SweepCircleCircleResult((b - rd) * a, (b + rd) * a);
     }
 
-    Pair<Boolean, Float> isectRaySeg(Vector3f ap, Vector3f u, Vector3f bp, Vector3f bq) {
+    float isectRaySeg(Vector3f ap, Vector3f u, Vector3f bp, Vector3f bq) {
         Vector3f v = sub(bq, bp);
         Vector3f w = sub(ap, bp);
         float d = -crossXZ(u, v);
         if (Math.abs(d) < 1e-6f)
-            return new Pair<>(false, 0f);
-        d = 1.0f / d;
+            return -1f;
+        d = 1f / d;
         float t = -crossXZ(v, w) * d;
         if (t < 0 || t > 1)
-            return new Pair<>(false, 0f);
+            return -1f;
         float s = -crossXZ(u, w) * d;
         if (s < 0 || s > 1)
-            return new Pair<>(false, 0f);
-        return new Pair<>(true, t);
+            return -1f;
+        return t;
     }
 
     /**
@@ -261,21 +260,20 @@ public class ObstacleAvoidanceQuery {
             vab = sub(vab, cir.vel);
 
             // Side
-            side += clamp(Math.min(dot2D(cir.dp, vab) * 0.5f + 0.5f, dot2D(cir.np, vab) * 2), 0.0f, 1.0f);
+            side += clamp(Math.min(dot2D(cir.dp, vab) * 0.5f + 0.5f, dot2D(cir.np, vab) * 2), 0f, 1f);
             nside++;
 
             SweepCircleCircleResult sres = sweepCircleCircle(pos, rad, vab, cir.p, cir.rad);
-            if (!sres.intersection)
-                continue;
+            if (sres == null) continue;
             float htmin = sres.htmin, htmax = sres.htmax;
 
             // Handle overlapping obstacles.
-            if (htmin < 0.0f && htmax > 0.0f) {
+            if (htmin < 0f && htmax > 0f) {
                 // Avoid more when overlapped.
                 htmin = -htmin * 0.5f;
             }
 
-            if (htmin >= 0.0f) {
+            if (htmin >= 0f) {
                 // The closest obstacle is somewhere ahead of us, keep track of nearest obstacle.
                 if (htmin < tmin) {
                     tmin = htmin;
@@ -296,19 +294,18 @@ public class ObstacleAvoidanceQuery {
                 snorm.x = -sdir.z;
                 snorm.z = sdir.x;
                 // If the velocity is pointing towards the segment, no collision.
-                if (dot2D(snorm, vcand) < 0.0f)
+                if (dot2D(snorm, vcand) < 0f)
                     continue;
                 // Else immediate collision.
-                htmin = 0.0f;
+                htmin = 0f;
             } else {
-                Pair<Boolean, Float> ires = isectRaySeg(pos, vcand, seg.p, seg.q);
-                if (!ires.first)
-                    continue;
-                htmin = ires.second;
+                float ires = isectRaySeg(pos, vcand, seg.p, seg.q);
+                if (ires < 0f) continue;
+                htmin = ires;
             }
 
             // Avoid less when facing walls.
-            htmin *= 2.0f;
+            htmin *= 2f;
 
             // The closest obstacle is somewhere ahead of us, keep track of nearest obstacle.
             if (htmin < tmin) {
@@ -323,7 +320,7 @@ public class ObstacleAvoidanceQuery {
             side /= nside;
 
         float spen = m_params.weightSide * side;
-        float tpen = m_params.weightToi * (1.0f / (0.1f + tmin * m_invHorizTime));
+        float tpen = m_params.weightToi * (1f / (0.1f + tmin * m_invHorizTime));
 
         float penalty = vpen + vcpen + spen + tpen;
         // Store different penalties for debug viewing
@@ -338,8 +335,8 @@ public class ObstacleAvoidanceQuery {
                                                       ObstacleAvoidanceParams params, ObstacleAvoidanceDebugData debug) {
         prepare(pos, dvel);
         m_params = params;
-        m_invHorizTime = 1.0f / m_params.horizTime;
-        m_invVmax = vmax > 0 ? 1.0f / vmax : Float.MAX_VALUE;
+        m_invHorizTime = 1f / m_params.horizTime;
+        m_invVmax = vmax > 0 ? 1f / vmax : Float.MAX_VALUE;
 
         Vector3f nvel = new Vector3f();
         set(nvel, 0f, 0f, 0f);
@@ -378,7 +375,7 @@ public class ObstacleAvoidanceQuery {
         float d = (float) Math.sqrt(v[0] * v[0] + v[2] * v[2]);
         if (d == 0)
             return;
-        d = 1.0f / d;
+        d = 1f / d;
         v[0] *= d;
         v[2] *= d;
     }
@@ -389,8 +386,8 @@ public class ObstacleAvoidanceQuery {
                                                           Vector3f dvel, ObstacleAvoidanceParams params, ObstacleAvoidanceDebugData debug) {
         prepare(pos, dvel);
         m_params = params;
-        m_invHorizTime = 1.0f / m_params.horizTime;
-        m_invVmax = vmax > 0 ? 1.0f / vmax : Float.MAX_VALUE;
+        m_invHorizTime = 1f / m_params.horizTime;
+        m_invVmax = vmax > 0 ? 1f / vmax : Float.MAX_VALUE;
 
         Vector3f nvel = new Vector3f();
 
@@ -406,7 +403,7 @@ public class ObstacleAvoidanceQuery {
 
         int nd = clamp(ndivs, 1, DT_MAX_PATTERN_DIVS);
         int nr = clamp(nrings, 1, DT_MAX_PATTERN_RINGS);
-        float da = (1.0f / nd) * DT_PI * 2;
+        float da = (1f / nd) * DT_PI * 2;
         float ca = (float) Math.cos(da);
         float sa = (float) Math.sin(da);
 
@@ -448,12 +445,12 @@ public class ObstacleAvoidanceQuery {
         }
 
         // Start sampling.
-        float cr = vmax * (1.0f - m_params.velBias);
+        float cr = vmax * (1f - m_params.velBias);
         Vector3f res = new Vector3f(dvel.x * m_params.velBias, 0, dvel.z * m_params.velBias);
         int ns = 0;
         for (int k = 0; k < depth; ++k) {
             float minPenalty = Float.MAX_VALUE;
-            Vector3f bvel = new Vector3f();
+            Vector3f bVel = new Vector3f();
             for (int i = 0; i < npat; ++i) {
                 Vector3f vcand = new Vector3f(res.x + pat[i * 2] * cr, 0f, res.z + pat[i * 2 + 1] * cr);
                 if (sqr(vcand.x) + sqr(vcand.z) > sqr(vmax + 0.001f))
@@ -463,11 +460,11 @@ public class ObstacleAvoidanceQuery {
                 ns++;
                 if (penalty < minPenalty) {
                     minPenalty = penalty;
-                    bvel.set(vcand);
+                    bVel.set(vcand);
                 }
             }
 
-            res.set(bvel);
+            res.set(bVel);
 
             cr *= 0.5f;
         }

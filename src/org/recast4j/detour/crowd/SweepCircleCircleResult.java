@@ -20,12 +20,9 @@ package org.recast4j.detour.crowd;
 
 public class SweepCircleCircleResult {
 
-    final boolean intersection;
-    final float htmin;
-    final float htmax;
+    final float htmin, htmax;
 
-    public SweepCircleCircleResult(boolean intersection, float htmin, float htmax) {
-        this.intersection = intersection;
+    public SweepCircleCircleResult(float htmin, float htmax) {
         this.htmin = htmin;
         this.htmax = htmax;
     }

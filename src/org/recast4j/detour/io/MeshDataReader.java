@@ -121,12 +121,12 @@ public class MeshDataReader {
             for (int j = 0; j < polys[i].vertices.length; j++) {
                 polys[i].vertices[j] = buf.getShort() & 0xFFFF;
             }
-            for (int j = 0; j < polys[i].neis.length; j++) {
-                polys[i].neis[j] = buf.getShort() & 0xFFFF;
+            for (int j = 0; j < polys[i].neighborData.length; j++) {
+                polys[i].neighborData[j] = buf.getShort() & 0xFFFF;
             }
             polys[i].flags = buf.getShort() & 0xFFFF;
             polys[i].vertCount = buf.get() & 0xFF;
-            polys[i].areaAndtype = buf.get() & 0xFF;
+            polys[i].areaAndType = buf.get() & 0xFF;
         }
         return polys;
     }

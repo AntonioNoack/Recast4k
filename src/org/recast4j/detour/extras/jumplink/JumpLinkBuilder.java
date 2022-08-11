@@ -10,7 +10,6 @@ import java.util.List;
 
 import static java.util.stream.Collectors.toList;
 import static org.recast4j.Vectors.copy;
-import static org.recast4j.Vectors.dist2DSqr;
 
 public class JumpLinkBuilder {
 
@@ -20,7 +19,7 @@ public class JumpLinkBuilder {
     private final TrajectorySampler trajectorySampler = new TrajectorySampler();
     private final JumpSegmentBuilder jumpSegmentBuilder = new JumpSegmentBuilder();
 
-    private final List<Edge[]> edges;
+    public final List<Edge[]> edges;
     private final List<RecastBuilderResult> results;
 
     @SuppressWarnings("unused")
@@ -29,23 +28,23 @@ public class JumpLinkBuilder {
         edges = results.stream().map(r -> edgeExtractor.extractEdges(r.mesh)).collect(toList());
     }
 
-    public List<JumpLink> build(JumpLinkBuilderConfig acfg, JumpLinkType type) {
+    public List<JumpLink> build(JumpLinkBuilderConfig cfg, JumpLinkType type) {
         List<JumpLink> links = new ArrayList<>();
         for (int tile = 0; tile < results.size(); tile++) {
             Edge[] edges = this.edges.get(tile);
             for (Edge edge : edges) {
-                links.addAll(processEdge(acfg, results.get(tile), type, edge));
+                links.addAll(processEdge(cfg, results.get(tile), type, edge));
             }
         }
         return links;
     }
 
-    private List<JumpLink> processEdge(JumpLinkBuilderConfig acfg, RecastBuilderResult result, JumpLinkType type, Edge edge) {
-        EdgeSampler es = edgeSamplerFactory.get(acfg, type, edge);
-        groundSampler.sample(acfg, result, es);
-        trajectorySampler.sample(acfg, result.solidHeightField, es);
-        JumpSegment[] jumpSegments = jumpSegmentBuilder.build(acfg, es);
-        return buildJumpLinks(acfg, es, jumpSegments);
+    private List<JumpLink> processEdge(JumpLinkBuilderConfig cfg, RecastBuilderResult result, JumpLinkType type, Edge edge) {
+        EdgeSampler es = edgeSamplerFactory.get(cfg, type, edge);
+        groundSampler.sample(cfg, result, es);
+        trajectorySampler.sample(cfg, result.solidHeightField, es);
+        JumpSegment[] jumpSegments = jumpSegmentBuilder.build(cfg, es);
+        return buildJumpLinks(cfg, es, jumpSegments);
     }
 
 
@@ -74,10 +73,6 @@ public class JumpLinkBuilder {
             }
         }
         return links;
-    }
-
-    public List<Edge[]> getEdges() {
-        return edges;
     }
 
 }

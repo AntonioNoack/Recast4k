@@ -36,9 +36,7 @@ public class VoxelFile {
     public static final ByteOrder PREFERRED_BYTE_ORDER = ByteOrder.BIG_ENDIAN;
     public static final int MAGIC = 'V' << 24 | 'O' << 16 | 'X' << 8 | 'L';
     public static final int VERSION_EXPORTER_MASK = 0xF000;
-    public static final int VERSION_COMPRESSION_MASK = 0x0F00;
     public static final int VERSION_EXPORTER_RECAST4J = 0x1000;
-    public static final int VERSION_COMPRESSION_LZ4 = 0x0100;
     public int version;
     public PartitionType partitionType = PartitionType.WATERSHED;
     public boolean filterLowHangingObstacles = true;
@@ -68,13 +66,13 @@ public class VoxelFile {
         tiles.add(tile);
     }
 
-    public RecastConfig getConfig(VoxelTile tile, PartitionType partitionType, int maxPolyVertices, int regionMergeSize,
-            boolean filterLowHangingObstacles, boolean filterLedgeSpans, boolean filterWalkableLowHeightSpans,
-            AreaModification walkbableAreaMod, boolean buildMeshDetail, float detailSampleDist, float detailSampleMaxError) {
+    public RecastConfig getConfig(VoxelTile tile, PartitionType partitionType, int maxPolyVertices,
+                                  boolean filterLowHangingObstacles, boolean filterLedgeSpans, boolean filterWalkableLowHeightSpans,
+            AreaModification walkableAreaMod, boolean buildMeshDetail, float detailSampleDist, float detailSampleMaxError) {
         return new RecastConfig(useTiles, tileSizeX, tileSizeZ, tile.borderSize, partitionType, cellSize, tile.cellHeight,
                 walkableSlopeAngle, filterLowHangingObstacles, filterLedgeSpans, filterWalkableLowHeightSpans, walkableHeight,
                 walkableRadius, walkableClimb, minRegionArea, regionMergeArea, maxEdgeLen, maxSimplificationError, maxPolyVertices,
-                buildMeshDetail, detailSampleDist, detailSampleMaxError, walkbableAreaMod);
+                buildMeshDetail, detailSampleDist, detailSampleMaxError, walkableAreaMod);
     }
 
     public static VoxelFile from(RecastConfig config, List<RecastBuilderResult> results) {

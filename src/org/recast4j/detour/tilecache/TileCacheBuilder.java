@@ -19,6 +19,7 @@ freely, subject to the following restrictions:
 package org.recast4j.detour.tilecache;
 
 import org.joml.Vector3f;
+import org.recast4j.Edge;
 import org.recast4j.Pair;
 import org.recast4j.detour.tilecache.io.TileCacheLayerHeaderReader;
 import org.recast4j.detour.tilecache.io.TileCacheLayerHeaderWriter;
@@ -35,35 +36,29 @@ import static org.recast4j.Vectors.sqr;
 
 public class TileCacheBuilder {
 
-    static final int DT_TILECACHE_NULL_AREA = 0;
-    static final int DT_TILECACHE_WALKABLE_AREA = 63;
-    static final int DT_TILECACHE_NULL_IDX = 0xffff;
+    static final int TILECACHE_NULL_AREA = 0;
+    static final int TILECACHE_WALKABLE_AREA = 63;
+    static final int TILECACHE_NULL_IDX = 0xffff;
 
     private static class LayerSweepSpan {
-        int ns; // number samples
-        int id; // region id
-        int nei; // neighbour id
+        int numSamples, regionId, neighborId;
     }
-
-    ;
 
     private static class LayerMonotoneRegion {
         int area;
-        List<Integer> neis = new ArrayList<>(16);
         int regId;
         int areaId;
+        List<Integer> neighbors = new ArrayList<>(16);
     }
-
-    ;
 
     private static class TempContour {
         List<Integer> vertices;
-        int nvertices;
+        int numVertices;
         List<Integer> poly;
 
         TempContour() {
             vertices = new ArrayList<>();
-            nvertices = 0;
+            numVertices = 0;
             poly = new ArrayList<>();
         }
 
@@ -72,20 +67,10 @@ public class TileCacheBuilder {
         }
 
         public void clear() {
-            nvertices = 0;
+            numVertices = 0;
             vertices.clear();
         }
     }
-
-    ;
-
-    private static class Edge {
-        int[] vert = new int[2];
-        int[] polyEdge = new int[2];
-        int[] poly = new int[2];
-    }
-
-    ;
 
     private final TileCacheLayerHeaderReader reader = new TileCacheLayerHeaderReader();
 
@@ -112,7 +97,7 @@ public class TileCacheBuilder {
 
             for (int x = 0; x < w; ++x) {
                 int idx = x + y * w;
-                if (layer.areas[idx] == DT_TILECACHE_NULL_AREA)
+                if (layer.areas[idx] == TILECACHE_NULL_AREA)
                     continue;
 
                 int sid = 0xff;
@@ -126,8 +111,8 @@ public class TileCacheBuilder {
 
                 if (sid == 0xff) {
                     sid = sweepId++;
-                    sweeps[sid].nei = 0xff;
-                    sweeps[sid].ns = 0;
+                    sweeps[sid].neighborId = 0xff;
+                    sweeps[sid].numSamples = 0;
                 }
 
                 // -y
@@ -137,17 +122,17 @@ public class TileCacheBuilder {
                     if (nr != 0xff) {
                         // Set neighbour when first valid neighbour is
                         // encoutered.
-                        if (sweeps[sid].ns == 0)
-                            sweeps[sid].nei = nr;
+                        if (sweeps[sid].numSamples == 0)
+                            sweeps[sid].neighborId = nr;
 
-                        if (sweeps[sid].nei == nr) {
+                        if (sweeps[sid].neighborId == nr) {
                             // Update existing neighbour
-                            sweeps[sid].ns++;
+                            sweeps[sid].numSamples++;
                             prevCount[nr]++;
                         } else {
                             // This is hit if there is nore than one neighbour.
                             // Invalidate the neighbour.
-                            sweeps[sid].nei = 0xff;
+                            sweeps[sid].neighborId = 0xff;
                         }
                     }
                 }
@@ -161,14 +146,14 @@ public class TileCacheBuilder {
                 // connection to it,
                 // the sweep will be merged with the previous one, else new
                 // region is created.
-                if (sweeps[i].nei != 0xff && prevCount[sweeps[i].nei] == sweeps[i].ns) {
-                    sweeps[i].id = sweeps[i].nei;
+                if (sweeps[i].neighborId != 0xff && prevCount[sweeps[i].neighborId] == sweeps[i].numSamples) {
+                    sweeps[i].regionId = sweeps[i].neighborId;
                 } else {
                     if (regId == 255) {
                         // Region ID's overflow.
                         throw new RuntimeException("Buffer too small");
                     }
-                    sweeps[i].id = regId++;
+                    sweeps[i].regionId = regId++;
                 }
             }
 
@@ -176,7 +161,7 @@ public class TileCacheBuilder {
             for (int x = 0; x < w; ++x) {
                 int idx = x + y * w;
                 if (layer.regs[idx] != 0xff)
-                    layer.regs[idx] = (short) sweeps[layer.regs[idx]].id;
+                    layer.regs[idx] = (short) sweeps[layer.regs[idx]].regionId;
             }
         }
 
@@ -206,8 +191,8 @@ public class TileCacheBuilder {
                 if (y > 0 && isConnected(layer, idx, ymi, walkableClimb)) {
                     int rai = layer.regs[ymi];
                     if (rai != 0xff && rai != ri) {
-                        addUniqueLast(regs[ri].neis, rai);
-                        addUniqueLast(regs[rai].neis, ri);
+                        addUniqueLast(regs[ri].neighbors, rai);
+                        addUniqueLast(regs[rai].neighbors, ri);
                     }
                 }
             }
@@ -221,7 +206,7 @@ public class TileCacheBuilder {
 
             int merge = -1;
             int mergea = 0;
-            for (int nei : reg.neis) {
+            for (int nei : reg.neighbors) {
                 LayerMonotoneRegion regn = regs[nei];
                 if (reg.regId == regn.regId)
                     continue;
@@ -286,7 +271,7 @@ public class TileCacheBuilder {
             LayerMonotoneRegion reg = regs[i];
             if (reg.regId != oldRegId)
                 continue;
-            for (int nei : reg.neis) {
+            for (int nei : reg.neighbors) {
                 if (regs[nei].regId == newRegId)
                     count++;
             }
@@ -296,9 +281,9 @@ public class TileCacheBuilder {
 
     private void appendVertex(TempContour cont, int x, int y, int z, int r) {
         // Try to merge with existing segments.
-        if (cont.nvertices > 1) {
-            int pa = (cont.nvertices - 2) * 4;
-            int pb = (cont.nvertices - 1) * 4;
+        if (cont.numVertices > 1) {
+            int pa = (cont.numVertices - 2) * 4;
+            int pb = (cont.numVertices - 1) * 4;
             if (cont.vertices.get(pb + 3) == r) {
                 if (cont.vertices.get(pa).intValue() == cont.vertices.get(pb).intValue() && cont.vertices.get(pb) == x) {
                     // The vertices are aligned aling x-axis, update z.
@@ -318,7 +303,7 @@ public class TileCacheBuilder {
         cont.vertices.add(y);
         cont.vertices.add(z);
         cont.vertices.add(r);
-        cont.nvertices++;
+        cont.numVertices++;
     }
 
     private int getNeighbourReg(TileCacheLayer layer, int ax, int ay, int dir) {
@@ -421,11 +406,11 @@ public class TileCacheBuilder {
         }
 
         // Remove last vertex if it is duplicate of the first one.
-        int pa = (cont.nvertices - 1) * 4;
+        int pa = (cont.numVertices - 1) * 4;
         int pb = 0;
         if (cont.vertices.get(pa).intValue() == cont.vertices.get(pb).intValue()
                 && cont.vertices.get(pa + 2).intValue() == cont.vertices.get(pb + 2).intValue())
-            cont.nvertices--;
+            cont.numVertices--;
 
     }
 
@@ -452,8 +437,8 @@ public class TileCacheBuilder {
     private void simplifyContour(TempContour cont, float maxError) {
         cont.poly.clear();
 
-        for (int i = 0; i < cont.nvertices; ++i) {
-            int j = (i + 1) % cont.nvertices;
+        for (int i = 0; i < cont.numVertices; ++i) {
+            int j = (i + 1) % cont.numVertices;
             // Check for start of a wall segment.
             int ra = j * 4 + 3;
             int rb = i * 4 + 3;
@@ -470,7 +455,7 @@ public class TileCacheBuilder {
             int urx = cont.vertices.get(0);
             int urz = cont.vertices.get(2);
             int uri = 0;
-            for (int i = 1; i < cont.nvertices; ++i) {
+            for (int i = 1; i < cont.numVertices; ++i) {
                 int x = cont.vertices.get(i * 4);
                 int z = cont.vertices.get(i * 4 + 2);
                 if (x < llx || (x == llx && z < llz)) {
@@ -512,11 +497,11 @@ public class TileCacheBuilder {
             // opposite segments.
             if (bx > ax || (bx == ax && bz > az)) {
                 cinc = 1;
-                ci = (ai + cinc) % cont.nvertices;
+                ci = (ai + cinc) % cont.numVertices;
                 endi = bi;
             } else {
-                cinc = cont.nvertices - 1;
-                ci = (bi + cinc) % cont.nvertices;
+                cinc = cont.numVertices - 1;
+                ci = (bi + cinc) % cont.numVertices;
                 endi = ai;
             }
 
@@ -527,7 +512,7 @@ public class TileCacheBuilder {
                     maxd = d;
                     maxi = ci;
                 }
-                ci = (ci + cinc) % cont.nvertices;
+                ci = (ci + cinc) % cont.numVertices;
             }
 
             // If the max deviation is larger than accepted error,
@@ -545,16 +530,16 @@ public class TileCacheBuilder {
             if (cont.poly.get(i) < cont.poly.get(start))
                 start = i;
 
-        cont.nvertices = 0;
+        cont.numVertices = 0;
         for (int i = 0; i < cont.npoly(); ++i) {
             int j = (start + i) % cont.npoly();
             int src = cont.poly.get(j) * 4;
-            int dst = cont.nvertices * 4;
+            int dst = cont.numVertices * 4;
             cont.vertices.set(dst, cont.vertices.get(src));
             cont.vertices.set(dst + 1, cont.vertices.get(src + 1));
             cont.vertices.set(dst + 2, cont.vertices.get(src + 2));
             cont.vertices.set(dst + 3, cont.vertices.get(src + 3));
-            cont.nvertices++;
+            cont.numVertices++;
         }
     }
 
@@ -576,7 +561,7 @@ public class TileCacheBuilder {
                 if (px >= 0 && pz >= 0 && px < w && pz < h) {
                     int idx = px + pz * w;
                     int lh = layer.heights[idx];
-                    if (Math.abs(lh - y) <= walkableClimb && layer.areas[idx] != DT_TILECACHE_NULL_AREA) {
+                    if (Math.abs(lh - y) <= walkableClimb && layer.areas[idx] != TILECACHE_NULL_AREA) {
                         height = Math.max(height, (char) lh);
                         portal &= (layer.cons[idx] >> 4);
                         if (preg != 0xff && preg != layer.regs[idx])
@@ -637,11 +622,11 @@ public class TileCacheBuilder {
                 simplifyContour(temp, maxError);
 
                 // Store contour.
-                cont.nvertices = temp.nvertices;
+                cont.nvertices = temp.numVertices;
                 if (cont.nvertices > 0) {
-                    cont.vertices = new int[4 * temp.nvertices];
+                    cont.vertices = new int[4 * temp.numVertices];
 
-                    for (int i = 0, j = temp.nvertices - 1; i < temp.nvertices; j = i++) {
+                    for (int i = 0, j = temp.numVertices - 1; i < temp.numVertices; j = i++) {
                         int dst = j * 4;
                         int v = j * 4;
                         int vn = i * 4;
@@ -686,7 +671,7 @@ public class TileCacheBuilder {
     private int addVertex(int x, int y, int z, int[] vertices, int[] firstVert, int[] nextVert, int nv) {
         int bucket = computeVertexHash2(x, 0, z);
         int i = firstVert[bucket];
-        while (i != DT_TILECACHE_NULL_IDX) {
+        while (i != TILECACHE_NULL_IDX) {
             int v = i * 3;
             if (vertices[v] == x && vertices[v + 2] == z && (Math.abs(vertices[v + 1] - y) <= 2))
                 return i;
@@ -720,24 +705,24 @@ public class TileCacheBuilder {
             edges[i] = new Edge();
         }
         for (int i = 0; i < nvertices; i++)
-            firstEdge[i] = DT_TILECACHE_NULL_IDX;
+            firstEdge[i] = TILECACHE_NULL_IDX;
 
         for (int i = 0; i < npolys; ++i) {
             int t = i * maxVerticesPerPoly * 2;
             for (int j = 0; j < maxVerticesPerPoly; ++j) {
-                if (polys[t + j] == DT_TILECACHE_NULL_IDX)
+                if (polys[t + j] == TILECACHE_NULL_IDX)
                     break;
                 int v0 = polys[t + j];
-                int v1 = (j + 1 >= maxVerticesPerPoly || polys[t + j + 1] == DT_TILECACHE_NULL_IDX) ? polys[t]
+                int v1 = (j + 1 >= maxVerticesPerPoly || polys[t + j + 1] == TILECACHE_NULL_IDX) ? polys[t]
                         : polys[t + j + 1];
                 if (v0 < v1) {
                     Edge edge = edges[edgeCount];
-                    edge.vert[0] = v0;
-                    edge.vert[1] = v1;
-                    edge.poly[0] = i;
-                    edge.polyEdge[0] = j;
-                    edge.poly[1] = i;
-                    edge.polyEdge[1] = 0xff;
+                    edge.vert0 = v0;
+                    edge.vert0 = v1;
+                    edge.poly0 = i;
+                    edge.polyEdge0 = j;
+                    edge.poly1 = i;
+                    edge.polyEdge1 = 0xff;
                     // Insert edge
                     firstEdge[nextEdge + edgeCount] = firstEdge[v0];
                     firstEdge[v0] = (short) edgeCount;
@@ -749,18 +734,18 @@ public class TileCacheBuilder {
         for (int i = 0; i < npolys; ++i) {
             int t = i * maxVerticesPerPoly * 2;
             for (int j = 0; j < maxVerticesPerPoly; ++j) {
-                if (polys[t + j] == DT_TILECACHE_NULL_IDX)
+                if (polys[t + j] == TILECACHE_NULL_IDX)
                     break;
                 int v0 = polys[t + j];
-                int v1 = (j + 1 >= maxVerticesPerPoly || polys[t + j + 1] == DT_TILECACHE_NULL_IDX) ? polys[t]
+                int v1 = (j + 1 >= maxVerticesPerPoly || polys[t + j + 1] == TILECACHE_NULL_IDX) ? polys[t]
                         : polys[t + j + 1];
                 if (v0 > v1) {
                     boolean found = false;
-                    for (int e = firstEdge[v1]; e != DT_TILECACHE_NULL_IDX; e = firstEdge[nextEdge + e]) {
+                    for (int e = firstEdge[v1]; e != TILECACHE_NULL_IDX; e = firstEdge[nextEdge + e]) {
                         Edge edge = edges[e];
-                        if (edge.vert[1] == v0 && edge.poly[0] == edge.poly[1]) {
-                            edge.poly[1] = i;
-                            edge.polyEdge[1] = j;
+                        if (edge.vert1 == v0 && edge.poly0 == edge.poly1) {
+                            edge.poly1 = i;
+                            edge.polyEdge1 = j;
                             found = true;
                             break;
                         }
@@ -768,12 +753,12 @@ public class TileCacheBuilder {
                     if (!found) {
                         // Matching edge not found, it is an open edge, add it.
                         Edge edge = edges[edgeCount];
-                        edge.vert[0] = v1;
-                        edge.vert[1] = v0;
-                        edge.poly[0] = (short) i;
-                        edge.polyEdge[0] = (short) j;
-                        edge.poly[1] = (short) i;
-                        edge.polyEdge[1] = 0xff;
+                        edge.vert0 = v1;
+                        edge.vert1 = v0;
+                        edge.poly0 = (short) i;
+                        edge.polyEdge0 = (short) j;
+                        edge.poly1 = (short) i;
+                        edge.polyEdge1 = 0xff;
                         // Insert edge
                         firstEdge[nextEdge + edgeCount] = firstEdge[v1];
                         firstEdge[v1] = (short) edgeCount;
@@ -810,10 +795,10 @@ public class TileCacheBuilder {
                     for (int m = 0; m < edgeCount; ++m) {
                         Edge e = edges[m];
                         // Skip connected edges.
-                        if (e.poly[0] != e.poly[1])
+                        if (e.poly0 != e.poly1)
                             continue;
-                        int eva = e.vert[0] * 3;
-                        int evb = e.vert[1] * 3;
+                        int eva = e.vert0 * 3;
+                        int evb = e.vert1 * 3;
                         if (vertices[eva] == x && vertices[evb] == x) {
                             int ezmin = vertices[eva + 2];
                             int ezmax = vertices[evb + 2];
@@ -824,7 +809,7 @@ public class TileCacheBuilder {
                             }
                             if (overlapRangeExl(zmin, zmax, ezmin, ezmax)) {
                                 // Reuse the other polyedge to store dir.
-                                e.polyEdge[1] = dir;
+                                e.polyEdge1 = dir;
                             }
                         }
                     }
@@ -841,10 +826,10 @@ public class TileCacheBuilder {
                     for (int m = 0; m < edgeCount; ++m) {
                         Edge e = edges[m];
                         // Skip connected edges.
-                        if (e.poly[0] != e.poly[1])
+                        if (e.poly0 != e.poly1)
                             continue;
-                        int eva = e.vert[0] * 3;
-                        int evb = e.vert[1] * 3;
+                        int eva = e.vert0 * 3;
+                        int evb = e.vert1 * 3;
                         if (vertices[eva + 2] == z && vertices[evb + 2] == z) {
                             int exmin = vertices[eva];
                             int exmax = vertices[evb];
@@ -855,7 +840,7 @@ public class TileCacheBuilder {
                             }
                             if (overlapRangeExl(xmin, xmax, exmin, exmax)) {
                                 // Reuse the other polyedge to store dir.
-                                e.polyEdge[1] = dir;
+                                e.polyEdge1 = dir;
                             }
                         }
                     }
@@ -866,14 +851,14 @@ public class TileCacheBuilder {
         // Store adjacency
         for (int i = 0; i < edgeCount; ++i) {
             Edge e = edges[i];
-            if (e.poly[0] != e.poly[1]) {
-                int p0 = e.poly[0] * maxVerticesPerPoly * 2;
-                int p1 = e.poly[1] * maxVerticesPerPoly * 2;
-                polys[p0 + maxVerticesPerPoly + e.polyEdge[0]] = e.poly[1];
-                polys[p1 + maxVerticesPerPoly + e.polyEdge[1]] = e.poly[0];
-            } else if (e.polyEdge[1] != 0xff) {
-                int p0 = e.poly[0] * maxVerticesPerPoly * 2;
-                polys[p0 + maxVerticesPerPoly + e.polyEdge[0]] = 0x8000 | (short) e.polyEdge[1];
+            if (e.poly0 != e.poly1) {
+                int p0 = e.poly0 * maxVerticesPerPoly * 2;
+                int p1 = e.poly1 * maxVerticesPerPoly * 2;
+                polys[p0 + maxVerticesPerPoly + e.polyEdge0] = e.poly1;
+                polys[p1 + maxVerticesPerPoly + e.polyEdge1] = e.poly0;
+            } else if (e.polyEdge1 != 0xff) {
+                int p0 = e.poly0 * maxVerticesPerPoly * 2;
+                polys[p0 + maxVerticesPerPoly + e.polyEdge0] = 0x8000 | (short) e.polyEdge1;
             }
 
         }
@@ -1077,7 +1062,7 @@ public class TileCacheBuilder {
 
     private int countPolyVertices(int[] polys, int p, int maxVerticesPerPoly) {
         for (int i = 0; i < maxVerticesPerPoly; ++i)
-            if (polys[p + i] == DT_TILECACHE_NULL_IDX)
+            if (polys[p + i] == TILECACHE_NULL_IDX)
                 return i;
         return maxVerticesPerPoly;
     }
@@ -1158,7 +1143,7 @@ public class TileCacheBuilder {
         int nb = countPolyVertices(polys, pb, maxVerticesPerPoly);
 
         // Merge polygons.
-        Arrays.fill(tmp, DT_TILECACHE_NULL_IDX);
+        Arrays.fill(tmp, TILECACHE_NULL_IDX);
         int n = 0;
         // Add pa
         for (int i = 0; i < na - 1; ++i)
@@ -1289,7 +1274,7 @@ public class TileCacheBuilder {
                 // Remove the polygon.
                 int p2 = (mesh.numPolygons - 1) * maxVerticesPerPoly * 2;
                 System.arraycopy(mesh.polys, p2, mesh.polys, p, maxVerticesPerPoly);
-                Arrays.fill(mesh.polys, p + maxVerticesPerPoly, p + 2 * maxVerticesPerPoly, DT_TILECACHE_NULL_IDX);
+                Arrays.fill(mesh.polys, p + maxVerticesPerPoly, p + 2 * maxVerticesPerPoly, TILECACHE_NULL_IDX);
                 mesh.areas[i] = mesh.areas[mesh.numPolygons - 1];
                 mesh.numPolygons--;
                 --i;
@@ -1387,7 +1372,7 @@ public class TileCacheBuilder {
 
         // Build initial polygons.
         int npolys = 0;
-        Arrays.fill(polys, 0, ntris * maxVerticesPerPoly, DT_TILECACHE_NULL_IDX);
+        Arrays.fill(polys, 0, ntris * maxVerticesPerPoly, TILECACHE_NULL_IDX);
         for (int j = 0; j < ntris; ++j) {
             int t = j * 3;
             if (tris[t] != tris[t + 1] && tris[t] != tris[t + 2] && tris[t + 1] != tris[t + 2]) {
@@ -1446,7 +1431,7 @@ public class TileCacheBuilder {
             if (mesh.numPolygons >= maxTris)
                 break;
             int p = mesh.numPolygons * maxVerticesPerPoly * 2;
-            Arrays.fill(mesh.polys, p, p + maxVerticesPerPoly * 2, DT_TILECACHE_NULL_IDX);
+            Arrays.fill(mesh.polys, p, p + maxVerticesPerPoly * 2, TILECACHE_NULL_IDX);
             for (int j = 0; j < maxVerticesPerPoly; ++j)
                 mesh.polys[p + j] = polys[i * maxVerticesPerPoly + j];
             mesh.areas[mesh.numPolygons] = pareas[i];
@@ -1488,11 +1473,11 @@ public class TileCacheBuilder {
         mesh.numVertices = 0;
         mesh.numPolygons = 0;
 
-        Arrays.fill(mesh.polys, DT_TILECACHE_NULL_IDX);
+        Arrays.fill(mesh.polys, TILECACHE_NULL_IDX);
 
         int[] firstVert = new int[VERTEX_BUCKET_COUNT2];
         for (int i = 0; i < VERTEX_BUCKET_COUNT2; ++i)
-            firstVert[i] = DT_TILECACHE_NULL_IDX;
+            firstVert[i] = TILECACHE_NULL_IDX;
 
         int[] nextVert = new int[maxVertices];
         int[] indices = new int[maxVerticesPerCont];
@@ -1530,7 +1515,7 @@ public class TileCacheBuilder {
 
             // Build initial polygons.
             int npolys = 0;
-            Arrays.fill(polys, DT_TILECACHE_NULL_IDX);
+            Arrays.fill(polys, TILECACHE_NULL_IDX);
             for (int j = 0; j < ntris; ++j) {
                 int t = j * 3;
                 if (tris[t] != tris[t + 1] && tris[t] != tris[t + 2] && tris[t + 1] != tris[t + 2]) {
@@ -1628,8 +1613,8 @@ public class TileCacheBuilder {
 
         int w = layer.header.width;
         int h = layer.header.height;
-        float ics = 1.0f / cs;
-        float ich = 1.0f / ch;
+        float ics = 1f / cs;
+        float ich = 1f / ch;
 
         float px = (pos.x - orig.x) * ics;
         float pz = (pos.z - orig.z) * ics;
@@ -1664,8 +1649,8 @@ public class TileCacheBuilder {
                             int areaId) {
         int w = layer.header.width;
         int h = layer.header.height;
-        float ics = 1.0f / cs;
-        float ich = 1.0f / ch;
+        float ics = 1f / cs;
+        float ich = 1f / ch;
 
         int minx = (int) Math.floor((bmin.x - orig.x) * ics);
         int miny = (int) Math.floor((bmin.y - orig.y) * ich);
@@ -1758,8 +1743,8 @@ public class TileCacheBuilder {
     public void markBoxArea(TileCacheLayer layer, Vector3f orig, float cs, float ch, Vector3f center, Vector3f extents, float[] rotAux, int areaId) {
         int w = layer.header.width;
         int h = layer.header.height;
-        float ics = 1.0f / cs;
-        float ich = 1.0f / ch;
+        float ics = 1f / cs;
+        float ich = 1f / ch;
 
         float cx = (center.x - orig.x) * ics;
         float cz = (center.z - orig.z) * ics;
@@ -1781,8 +1766,8 @@ public class TileCacheBuilder {
         float zhalf = extents.z * ics + 0.5f;
         for (int z = minz; z <= maxz; ++z) {
             for (int x = minx; x <= maxx; ++x) {
-                float x2 = 2.0f * (x - cx);
-                float z2 = 2.0f * (z - cz);
+                float x2 = 2f * (x - cx);
+                float z2 = 2f * (z - cz);
                 float xrot = rotAux[1] * x2 + rotAux[0] * z2;
                 if (xrot > xhalf || xrot < -xhalf) continue;
                 float zrot = rotAux[1] * z2 - rotAux[0] * x2;

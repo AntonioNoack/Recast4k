@@ -42,14 +42,13 @@ class TrajectorySampler {
     }
 
     private boolean checkHeightfieldCollision(Heightfield solid, float x, float ymin, float ymax, float z) {
+        float cellSize = solid.cellSize;
+        Vector3f origin = solid.bmin;
+        int ix = (int) Math.floor((x - origin.x) / cellSize);
+        int iz = (int) Math.floor((z - origin.z) / cellSize);
+
         int w = solid.width;
         int h = solid.height;
-        float cs = solid.cellSize;
-        float ch = solid.cellHeight;
-        Vector3f orig = solid.bmin;
-        int ix = (int) Math.floor((x - orig.x) / cs);
-        int iz = (int) Math.floor((z - orig.z) / cs);
-
         if (ix < 0 || iz < 0 || ix > w || iz > h) {
             return false;
         }
@@ -60,9 +59,10 @@ class TrajectorySampler {
         }
 
         while (s != null) {
-            float syMin = orig.y + s.min * ch;
-            float symax = orig.y + s.max * ch;
-            if (overlapRange(ymin, ymax, syMin, symax)) {
+            float cellHeight = solid.cellHeight;
+            float syMin = origin.y + s.min * cellHeight;
+            float syMax = origin.y + s.max * cellHeight;
+            if (overlapRange(ymin, ymax, syMin, syMax)) {
                 return true;
             }
             s = s.next;

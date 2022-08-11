@@ -26,11 +26,10 @@ package org.recast4j.detour;
  */
 public class Link {
     /** Neighbour reference. (The neighbor that is linked to.) */
-    public long ref;
-    /** Index of the next link. */
-    public int next;
+    public long neighborRef;
+    public int indexOfNextLink;
     /** Index of the polygon edge, that owns this link. */
-    public int edge;
+    public int indexOfPolyEdge;
     /** If a boundary link, defines on which side the link is. */
     int side;
     /** If a boundary link, defines the minimum sub-edge area. */

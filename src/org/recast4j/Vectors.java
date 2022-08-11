@@ -80,7 +80,7 @@ public class Vectors {
     }
 
     public static void normalize(float[] v) {
-        float d = (float) (1.0f / Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]));
+        float d = (float) (1f / Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]));
         v[0] *= d;
         v[1] *= d;
         v[2] *= d;
@@ -92,8 +92,18 @@ public class Vectors {
 
     static float EPS = 1e-4f;
 
-    public static Vector3f mad(Vector3f v1, Vector3f v2, float s) {
-        return new Vector3f(v2).mul(s).add(v1);
+    /**
+     * a + b * s
+     */
+    public static Vector3f mad(Vector3f a, Vector3f b, float f) {
+        return new Vector3f(b).mul(f).add(a);
+    }
+
+    /**
+     * a += b * s
+     */
+    public static void mad2(Vector3f a, Vector3f b, float f) {
+        a.add(b.x * f, b.y * f, b.z * f);
     }
 
     public static Vector3f lerp(float[] vertices, int v1, int v2, float t) {
@@ -145,17 +155,14 @@ public class Vectors {
     public static void copy(Vector3f out, int[] in, int i) {
         out.set(in[i], in[i + 1], in[i + 2]);
     }
+
     public static float sqr(float a) {
         return a * a;
     }
 
-    /// Derives the distance between the specified points on the xz-plane.
-    /// @param[in] v1 A point. [(x, y, z)]
-    /// @param[in] v2 A point. [(x, y, z)]
-    /// @return The distance between the point on the xz-plane.
-    ///
-    /// The vectors are projected onto the xz-plane, so the y-values are
-    /// ignored.
+    /**
+     * Derives the distance between the specified points on the xz-plane.
+     */
     public static float dist2D(Vector3f v1, Vector3f v2) {
         float dx = v2.x - v1.x;
         float dz = v2.z - v1.z;
@@ -174,15 +181,13 @@ public class Vectors {
         return dx * dx + dz * dz;
     }
 
-    private static final float EQUAL_THRESHOLD = sqr(1.0f / 16384.0f);
+    private static final float EQUAL_THRESHOLD = sqr(1f / 16384f);
 
-    /// Performs a 'sloppy' colocation check of the specified points.
-    /// @param[in] p0 A point. [(x, y, z)]
-    /// @param[in] p1 A point. [(x, y, z)]
-    /// @return True if the points are considered to be at the same location.
-    ///
-    /// Basically, this function will return true if the specified points are
-    /// close enough to eachother to be considered colocated.
+    /**
+     * Performs a 'sloppy' co-location check of the specified points.
+     *
+     * @return True if the points are considered to be at the same location.
+     */
     public static boolean vEqual(Vector3f p0, Vector3f p1) {
         return p0.distanceSquared(p1) < EQUAL_THRESHOLD;
     }
@@ -266,7 +271,7 @@ public class Vectors {
         return new Pair<>(dx * dx + dz * dz, t);
     }
 
-    public static Optional<Float> closestHeightPointTriangle(Vector3f p, Vector3f a, Vector3f b, Vector3f c) {
+    public static float closestHeightPointTriangle(Vector3f p, Vector3f a, Vector3f b, Vector3f c) {
         Vector3f v0 = sub(c, a);
         Vector3f v1 = sub(b, a);
         Vector3f v2 = sub(p, a);
@@ -274,7 +279,7 @@ public class Vectors {
         // Compute scaled barycentric coordinates
         float denom = v0.x * v1.z - v0.z * v1.x;
         if (Math.abs(denom) < EPS) {
-            return Optional.empty();
+            return Float.NaN;
         }
 
         float u = v1.z * v2.x - v1.x * v2.z;
@@ -286,13 +291,10 @@ public class Vectors {
             v = -v;
         }
 
-        // If point lies inside the triangle, return interpolated ycoord.
-        if (u >= 0.0f && v >= 0.0f && (u + v) <= denom) {
-            float h = a.y + (v0.y * u + v1.y * v) / denom;
-            return Optional.of(h);
-        }
-
-        return Optional.empty();
+        // If point lies inside the triangle, return interpolated y-coord.
+        if (u >= 0f && v >= 0f && (u + v) <= denom) {
+            return a.y + (v0.y * u + v1.y * v) / denom;
+        } else return Float.NaN;
     }
 
     /// @par
@@ -392,15 +394,15 @@ public class Vectors {
     // Adapted from Graphics Gems article.
     public static Vector3f randomPointInConvexPoly(float[] pts, int npts, float[] areas, float s, float t) {
         // Calc triangle araes
-        float areasum = 0.0f;
+        float areasum = 0f;
         for (int i = 2; i < npts; i++) {
             areas[i] = triArea2D(pts, 0, (i - 1) * 3, i * 3);
             areasum += Math.max(0.001f, areas[i]);
         }
         // Find sub triangle weighted by area.
         float thr = s * areasum;
-        float acc = 0.0f;
-        float u = 1.0f;
+        float acc = 0f;
+        float u = 1f;
         int tri = npts - 1;
         for (int i = 2; i < npts; i++) {
             float dacc = areas[i];
@@ -558,9 +560,10 @@ public class Vectors {
         return v.isFinite();
     }
 
-    /// Checks that the specified vector's 2D components are finite.
-    /// @param[in] v A point. [(x, y, z)]
-    public static boolean vIsFinite2D(Vector3f v) {
+    /**
+     * Checks that the specified vector's xz components are finite.
+     */
+    public static boolean isFinite2D(Vector3f v) {
         return Float.isFinite(v.x) && Float.isFinite(v.z);
     }
 

@@ -139,7 +139,7 @@ public class RecastMeshDetail {
         float dot12 = vdot2(v1, v2);
 
         // Compute barycentric coordinates
-        float invDenom = 1.0f / (dot00 * dot11 - dot01 * dot01);
+        float invDenom = 1f / (dot00 * dot11 - dot01 * dot01);
         float u = (dot11 * dot02 - dot01 * dot12) * invDenom;
         float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
 
@@ -361,10 +361,10 @@ public class RecastMeshDetail {
     private static boolean overlapSegSeg2d(float[] vertices, int a, int b, int c, int d) {
         float a1 = vcross2(vertices, a, b, d);
         float a2 = vcross2(vertices, a, b, c);
-        if (a1 * a2 < 0.0f) {
+        if (a1 * a2 < 0f) {
             float a3 = vcross2(vertices, c, d, a);
             float a4 = a3 + a2 - a1;
-            return a3 * a4 < 0.0f;
+            return a3 * a4 < 0f;
         }
         return false;
     }
@@ -618,11 +618,11 @@ public class RecastMeshDetail {
     }
 
     private static float getJitterX(int i) {
-        return (((i * 0x8da6b343) & 0xffff) / 65535.0f * 2.0f) - 1.0f;
+        return (((i * 0x8da6b343) & 0xffff) / 65535f * 2f) - 1f;
     }
 
     private static float getJitterY(int i) {
-        return (((i * 0xd8163841) & 0xffff) / 65535.0f * 2.0f) - 1.0f;
+        return (((i * 0xd8163841) & 0xffff) / 65535f * 2f) - 1f;
     }
 
     static int buildPolyDetail(float[] in, int nin, float sampleDist, float sampleMaxError,
@@ -641,7 +641,7 @@ public class RecastMeshDetail {
         tris.clear();
 
         float cs = chf.cellSize;
-        float ics = 1.0f / cs;
+        float ics = 1f / cs;
 
         // Calculate minimum extents of the polygon based on input data.
         float minExtent = polyMinExtent(vertices, nvertices);
@@ -806,14 +806,14 @@ public class RecastMeshDetail {
                         continue; // skip added.
                     }
                     Vector3f pt = new Vector3f();
-                    // The sample location is jittered to get rid of some bad triangulations
-                    // which are cause by symmetrical data from the grid structure.
+                    // The sample location is jittered to get rid of some bad triangulations,
+                    // which are caused by symmetrical data from the grid structure.
                     pt.x = samples.get(s) * sampleDist + getJitterX(i) * cs * 0.1f;
                     pt.y = samples.get(s + 1) * chf.cellHeight;
                     pt.z = samples.get(s + 2) * sampleDist + getJitterY(i) * cs * 0.1f;
                     float d = distToTriMesh(pt, vertices, tris, tris.size() / 4);
-                    if (d < 0) {
-                        continue; // did not hit the mesh.
+                    if (d < 0) {// did not hit the mesh.
+                        continue;
                     }
                     if (d > bestd) {
                         bestd = d;

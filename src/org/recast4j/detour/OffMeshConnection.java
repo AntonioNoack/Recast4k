@@ -21,7 +21,7 @@ package org.recast4j.detour;
 import org.joml.Vector3f;
 
 /**
- * Defines an navigation mesh off-mesh connection within a dtMeshTile object. An off-mesh connection is a user defined
+ * Defines a navigation mesh off-mesh connection within a dtMeshTile object. An off-mesh connection is a user defined
  * traversable connection made up to two vertices.
  */
 public class OffMeshConnection {

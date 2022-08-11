@@ -22,7 +22,7 @@ public class JumpTrajectory implements Trajectory {
     private float interpolateHeight(float ys, float ye, float u) {
         if (u == 0f) {
             return ys;
-        } else if (u == 1.0f) {
+        } else if (u == 1f) {
             return ye;
         }
         float h1, h2;
@@ -35,10 +35,10 @@ public class JumpTrajectory implements Trajectory {
         }
         float t = (float) (Math.sqrt(h1) / (Math.sqrt(h2) + Math.sqrt(h1)));
         if (u <= t) {
-            float v = 1.0f - (u / t);
+            float v = 1f - (u / t);
             return ys + h1 - h1 * v * v;
         }
-        float v = (u - t) / (1.0f - t);
+        float v = (u - t) / (1f - t);
         return ys + h1 - h2 * v * v;
     }
 

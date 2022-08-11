@@ -54,7 +54,7 @@ public class DefaultQueryFilter implements QueryFilter {
         includeFlags = 0xffff;
         excludeFlags = 0;
         for (int i = 0; i < NavMesh.DT_MAX_AREAS; ++i) {
-            areaCosts[i] = 1.0f;
+            areaCosts[i] = 1f;
         }
     }
 
@@ -64,7 +64,7 @@ public class DefaultQueryFilter implements QueryFilter {
         this.excludeFlags = excludeFlags;
         System.arraycopy(areaCost, 0, areaCosts, 0, Math.min(NavMesh.DT_MAX_AREAS, areaCost.length));
         for (int i = areaCost.length; i < NavMesh.DT_MAX_AREAS; ++i) {
-            areaCosts[i] = 1.0f;
+            areaCosts[i] = 1f;
         }
     }
 

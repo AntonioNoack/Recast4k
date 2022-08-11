@@ -24,6 +24,7 @@ import java.util.List;
 import org.recast4j.recast.Heightfield;
 import org.recast4j.recast.Telemetry;
 
+@SuppressWarnings("unused")
 public class CompositeCollider implements Collider {
 
     private final List<Collider> colliders;

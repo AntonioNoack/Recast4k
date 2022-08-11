@@ -18,24 +18,18 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.crowd;
 
-import static java.util.stream.Collectors.toList;
+import java.util.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import static java.util.stream.Collectors.toList;
 
 public class ProximityGrid {
 
-    private final float m_cellSize;
-    private final float m_invCellSize;
+    private final float cellSize, invCellSize;
     private final Map<ItemKey, List<CrowdAgent>> items;
 
-    public ProximityGrid(float m_cellSize) {
-        this.m_cellSize = m_cellSize;
-        m_invCellSize = 1.0f / m_cellSize;
+    public ProximityGrid(float cellSize) {
+        this.cellSize = cellSize;
+        invCellSize = 1f / cellSize;
         items = new HashMap<>();
     }
 
@@ -43,14 +37,13 @@ public class ProximityGrid {
         items.clear();
     }
 
-    void addItem(CrowdAgent agent, float minx, float miny, float maxx, float maxy) {
-        int iminx = (int) Math.floor(minx * m_invCellSize);
-        int iminy = (int) Math.floor(miny * m_invCellSize);
-        int imaxx = (int) Math.floor(maxx * m_invCellSize);
-        int imaxy = (int) Math.floor(maxy * m_invCellSize);
-
-        for (int y = iminy; y <= imaxy; ++y) {
-            for (int x = iminx; x <= imaxx; ++x) {
+    void addItem(CrowdAgent agent, float minXf, float minYf, float maxXf, float maxYf) {
+        int minX = (int) Math.floor(minXf * invCellSize);
+        int minY = (int) Math.floor(minYf * invCellSize);
+        int maxX = (int) Math.floor(maxXf * invCellSize);
+        int maxY = (int) Math.floor(maxYf * invCellSize);
+        for (int y = minY; y <= maxY; ++y) {
+            for (int x = minX; x <= maxX; ++x) {
                 ItemKey key = new ItemKey(x, y);
                 List<CrowdAgent> ids = items.computeIfAbsent(key, k -> new ArrayList<>());
                 ids.add(agent);
@@ -58,15 +51,14 @@ public class ProximityGrid {
         }
     }
 
-    Set<CrowdAgent> queryItems(float minx, float miny, float maxx, float maxy) {
-        int iminx = (int) Math.floor(minx * m_invCellSize);
-        int iminy = (int) Math.floor(miny * m_invCellSize);
-        int imaxx = (int) Math.floor(maxx * m_invCellSize);
-        int imaxy = (int) Math.floor(maxy * m_invCellSize);
-
+    Set<CrowdAgent> queryItems(float minXf, float minYf, float maxXf, float maxYf) {
+        int minX = (int) Math.floor(minXf * invCellSize);
+        int minY = (int) Math.floor(minYf * invCellSize);
+        int maxX = (int) Math.floor(maxXf * invCellSize);
+        int maxY = (int) Math.floor(maxYf * invCellSize);
         Set<CrowdAgent> result = new HashSet<>();
-        for (int y = iminy; y <= imaxy; ++y) {
-            for (int x = iminx; x <= imaxx; ++x) {
+        for (int y = minY; y <= maxY; ++y) {
+            for (int x = minX; x <= maxX; ++x) {
                 ItemKey key = new ItemKey(x, y);
                 List<CrowdAgent> ids = items.get(key);
                 if (ids != null) {
@@ -74,18 +66,17 @@ public class ProximityGrid {
                 }
             }
         }
-
         return result;
     }
 
     @SuppressWarnings("unused")
     public List<int[]> getItemCounts() {
         return items.entrySet().stream().filter(e -> e.getValue() != null && e.getValue().size() > 0)
-                .map(e -> new int[] { e.getKey().x, e.getKey().y, e.getValue().size() }).collect(toList());
+                .map(e -> new int[]{e.getKey().x, e.getKey().y, e.getValue().size()}).collect(toList());
     }
 
     public float getCellSize() {
-        return m_cellSize;
+        return cellSize;
     }
 
     private static class ItemKey {
@@ -120,5 +111,7 @@ public class ProximityGrid {
             return y == other.y;
         }
 
-    };
+    }
+
+    ;
 }

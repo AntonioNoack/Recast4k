@@ -133,14 +133,14 @@ public class RecastFilledVolumeRasterization {
             plane(planes, i + 1, new Vector3f(planes[i]), bc, vertices, b);
             plane(planes, i + 2, new Vector3f(planes[i]), ca, vertices, c);
 
-            float s = 1.0f / (vertices[a] * planes[i + 1][0] + vertices[a + 1] * planes[i + 1][1]
+            float s = 1f / (vertices[a] * planes[i + 1][0] + vertices[a + 1] * planes[i + 1][1]
                     + vertices[a + 2] * planes[i + 1][2] - planes[i + 1][3]);
             planes[i + 1][0] *= s;
             planes[i + 1][1] *= s;
             planes[i + 1][2] *= s;
             planes[i + 1][3] *= s;
 
-            s = 1.0f / (vertices[b] * planes[i + 2][0] + vertices[b + 1] * planes[i + 2][1] + vertices[b + 2] * planes[i + 2][2]
+            s = 1f / (vertices[b] * planes[i + 2][0] + vertices[b + 1] * planes[i + 2][1] + vertices[b + 2] * planes[i + 2][2]
                     - planes[i + 2][3]);
             planes[i + 2][0] *= s;
             planes[i + 2][1] *= s;
@@ -177,8 +177,8 @@ public class RecastFilledVolumeRasterization {
         if (bounds[3] <= bounds[0] || bounds[4] <= bounds[1] || bounds[5] <= bounds[2]) {
             return;
         }
-        float ics = 1.0f / hf.cellSize;
-        float ich = 1.0f / hf.cellHeight;
+        float ics = 1f / hf.cellSize;
+        float ich = 1f / hf.cellHeight;
         int xMin = (int) ((bounds[0] - hf.bmin.x) * ics);
         int zMin = (int) ((bounds[2] - hf.bmin.z) * ics);
         int xMax = Math.min(hf.width - 1, (int) ((bounds[3] - hf.bmin.x) * ics));
@@ -215,19 +215,19 @@ public class RecastFilledVolumeRasterization {
         float mz = z - center.z;
 
         float c = lenSqr(mx, my, mz) - radiusSqr;
-        if (c > 0.0f && my > 0.0f) {
+        if (c > 0f && my > 0f) {
             return null;
         }
         float discr = my * my - c;
-        if (discr < 0.0f) {
+        if (discr < 0f) {
             return null;
         }
         float discrSqrt = (float) Math.sqrt(discr);
         float tmin = -my - discrSqrt;
         float tmax = -my + discrSqrt;
 
-        if (tmin < 0.0f) {
-            tmin = 0.0f;
+        if (tmin < 0f) {
+            tmin = 0f;
         }
         return new float[]{y + tmin, y + tmax};
     }
@@ -361,7 +361,7 @@ public class RecastFilledVolumeRasterization {
         float c = dd * k - md * md;
         if (Math.abs(a) < EPSILON) {
             // Segment runs parallel to cylinder axis
-            if (c > 0.0f) {
+            if (c > 0f) {
                 return null; // ’a’ and thus the segment lie outside cylinder
             }
             // Now known that segment intersects cylinder; figure out how it intersects
@@ -371,36 +371,36 @@ public class RecastFilledVolumeRasterization {
         }
         float b = dd * mn - nd * md;
         float discr = b * b - a * c;
-        if (discr < 0.0f) {
+        if (discr < 0f) {
             return null; // No real roots; no intersection
         }
         float discSqrt = (float) Math.sqrt(discr);
         float t1 = (-b - discSqrt) / a;
         float t2 = (-b + discSqrt) / a;
 
-        if (md + t1 * nd < 0.0f) {
+        if (md + t1 * nd < 0f) {
             // Intersection outside cylinder on ’p’ side
             t1 = -md / nd;
-            if (k + t1 * (2 * mn + t1 * nn) > 0.0f) {
+            if (k + t1 * (2 * mn + t1 * nn) > 0f) {
                 return null;
             }
         } else if (md + t1 * nd > dd) {
             // Intersection outside cylinder on ’q’ side
             t1 = (dd - md) / nd;
-            if (k + dd - 2 * md + t1 * (2 * (mn - nd) + t1 * nn) > 0.0f) {
+            if (k + dd - 2 * md + t1 * (2 * (mn - nd) + t1 * nn) > 0f) {
                 return null;
             }
         }
-        if (md + t2 * nd < 0.0f) {
+        if (md + t2 * nd < 0f) {
             // Intersection outside cylinder on ’p’ side
             t2 = -md / nd;
-            if (k + t2 * (2 * mn + t2 * nn) > 0.0f) {
+            if (k + t2 * (2 * mn + t2 * nn) > 0f) {
                 return null;
             }
         } else if (md + t2 * nd > dd) {
             // Intersection outside cylinder on ’q’ side
             t2 = (dd - md) / nd;
-            if (k + dd - 2 * md + t2 * (2 * (mn - nd) + t2 * nn) > 0.0f) {
+            if (k + dd - 2 * md + t2 * (2 * (mn - nd) + t2 * nn) > 0f) {
                 return null;
             }
         }
@@ -591,15 +591,15 @@ public class RecastFilledVolumeRasterization {
         float t = (planes[plane][3] - dot(planes[plane], point)) / planes[plane][1];
         float[] s = {point[0], point[1] + t, point[2]};
         float u = dot(s, planes[plane + 1]) - planes[plane + 1][3];
-        if (u < 0.0f || u > 1.0f) {
+        if (u < 0f || u > 1f) {
             return null;
         }
         float v = dot(s, planes[plane + 2]) - planes[plane + 2][3];
-        if (v < 0.0f) {
+        if (v < 0f) {
             return null;
         }
         float w = 1f - u - v;
-        if (w < 0.0f) {
+        if (w < 0f) {
             return null;
         }
         return s[1];

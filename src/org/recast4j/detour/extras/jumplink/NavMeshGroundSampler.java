@@ -1,19 +1,12 @@
 package org.recast4j.detour.extras.jumplink;
 
+import org.joml.Vector3f;
+import org.recast4j.Pair;
+import org.recast4j.detour.*;
+import org.recast4j.recast.RecastBuilder.RecastBuilderResult;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-
-import org.joml.Vector3f;
-import org.recast4j.detour.MeshTile;
-import org.recast4j.detour.NavMesh;
-import org.recast4j.detour.NavMeshBuilder;
-import org.recast4j.detour.NavMeshDataCreateParams;
-import org.recast4j.detour.NavMeshQuery;
-import org.recast4j.detour.Poly;
-import org.recast4j.detour.QueryFilter;
-import org.recast4j.detour.Result;
-import org.recast4j.Pair;
-import org.recast4j.recast.RecastBuilder.RecastBuilderResult;
 
 class NavMeshGroundSampler extends AbstractGroundSampler {
 
@@ -35,9 +28,9 @@ class NavMeshGroundSampler extends AbstractGroundSampler {
     }
 
     @Override
-    public void sample(JumpLinkBuilderConfig jlc, RecastBuilderResult result, EdgeSampler es) {
-        NavMeshQuery navMeshQuery = createNavMesh(result, jlc.agentRadius, jlc.agentHeight, jlc.agentClimb);
-        sampleGround(jlc, es, (pt, h) -> getNavMeshHeight(navMeshQuery, pt, jlc.cellSize, h));
+    public void sample(JumpLinkBuilderConfig cfg, RecastBuilderResult result, EdgeSampler es) {
+        NavMeshQuery navMeshQuery = createNavMesh(result, cfg.agentRadius, cfg.agentHeight, cfg.agentClimb);
+        sampleGround(cfg, es, (pt, h) -> getNavMeshHeight(navMeshQuery, pt, cfg.cellSize, h));
     }
 
     private NavMeshQuery createNavMesh(RecastBuilderResult r, float agentRadius, float agentHeight, float agentClimb) {
@@ -65,16 +58,14 @@ class NavMeshGroundSampler extends AbstractGroundSampler {
         return new NavMeshQuery(new NavMesh(NavMeshBuilder.createNavMeshData(params), params.maxVerticesPerPolygon, 0));
     }
 
-    private Pair<Boolean, Float> getNavMeshHeight(NavMeshQuery navMeshQuery, Vector3f pt, float cs,
-                                                  float heightRange) {
-        Vector3f halfExtents = new Vector3f(cs, heightRange, cs);
+    private Pair<Boolean, Float> getNavMeshHeight(NavMeshQuery navMeshQuery, Vector3f pt, float cellSize, float heightRange) {
+        Vector3f halfExtents = new Vector3f(cellSize, heightRange, cellSize);
         float maxHeight = pt.y + heightRange;
         AtomicBoolean found = new AtomicBoolean();
         AtomicReference<Float> minHeight = new AtomicReference<>(pt.y);
         navMeshQuery.queryPolygons(pt, halfExtents, filter, (tile, poly, ref) -> {
-            Result<Float> h = navMeshQuery.getPolyHeight(ref, pt);
-            if (h.succeeded()) {
-                float y = h.result;
+            float y = navMeshQuery.getPolyHeight(ref, pt);
+            if (Float.isFinite(y)) {
                 if (y > minHeight.get() && y < maxHeight) {
                     minHeight.set(y);
                     found.set(true);

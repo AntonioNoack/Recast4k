@@ -198,8 +198,8 @@ public class DynamicNavMesh {
     }
 
     private void rebuild(DynamicTile tile) {
-        NavMeshDataCreateParams params = new NavMeshDataCreateParams();
-        params.walkableHeight = config.walkableHeight;
+        // NavMeshDataCreateParams params = new NavMeshDataCreateParams();
+        // params.walkableHeight = config.walkableHeight;
         dirty = dirty | tile.build(builder, config, telemetry);
     }
 

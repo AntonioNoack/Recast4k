@@ -18,25 +18,20 @@ freely, subject to the following restrictions:
 
 package org.recast4j.dynamic;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.recast4j.detour.MeshData;
 import org.recast4j.detour.NavMesh;
 import org.recast4j.detour.NavMeshBuilder;
 import org.recast4j.detour.NavMeshDataCreateParams;
 import org.recast4j.dynamic.collider.Collider;
 import org.recast4j.dynamic.io.VoxelTile;
-import org.recast4j.recast.Heightfield;
-import org.recast4j.recast.PolyMesh;
-import org.recast4j.recast.PolyMeshDetail;
-import org.recast4j.recast.RecastBuilder;
+import org.recast4j.recast.*;
 import org.recast4j.recast.RecastBuilder.RecastBuilderResult;
-import org.recast4j.recast.RecastConfig;
-import org.recast4j.recast.Telemetry;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 class DynamicTile {
 
@@ -80,7 +75,7 @@ class DynamicTile {
     }
 
     private RecastBuilderResult buildRecast(RecastBuilder builder, DynamicNavMeshConfig config, VoxelTile vt,
-            Heightfield heightfield, Telemetry telemetry) {
+                                            Heightfield heightfield, Telemetry telemetry) {
         RecastConfig rcConfig = new RecastConfig(config.useTiles, config.tileSizeX, config.tileSizeZ, vt.borderSize,
                 config.partitionType, vt.cellSize, vt.cellHeight, config.walkableSlopeAngle, true, true, true,
                 config.walkableHeight, config.walkableRadius, config.walkableClimb, config.minRegionArea, config.regionMergeArea,
@@ -111,7 +106,7 @@ class DynamicTile {
     }
 
     private NavMeshDataCreateParams navMeshCreateParams(int tilex, int tileZ, float cellSize, float cellHeight,
-            DynamicNavMeshConfig config, RecastBuilderResult rcResult) {
+                                                        DynamicNavMeshConfig config, RecastBuilderResult rcResult) {
         PolyMesh mesh = rcResult.mesh;
         PolyMeshDetail meshDetail = rcResult.meshDetail;
         NavMeshDataCreateParams params = new NavMeshDataCreateParams();
@@ -142,14 +137,9 @@ class DynamicTile {
         params.cellSize = cellSize;
         params.cellHeight = cellHeight;
         params.buildBvTree = true;
-
         params.offMeshConCount = 0;
-        params.offMeshConVertices = new float[0];
-        params.offMeshConRad = new float[0];
-        params.offMeshConDir = new int[0];
-        params.offMeshConAreas = new int[0];
-        params.offMeshConFlags = new int[0];
-        params.offMeshConUserID = new int[0];
+        params.offMeshConVertices = params.offMeshConRad = new float[0];
+        params.offMeshConDir = params.offMeshConAreas = params.offMeshConFlags = params.offMeshConUserID = new int[0];
         return params;
     }
 

@@ -18,6 +18,8 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.recast;
 
+import org.recast4j.Edge;
+
 import java.util.Arrays;
 
 import static org.recast4j.recast.RecastConstants.*;
@@ -26,13 +28,6 @@ public class RecastMesh {
 
     private static final int MAX_MESH_VERTICES_POLY = 0xffff;
     static int VERTEX_BUCKET_COUNT = (1 << 12);
-
-    private static class Edge {
-        int[] vert = new int[2];
-        int[] polyEdge = new int[2];
-        int[] poly = new int[2];
-
-    }
 
     private static void buildMeshAdjacency(int[] polys, int npolys, int nvertices, int verticesPerPoly) {
         // Based on code by Eric Lengyel from:
@@ -58,12 +53,12 @@ public class RecastMesh {
                 if (v0 < v1) {
                     Edge edge = new Edge();
                     edges[edgeCount] = edge;
-                    edge.vert[0] = v0;
-                    edge.vert[1] = v1;
-                    edge.poly[0] = i;
-                    edge.polyEdge[0] = j;
-                    edge.poly[1] = i;
-                    edge.polyEdge[1] = 0;
+                    edge.vert0 = v0;
+                    edge.vert1 = v1;
+                    edge.poly0 = i;
+                    edge.polyEdge0 = j;
+                    edge.poly1 = i;
+                    edge.polyEdge1 = 0;
                     // Insert edge
                     firstEdge[nvertices + edgeCount] = firstEdge[v0];
                     firstEdge[v0] = edgeCount;
@@ -83,9 +78,9 @@ public class RecastMesh {
                 if (v0 > v1) {
                     for (int e = firstEdge[v1]; e != RC_MESH_NULL_IDX; e = firstEdge[nvertices + e]) {
                         Edge edge = edges[e];
-                        if (edge.vert[1] == v0 && edge.poly[0] == edge.poly[1]) {
-                            edge.poly[1] = i;
-                            edge.polyEdge[1] = j;
+                        if (edge.vert1 == v0 && edge.poly0 == edge.poly1) {
+                            edge.poly1 = i;
+                            edge.polyEdge1 = j;
                             break;
                         }
                     }
@@ -96,11 +91,11 @@ public class RecastMesh {
         // Store adjacency
         for (int i = 0; i < edgeCount; ++i) {
             Edge e = edges[i];
-            if (e.poly[0] != e.poly[1]) {
-                int p0 = e.poly[0] * verticesPerPoly * 2;
-                int p1 = e.poly[1] * verticesPerPoly * 2;
-                polys[p0 + verticesPerPoly + e.polyEdge[0]] = e.poly[1];
-                polys[p1 + verticesPerPoly + e.polyEdge[1]] = e.poly[0];
+            if (e.poly0 != e.poly1) {
+                int p0 = e.poly0 * verticesPerPoly * 2;
+                int p1 = e.poly1 * verticesPerPoly * 2;
+                polys[p0 + verticesPerPoly + e.polyEdge0] = e.poly1;
+                polys[p1 + verticesPerPoly + e.polyEdge1] = e.poly0;
             }
         }
 

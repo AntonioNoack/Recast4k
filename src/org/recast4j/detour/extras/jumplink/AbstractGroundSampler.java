@@ -8,9 +8,11 @@ import java.util.function.BiFunction;
 
 abstract class AbstractGroundSampler implements GroundSampler {
 
-    protected void sampleGround(JumpLinkBuilderConfig acfg, EdgeSampler es,
-                                BiFunction<Vector3f, Float, Pair<Boolean, Float>> heightFunc) {
-        float cellSize = acfg.cellSize;
+    protected void sampleGround(
+            JumpLinkBuilderConfig cfg, EdgeSampler es,
+            BiFunction<Vector3f, Float, Pair<Boolean, Float>> heightFunc
+    ) {
+        float cellSize = cfg.cellSize;
         float dist = es.start.p.distance(es.start.q);
         int numSamples = Math.max(2, (int) Math.ceil(dist / cellSize));
         sampleGroundSegment(heightFunc, es.start, numSamples);

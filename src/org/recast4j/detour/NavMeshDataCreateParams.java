@@ -108,14 +108,15 @@ public class NavMeshDataCreateParams {
      * User defined area ids assigned to the off-mesh connections. [Size: #offMeshConCount]
      */
     public int[] offMeshConAreas;
-    /// The permitted travel direction of the off-mesh connections. [Size: #offMeshConCount]
-    ///
-    /// 0 = Travel only from endpoint A to endpoint B.<br/>
-    /// #DT_OFFMESH_CON_BIDIR = Bidirectional travel.
+
+    /**
+     * The permitted travel direction of the off-mesh connections. [Size: #offMeshConCount]
+     * 0 = Travel only from endpoint A to endpoint B. Bidirectional travel.
+     * */
     public int[] offMeshConDir;
-    /// The user defined ids of the off-mesh connection. [Size: #offMeshConCount]
+    /** The user defined ids of the off-mesh connection. [Size: #offMeshConCount] */
     public int[] offMeshConUserID;
-    /// The number of off-mesh connections. [Limit: >= 0]
+    /** The number of off-mesh connections. [Limit: >= 0] */
     public int offMeshConCount;
 
     /// @}
@@ -167,7 +168,6 @@ public class NavMeshDataCreateParams {
 
     /**
      * True if a bounding volume tree should be built for the tile.
-     *
      * @note The BVTree is not normally needed for layered navigation meshes.
      */
     public boolean buildBvTree;

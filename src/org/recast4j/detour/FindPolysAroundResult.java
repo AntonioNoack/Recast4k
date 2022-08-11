@@ -22,8 +22,7 @@ import org.recast4j.FloatArrayList;
 import org.recast4j.LongArrayList;
 
 public class FindPolysAroundResult {
-    public final LongArrayList refs;
-    public final LongArrayList parentRefs;
+    public final LongArrayList refs, parentRefs;
     public final FloatArrayList costs;
 
     public FindPolysAroundResult(LongArrayList refs, LongArrayList parentRefs, FloatArrayList costs) {

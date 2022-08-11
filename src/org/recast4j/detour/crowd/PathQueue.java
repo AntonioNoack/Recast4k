@@ -69,9 +69,7 @@ public class PathQueue {
     }
 
     protected PathQueryResult request(long startRef, long endRef, Vector3f startPos, Vector3f endPos, QueryFilter filter) {
-        if (queue.size() >= config.pathQueueSize) {
-            return null;
-        }
+        if (queue.size() >= config.pathQueueSize) return null;
         PathQuery q = new PathQuery();
         q.startPos.set(startPos);
         q.startRef = startRef;

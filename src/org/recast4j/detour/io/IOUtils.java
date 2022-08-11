@@ -25,13 +25,13 @@ import java.nio.ByteBuffer;
 public class IOUtils {
 
 	public static ByteBuffer toByteBuffer(InputStream inputStream) throws IOException {
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		byte[] buffer = new byte[4096];
 		int l;
 		while ((l = inputStream.read(buffer)) != -1) {
-			baos.write(buffer, 0, l);
+			bos.write(buffer, 0, l);
 		}
-		return ByteBuffer.wrap(baos.toByteArray());
+		return ByteBuffer.wrap(bos.toByteArray());
 	}
 
 	public static int swapEndianness(int i) {

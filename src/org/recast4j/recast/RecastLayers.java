@@ -102,8 +102,8 @@ public class RecastLayers {
 
                     if (sid == 0xff) {
                         sid = sweepId++;
-                        sweeps[sid].nei = 0xff;
-                        sweeps[sid].ns = 0;
+                        sweeps[sid].neighborId = 0xff;
+                        sweeps[sid].numSamples = 0;
                     }
 
                     // -y
@@ -115,18 +115,18 @@ public class RecastLayers {
                         if (nr != 0xff) {
                             // Set neighbour when first valid neighbour is
                             // encoutered.
-                            if (sweeps[sid].ns == 0)
-                                sweeps[sid].nei = nr;
+                            if (sweeps[sid].numSamples == 0)
+                                sweeps[sid].neighborId = nr;
 
-                            if (sweeps[sid].nei == nr) {
+                            if (sweeps[sid].neighborId == nr) {
                                 // Update existing neighbour
-                                sweeps[sid].ns++;
+                                sweeps[sid].numSamples++;
                                 prevCount[nr]++;
                             } else {
                                 // This is hit if there is nore than one
                                 // neighbour.
                                 // Invalidate the neighbour.
-                                sweeps[sid].nei = 0xff;
+                                sweeps[sid].neighborId = 0xff;
                             }
                         }
                     }
@@ -141,13 +141,13 @@ public class RecastLayers {
                 // connection to it,
                 // the sweep will be merged with the previous one, else new
                 // region is created.
-                if (sweeps[i].nei != 0xff && prevCount[sweeps[i].nei] == sweeps[i].ns) {
-                    sweeps[i].id = sweeps[i].nei;
+                if (sweeps[i].neighborId != 0xff && prevCount[sweeps[i].neighborId] == sweeps[i].numSamples) {
+                    sweeps[i].regionId = sweeps[i].neighborId;
                 } else {
                     if (regId == 255) {
                         throw new RuntimeException("rcBuildHeightfieldLayers: Region ID overflow.");
                     }
-                    sweeps[i].id = regId++;
+                    sweeps[i].regionId = regId++;
                 }
             }
 
@@ -156,7 +156,7 @@ public class RecastLayers {
                 CompactCell c = chf.cells[x + y * w];
                 for (int i = c.index, ni = c.index + c.count; i < ni; ++i) {
                     if (srcReg[i] != 0xff)
-                        srcReg[i] = sweeps[srcReg[i]].id;
+                        srcReg[i] = sweeps[srcReg[i]].regionId;
                 }
             }
         }

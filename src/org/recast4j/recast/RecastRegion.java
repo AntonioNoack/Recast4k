@@ -29,10 +29,7 @@ public class RecastRegion {
     static final int RC_NULL_NEI = 0xffff;
 
     static class SweepSpan {
-        int rid; // row id
-        int id; // region id
-        int ns; // number samples
-        int nei; // neighbour id
+        int rowId, regionId, numSamples, neighborId;
     }
 
     public static int calculateDistanceField(CompactHeightfield chf, int[] src) {
@@ -1259,9 +1256,9 @@ public class RecastRegion {
 
                     if (previd == 0) {
                         previd = rid++;
-                        sweeps[previd].rid = previd;
-                        sweeps[previd].ns = 0;
-                        sweeps[previd].nei = 0;
+                        sweeps[previd].rowId = previd;
+                        sweeps[previd].numSamples = 0;
+                        sweeps[previd].neighborId = 0;
                     }
 
                     // -y
@@ -1271,15 +1268,15 @@ public class RecastRegion {
                         int ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, 3);
                         if (srcReg[ai] != 0 && (srcReg[ai] & RC_BORDER_REG) == 0 && chf.areas[i] == chf.areas[ai]) {
                             int nr = srcReg[ai];
-                            if (sweeps[previd].nei == 0 || sweeps[previd].nei == nr) {
-                                sweeps[previd].nei = nr;
-                                sweeps[previd].ns++;
+                            if (sweeps[previd].neighborId == 0 || sweeps[previd].neighborId == nr) {
+                                sweeps[previd].neighborId = nr;
+                                sweeps[previd].numSamples++;
                                 if (prev.length <= nr) {
                                     prev = Arrays.copyOf(prev, prev.length * 2);
                                 }
                                 prev[nr]++;
                             } else {
-                                sweeps[previd].nei = RC_NULL_NEI;
+                                sweeps[previd].neighborId = RC_NULL_NEI;
                             }
                         }
                     }
@@ -1290,10 +1287,10 @@ public class RecastRegion {
 
             // Create unique ID.
             for (int i = 1; i < rid; ++i) {
-                if (sweeps[i].nei != RC_NULL_NEI && sweeps[i].nei != 0 && prev[sweeps[i].nei] == sweeps[i].ns) {
-                    sweeps[i].id = sweeps[i].nei;
+                if (sweeps[i].neighborId != RC_NULL_NEI && sweeps[i].neighborId != 0 && prev[sweeps[i].neighborId] == sweeps[i].numSamples) {
+                    sweeps[i].regionId = sweeps[i].neighborId;
                 } else {
-                    sweeps[i].id = id++;
+                    sweeps[i].regionId = id++;
                 }
             }
 
@@ -1303,7 +1300,7 @@ public class RecastRegion {
 
                 for (int i = c.index, ni = c.index + c.count; i < ni; ++i) {
                     if (srcReg[i] > 0 && srcReg[i] < rid) {
-                        srcReg[i] = sweeps[srcReg[i]].id;
+                        srcReg[i] = sweeps[srcReg[i]].regionId;
                     }
                 }
             }
@@ -1528,9 +1525,9 @@ public class RecastRegion {
 
                     if (previd == 0) {
                         previd = rid++;
-                        sweeps[previd].rid = previd;
-                        sweeps[previd].ns = 0;
-                        sweeps[previd].nei = 0;
+                        sweeps[previd].rowId = previd;
+                        sweeps[previd].numSamples = 0;
+                        sweeps[previd].neighborId = 0;
                     }
 
                     // -y
@@ -1540,15 +1537,15 @@ public class RecastRegion {
                         int ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, 3);
                         if (srcReg[ai] != 0 && (srcReg[ai] & RC_BORDER_REG) == 0 && chf.areas[i] == chf.areas[ai]) {
                             int nr = srcReg[ai];
-                            if (sweeps[previd].nei == 0 || sweeps[previd].nei == nr) {
-                                sweeps[previd].nei = nr;
-                                sweeps[previd].ns++;
+                            if (sweeps[previd].neighborId == 0 || sweeps[previd].neighborId == nr) {
+                                sweeps[previd].neighborId = nr;
+                                sweeps[previd].numSamples++;
                                 if (prev.length <= nr) {
                                     prev = Arrays.copyOf(prev, prev.length * 2);
                                 }
                                 prev[nr]++;
                             } else {
-                                sweeps[previd].nei = RC_NULL_NEI;
+                                sweeps[previd].neighborId = RC_NULL_NEI;
                             }
                         }
                     }
@@ -1559,10 +1556,10 @@ public class RecastRegion {
 
             // Create unique ID.
             for (int i = 1; i < rid; ++i) {
-                if (sweeps[i].nei != RC_NULL_NEI && sweeps[i].nei != 0 && prev[sweeps[i].nei] == sweeps[i].ns) {
-                    sweeps[i].id = sweeps[i].nei;
+                if (sweeps[i].neighborId != RC_NULL_NEI && sweeps[i].neighborId != 0 && prev[sweeps[i].neighborId] == sweeps[i].numSamples) {
+                    sweeps[i].regionId = sweeps[i].neighborId;
                 } else {
-                    sweeps[i].id = id++;
+                    sweeps[i].regionId = id++;
                 }
             }
 
@@ -1572,7 +1569,7 @@ public class RecastRegion {
 
                 for (int i = c.index, ni = c.index + c.count; i < ni; ++i) {
                     if (srcReg[i] > 0 && srcReg[i] < rid) {
-                        srcReg[i] = sweeps[srcReg[i]].id;
+                        srcReg[i] = sweeps[srcReg[i]].regionId;
                     }
                 }
             }

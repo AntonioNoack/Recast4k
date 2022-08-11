@@ -24,33 +24,27 @@ import static org.joml.Math.clamp;
 import static org.recast4j.Vectors.copy;
 
 public class ObstacleAvoidanceDebugData {
-    int m_nsamples;
-    int m_maxSamples;
-    float[] m_vel;
-    float[] m_ssize;
-    float[] m_pen;
-    float[] m_vpen;
-    float[] m_vcpen;
-    float[] m_spen;
-    float[] m_tpen;
+    int numSamples, maxSamples;
+    float[] vel, ssize;
+    float[] pen, vpen, vcpen, spen, tpen;
 
-    public ObstacleAvoidanceDebugData(int maxSamples) {
-        m_maxSamples = maxSamples;
-        m_vel = new float[3 * m_maxSamples];
-        m_pen = new float[m_maxSamples];
-        m_ssize = new float[m_maxSamples];
-        m_vpen = new float[m_maxSamples];
-        m_vcpen = new float[m_maxSamples];
-        m_spen = new float[m_maxSamples];
-        m_tpen = new float[m_maxSamples];
+    public ObstacleAvoidanceDebugData(int maxNumSamples) {
+        maxSamples = maxNumSamples;
+        vel = new float[3 * maxSamples];
+        pen = new float[maxSamples];
+        ssize = new float[maxSamples];
+        vpen = new float[maxSamples];
+        vcpen = new float[maxSamples];
+        spen = new float[maxSamples];
+        tpen = new float[maxSamples];
     }
 
     public void reset() {
-        m_nsamples = 0;
+        numSamples = 0;
     }
 
     void normalizeArray(float[] arr, int n) {
-        // Normalize penaly range.
+        // Normalize penalty range.
         float minPen = Float.MAX_VALUE;
         float maxPen = -Float.MAX_VALUE;
         for (int i = 0; i < n; ++i) {
@@ -58,62 +52,62 @@ public class ObstacleAvoidanceDebugData {
             maxPen = Math.max(maxPen, arr[i]);
         }
         float penRange = maxPen - minPen;
-        float s = penRange > 0.001f ? (1.0f / penRange) : 1;
+        float s = penRange > 0.001f ? (1f / penRange) : 1;
         for (int i = 0; i < n; ++i)
-            arr[i] = clamp((arr[i] - minPen) * s, 0.0f, 1.0f);
+            arr[i] = clamp((arr[i] - minPen) * s, 0f, 1f);
     }
 
     public void normalizeSamples() {
-        normalizeArray(m_pen, m_nsamples);
-        normalizeArray(m_vpen, m_nsamples);
-        normalizeArray(m_vcpen, m_nsamples);
-        normalizeArray(m_spen, m_nsamples);
-        normalizeArray(m_tpen, m_nsamples);
+        normalizeArray(pen, numSamples);
+        normalizeArray(vpen, numSamples);
+        normalizeArray(vcpen, numSamples);
+        normalizeArray(spen, numSamples);
+        normalizeArray(tpen, numSamples);
     }
 
     public void addSample(Vector3f vel, float ssize, float pen, float vpen, float vcpen, float spen, float tpen) {
-        if (m_nsamples >= m_maxSamples) return;
-        copy(m_vel, m_nsamples * 3, vel);
-        m_ssize[m_nsamples] = ssize;
-        m_pen[m_nsamples] = pen;
-        m_vpen[m_nsamples] = vpen;
-        m_vcpen[m_nsamples] = vcpen;
-        m_spen[m_nsamples] = spen;
-        m_tpen[m_nsamples] = tpen;
-        m_nsamples++;
+        if (numSamples >= maxSamples) return;
+        copy(this.vel, numSamples * 3, vel);
+        this.ssize[numSamples] = ssize;
+        this.pen[numSamples] = pen;
+        this.vpen[numSamples] = vpen;
+        this.vcpen[numSamples] = vcpen;
+        this.spen[numSamples] = spen;
+        this.tpen[numSamples] = tpen;
+        numSamples++;
     }
 
     public int getSampleCount() {
-        return m_nsamples;
+        return numSamples;
     }
 
     public Vector3f getSampleVelocity(int i) {
         Vector3f vel = new Vector3f();
-        copy(vel, m_vel, i * 3);
+        copy(vel, this.vel, i * 3);
         return vel;
     }
 
     public float getSampleSize(int i) {
-        return m_ssize[i];
+        return ssize[i];
     }
 
     public float getSamplePenalty(int i) {
-        return m_pen[i];
+        return pen[i];
     }
 
     public float getSampleDesiredVelocityPenalty(int i) {
-        return m_vpen[i];
+        return vpen[i];
     }
 
     public float getSampleCurrentVelocityPenalty(int i) {
-        return m_vcpen[i];
+        return vcpen[i];
     }
 
     public float getSamplePreferredSidePenalty(int i) {
-        return m_spen[i];
+        return spen[i];
     }
 
     public float getSampleCollisionTimePenalty(int i) {
-        return m_tpen[i];
+        return tpen[i];
     }
 }

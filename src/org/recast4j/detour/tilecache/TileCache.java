@@ -36,12 +36,12 @@ import static org.recast4j.Vectors.*;
 
 public class TileCache {
 
-    int m_tileLutSize; /// < Tile hash lookup size (must be pot).
-    int m_tileLutMask; /// < Tile hash lookup mask.
+    int tileLutSize; /// < Tile hash lookup size (must be pot).
+    int tileLutMask; /// < Tile hash lookup mask.
 
-    private final CompressedTile[] m_posLookup; /// < Tile hash lookup.
-    private CompressedTile m_nextFreeTile; /// < Freelist of tiles.
-    private final CompressedTile[] m_tiles; /// < List of tiles. // TODO: (PP) replace with list
+    private final CompressedTile[] posLookup; /// < Tile hash lookup.
+    private CompressedTile nextFreeTile; /// < Freelist of tiles.
+    private final CompressedTile[] tiles; /// < List of tiles. // TODO: (PP) replace with list
 
     private final int m_saltBits; /// < Number of salt bits in the tile ID.
     private final int m_tileBits; /// < Number of tile bits in the tile ID.
@@ -106,17 +106,17 @@ public class TileCache {
         m_navmesh = navmesh;
         tmProcess = tmprocs;
 
-        m_tileLutSize = nextPow2(this.params.maxTiles / 4);
-        if (m_tileLutSize == 0) {
-            m_tileLutSize = 1;
+        tileLutSize = nextPow2(this.params.maxTiles / 4);
+        if (tileLutSize == 0) {
+            tileLutSize = 1;
         }
-        m_tileLutMask = m_tileLutSize - 1;
-        m_tiles = new CompressedTile[this.params.maxTiles];
-        m_posLookup = new CompressedTile[m_tileLutSize];
+        tileLutMask = tileLutSize - 1;
+        tiles = new CompressedTile[this.params.maxTiles];
+        posLookup = new CompressedTile[tileLutSize];
         for (int i = this.params.maxTiles - 1; i >= 0; --i) {
-            m_tiles[i] = new CompressedTile(i);
-            m_tiles[i].next = m_nextFreeTile;
-            m_nextFreeTile = m_tiles[i];
+            tiles[i] = new CompressedTile(i);
+            tiles[i].next = nextFreeTile;
+            nextFreeTile = tiles[i];
         }
         m_tileBits = ilog2(nextPow2(this.params.maxTiles));
         m_saltBits = Math.min(31, 32 - m_tileBits);
@@ -127,18 +127,12 @@ public class TileCache {
 
     @SuppressWarnings("unused")
     public CompressedTile getTileByRef(long ref) {
-        if (ref == 0) {
-            return null;
-        }
+        if (ref == 0) return null;
         int tileIndex = decodeTileIdTile(ref);
         int tileSalt = decodeTileIdSalt(ref);
-        if (tileIndex >= params.maxTiles) {
-            return null;
-        }
-        CompressedTile tile = m_tiles[tileIndex];
-        if (tile.salt != tileSalt) {
-            return null;
-        }
+        if (tileIndex >= params.maxTiles) return null;
+        CompressedTile tile = tiles[tileIndex];
+        if (tile.salt != tileSalt) return null;
         return tile;
     }
 
@@ -146,8 +140,8 @@ public class TileCache {
         LongArrayList tiles = new LongArrayList();
 
         // Find tile based on hash.
-        int h = NavMesh.computeTileHash(tx, ty, m_tileLutMask);
-        CompressedTile tile = m_posLookup[h];
+        int h = NavMesh.computeTileHash(tx, ty, tileLutMask);
+        CompressedTile tile = posLookup[h];
         while (tile != null) {
             if (tile.header != null && tile.header.tx == tx && tile.header.ty == ty) {
                 tiles.add(getTileRef(tile));
@@ -160,8 +154,8 @@ public class TileCache {
 
     CompressedTile getTileAt(int tx, int ty, int tlayer) {
         // Find tile based on hash.
-        int h = NavMesh.computeTileHash(tx, ty, m_tileLutMask);
-        CompressedTile tile = m_posLookup[h];
+        int h = NavMesh.computeTileHash(tx, ty, tileLutMask);
+        CompressedTile tile = posLookup[h];
         while (tile != null) {
             if (tile.header != null && tile.header.tx == tx && tile.header.ty == ty && tile.header.tlayer == tlayer) {
                 return tile;
@@ -180,27 +174,19 @@ public class TileCache {
     }
 
     public long getObstacleRef(TileCacheObstacle ob) {
-        if (ob == null) {
-            return 0;
-        }
+        if (ob == null) return 0;
         int idx = ob.index;
         return encodeObstacleId(ob.salt, idx);
     }
 
     @SuppressWarnings("unused")
     public TileCacheObstacle getObstacleByRef(long ref) {
-        if (ref == 0) {
-            return null;
-        }
+        if (ref == 0) return null;
         int idx = decodeObstacleIdObstacle(ref);
-        if (idx >= obstacles.size()) {
-            return null;
-        }
+        if (idx >= obstacles.size()) return null;
         TileCacheObstacle ob = obstacles.get(idx);
         int salt = decodeObstacleIdSalt(ref);
-        if (ob.salt != salt) {
-            return null;
-        }
+        if (ob.salt != salt) return null;
         return ob;
     }
 
@@ -215,9 +201,9 @@ public class TileCache {
         }
         // Allocate a tile.
         CompressedTile tile = null;
-        if (m_nextFreeTile != null) {
-            tile = m_nextFreeTile;
-            m_nextFreeTile = tile.next;
+        if (nextFreeTile != null) {
+            tile = nextFreeTile;
+            nextFreeTile = tile.next;
             tile.next = null;
         }
 
@@ -227,9 +213,9 @@ public class TileCache {
         }
 
         // Insert tile into the position lut.
-        int h = NavMesh.computeTileHash(header.tx, header.ty, m_tileLutMask);
-        tile.next = m_posLookup[h];
-        m_posLookup[h] = tile;
+        int h = NavMesh.computeTileHash(header.tx, header.ty, tileLutMask);
+        tile.next = posLookup[h];
+        posLookup[h] = tile;
 
         // Init tile.
         tile.header = header;
@@ -254,21 +240,21 @@ public class TileCache {
         if (tileIndex >= params.maxTiles) {
             throw new RuntimeException("Invalid tile index");
         }
-        CompressedTile tile = m_tiles[tileIndex];
+        CompressedTile tile = tiles[tileIndex];
         if (tile.salt != tileSalt) {
             throw new RuntimeException("Invalid tile salt");
         }
 
         // Remove tile from hash lookup.
-        int h = NavMesh.computeTileHash(tile.header.tx, tile.header.ty, m_tileLutMask);
+        int h = NavMesh.computeTileHash(tile.header.tx, tile.header.ty, tileLutMask);
         CompressedTile prev = null;
-        CompressedTile cur = m_posLookup[h];
+        CompressedTile cur = posLookup[h];
         while (cur != null) {
             if (cur == tile) {
                 if (prev != null) {
                     prev.next = cur.next;
                 } else {
-                    m_posLookup[h] = cur.next;
+                    posLookup[h] = cur.next;
                 }
                 break;
             }
@@ -288,8 +274,8 @@ public class TileCache {
         }
 
         // Add to free list.
-        tile.next = m_nextFreeTile;
-        m_nextFreeTile = tile;
+        tile.next = nextFreeTile;
+        nextFreeTile = tile;
 
     }
 
@@ -388,7 +374,7 @@ public class TileCache {
                 LongArrayList tiles = getTilesAt(tx, ty);
                 for (int i = 0, l = tiles.getSize(); i < l; i++) {
                     long t = tiles.get(i);
-                    CompressedTile tile = m_tiles[decodeTileIdTile(t)];
+                    CompressedTile tile = this.tiles[decodeTileIdTile(t)];
                     calcTightTileBounds(tile.header, tbmin, tbmax);
                     if (overlapBounds(bmin, bmax, tbmin, tbmax)) {
                         results.add(t);
@@ -494,7 +480,7 @@ public class TileCache {
         if (idx > params.maxTiles) {
             throw new RuntimeException("Invalid tile index");
         }
-        CompressedTile tile = m_tiles[idx];
+        CompressedTile tile = tiles[idx];
         int salt = decodeTileIdSalt(ref);
         if (tile.salt != salt) {
             throw new RuntimeException("Invalid tile salt");
@@ -608,7 +594,7 @@ public class TileCache {
     }
 
     public CompressedTile getTile(int i) {
-        return m_tiles[i];
+        return tiles[i];
     }
 
     public NavMesh getNavMesh() {

@@ -11,9 +11,7 @@ public class EdgeSampler {
     public final List<GroundSegment> end = new ArrayList<>();
     public final Trajectory trajectory;
 
-    final Vector3f ax = new Vector3f();
-    final Vector3f ay = new Vector3f();
-    final Vector3f az = new Vector3f();
+    final Vector3f ax = new Vector3f(), ay = new Vector3f(), az = new Vector3f();
 
     public EdgeSampler(Edge edge, Trajectory trajectory) {
         this.trajectory = trajectory;

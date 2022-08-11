@@ -50,7 +50,7 @@ public class Recast {
     public static int[] markWalkableTriangles(float walkableSlopeAngle, float[] vertices, int[] tris, int nt,
                                               AreaModification areaMod) {
         int[] areas = new int[nt];
-        float walkableThr = (float) Math.cos(walkableSlopeAngle / 180.0f * Math.PI);
+        float walkableThr = (float) Math.cos(walkableSlopeAngle / 180f * Math.PI);
         Vector3f norm = new Vector3f();
         for (int i = 0; i < nt; ++i) {
             int tri = i * 3;
@@ -76,7 +76,7 @@ public class Recast {
     @SuppressWarnings("unused")
     public static void clearUnwalkableTriangles(float walkableSlopeAngle, float[] vertices,
                                                 int[] tris, int nt, int[] areas) {
-        float walkableThr = (float) Math.cos(walkableSlopeAngle / 180.0f * Math.PI);
+        float walkableThr = (float) Math.cos(walkableSlopeAngle / 180f * Math.PI);
         Vector3f norm = new Vector3f();
         for (int i = 0; i < nt; ++i) {
             int tri = i * 3;

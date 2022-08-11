@@ -29,7 +29,7 @@ public class Poly {
     /** The indices of the polygon's vertices. The actual vertices are located in MeshTile::vertices. */
     public final int[] vertices;
     /** Packed data representing neighbor polygons references and flags for each edge. */
-    public final int[] neis;
+    public final int[] neighborData;
     /** The user defined polygon flags. */
     public int flags;
     /** The number of vertices in the polygon. */
@@ -39,32 +39,32 @@ public class Poly {
      *
      * @note Use the structure's set and get methods to access this value.
      */
-    public int areaAndtype;
+    public int areaAndType;
 
     public Poly(int index, int maxVerticesPerPoly) {
         this.index = index;
         vertices = new int[maxVerticesPerPoly];
-        neis = new int[maxVerticesPerPoly];
+        neighborData = new int[maxVerticesPerPoly];
     }
 
     /** Sets the user defined area id. [Limit: &lt; {@link org.recast4j.detour.NavMesh#DT_MAX_AREAS}] */
     public void setArea(int a) {
-        areaAndtype = (areaAndtype & 0xc0) | (a & 0x3f);
+        areaAndType = (areaAndType & 0xc0) | (a & 0x3f);
     }
 
     /** Sets the polygon type. (See: #dtPolyTypes.) */
     public void setType(int t) {
-        areaAndtype = (areaAndtype & 0x3f) | (t << 6);
+        areaAndType = (areaAndType & 0x3f) | (t << 6);
     }
 
     /** Gets the user defined area id. */
     public int getArea() {
-        return areaAndtype & 0x3f;
+        return areaAndType & 0x3f;
     }
 
     /** Gets the polygon type. (See: #dtPolyTypes) */
     public int getType() {
-        return areaAndtype >> 6;
+        return areaAndType >> 6;
     }
 
 }

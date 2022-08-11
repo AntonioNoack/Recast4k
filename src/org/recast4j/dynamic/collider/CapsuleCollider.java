@@ -23,6 +23,7 @@ import org.recast4j.recast.Heightfield;
 import org.recast4j.recast.RecastFilledVolumeRasterization;
 import org.recast4j.recast.Telemetry;
 
+@SuppressWarnings("unused")
 public class CapsuleCollider extends AbstractCollider {
 
     private final Vector3f start;

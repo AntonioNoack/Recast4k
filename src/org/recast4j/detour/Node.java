@@ -21,34 +21,48 @@ package org.recast4j.detour;
 import org.joml.Vector3f;
 import org.recast4j.LongArrayList;
 
-import java.util.List;
-
 public class Node {
 
-    static int DT_NODE_OPEN = 0x01;
-    static int DT_NODE_CLOSED = 0x02;
-    /** parent of the node is not adjacent. Found using raycast. */
-    static int DT_NODE_PARENT_DETACHED = 0x04;
+    static final int OPEN = 0x01;
+    static final int CLOSED = 0x02;
+    /**
+     * parent of the node is not adjacent. Found using raycast.
+     */
+    static final int PARENT_DETACHED = 0x04;
 
     public final int index;
 
-    /** Position of the node. */
+    /**
+     * Position of the node.
+     */
     public Vector3f pos = new Vector3f();
-    /** Cost of reaching the given node. */
+    /**
+     * Cost of reaching the given node.
+     */
     public float cost;
-    /** Total cost of reaching the goal via the given node including heuristics. */
-    public float total;
-    /** Index to parent node. */
+    /**
+     * Total cost of reaching the goal via the given node including heuristics.
+     */
+    public float totalCost;
+    /**
+     * Index to parent node.
+     */
     public int parentIndex;
     /**
      * extra state information. A polyRef can have multiple nodes with different extra info. see DT_MAX_STATES_PER_NODE
      */
     public int state;
-    /** Node flags. A combination of dtNodeFlags. */
+    /**
+     * Node flags. A combination of dtNodeFlags.
+     */
     public int flags;
-    /** Polygon ref the node corresponds to. */
-    public long id;
-    /** Shortcut found by raycast. */
+    /**
+     * Polygon ref the node corresponds to.
+     */
+    public long polygonRef;
+    /**
+     * Shortcut found by raycast.
+     */
     LongArrayList shortcut;
 
     public Node(int index) {
@@ -57,7 +71,7 @@ public class Node {
 
     @Override
     public String toString() {
-        return "Node [id=" + id + "]";
+        return "Node [id=" + polygonRef + "]";
     }
 
 }

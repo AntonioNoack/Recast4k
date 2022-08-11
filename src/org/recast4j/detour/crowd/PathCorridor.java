@@ -379,8 +379,8 @@ public class PathCorridor {
             path = mergeCorridorStartMoved(path, masResult.result.visited);
             // Adjust the position to stay on top of the navmesh.
             copy(pos, masResult.result.resultPos);
-            Result<Float> hr = navquery.getPolyHeight(path.get(0), masResult.result.resultPos);
-            if (hr.succeeded()) pos.y = hr.result;
+            float hr = navquery.getPolyHeight(path.get(0), masResult.result.resultPos);
+            if (Float.isFinite(hr)) pos.y = hr;
             return true;
         }
         return false;

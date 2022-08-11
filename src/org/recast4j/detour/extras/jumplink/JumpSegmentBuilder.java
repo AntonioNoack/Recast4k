@@ -5,7 +5,7 @@ import java.util.LinkedList;
 
 class JumpSegmentBuilder {
 
-    JumpSegment[] build(JumpLinkBuilderConfig acfg, EdgeSampler es) {
+    JumpSegment[] build(JumpLinkBuilderConfig cfg, EdgeSampler es) {
         int n = es.end.get(0).samples.length;
         int[][] sampleGrid = new int[n][es.end.size()];
         for (int j = 0; j < es.end.size(); j++) {
@@ -24,7 +24,7 @@ class JumpSegmentBuilder {
                     } else {
                         Deque<int[]> queue = new LinkedList<>();
                         queue.add(new int[] { i, j });
-                        fill(es, sampleGrid, queue, acfg.agentClimb, region);
+                        fill(es, sampleGrid, queue, cfg.agentClimb, region);
                         region++;
                     }
                 }

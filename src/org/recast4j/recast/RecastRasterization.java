@@ -188,10 +188,7 @@ public class RecastRasterization {
                 in = p1;
                 p1 = temp;
             }
-            if (nvrow < 3)
-                continue;
-
-            if (y < 0) {
+            if (nvrow < 3 || y < 0) {
                 continue;
             }
             // find the horizontal bounds in the row
@@ -221,9 +218,7 @@ public class RecastRasterization {
                     inrow = p2;
                     p2 = temp;
                 }
-                if (nv < 3)
-                    continue;
-                if (x < 0) {
+                if (nv < 3 || x < 0) {
                     continue;
                 }
 
@@ -236,14 +231,10 @@ public class RecastRasterization {
                 smin -= bmin.y;
                 smax -= bmin.y;
                 // Skip the span if it is outside the heightfield bbox
-                if (smax < 0.0f)
-                    continue;
-                if (smin > by)
+                if (smax < 0f || smin > by)
                     continue;
                 // Clamp the span to the heightfield bbox.
-                if (smin < 0.0f)
-                    smin = 0;
-                if (smax > by)
+                if (smin < 0f || smax > by)
                     smax = by;
 
                 // Snap the span to the heightfield height grid.
@@ -265,8 +256,8 @@ public class RecastRasterization {
 
         if (ctx != null) ctx.startTimer("RASTERIZE_TRIANGLES");
 
-        float ics = 1.0f / solid.cellSize;
-        float ich = 1.0f / solid.cellHeight;
+        float ics = 1f / solid.cellSize;
+        float ich = 1f / solid.cellHeight;
         rasterizeTri(vertices, v0, v1, v2, area, solid, solid.bmin, solid.bmax, solid.cellSize, ics, ich, flagMergeThr);
 
         if (ctx != null) ctx.stopTimer("RASTERIZE_TRIANGLES");
@@ -282,8 +273,8 @@ public class RecastRasterization {
 
         if (ctx != null) ctx.startTimer("RASTERIZE_TRIANGLES");
 
-        float ics = 1.0f / solid.cellSize;
-        float ich = 1.0f / solid.cellHeight;
+        float ics = 1f / solid.cellSize;
+        float ich = 1f / solid.cellHeight;
         // Rasterize triangles.
         for (int i = 0; i < nt; ++i) {
             int v0 = tris[i * 3];
@@ -306,8 +297,8 @@ public class RecastRasterization {
                                           Telemetry ctx) {
         if (ctx != null) ctx.startTimer("RASTERIZE_TRIANGLES");
 
-        float ics = 1.0f / solid.cellSize;
-        float ich = 1.0f / solid.cellHeight;
+        float ics = 1f / solid.cellSize;
+        float ich = 1f / solid.cellHeight;
         // Rasterize triangles.
         for (int i = 0; i < nt; ++i) {
             int v0 = (i * 3);

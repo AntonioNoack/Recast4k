@@ -23,11 +23,9 @@ import org.recast4j.detour.NavMeshQuery;
 import org.recast4j.detour.QueryFilter;
 
 public class PathQuery {
-    /// Path find start and end location.
     Vector3f startPos = new Vector3f(), endPos = new Vector3f();
     long startRef, endRef;
     QueryFilter filter;
     final PathQueryResult result = new PathQueryResult();
     NavMeshQuery navQuery;
-
 }

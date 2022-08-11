@@ -69,12 +69,12 @@ public class MeshDataWriter extends DetourWriter {
             for (int j = 0; j < data.polygons[i].vertices.length; j++) {
                 write(stream, (short) data.polygons[i].vertices[j], order);
             }
-            for (int j = 0; j < data.polygons[i].neis.length; j++) {
-                write(stream, (short) data.polygons[i].neis[j], order);
+            for (int j = 0; j < data.polygons[i].neighborData.length; j++) {
+                write(stream, (short) data.polygons[i].neighborData[j], order);
             }
             write(stream, (short) data.polygons[i].flags, order);
             stream.write(data.polygons[i].vertCount);
-            stream.write(data.polygons[i].areaAndtype);
+            stream.write(data.polygons[i].areaAndType);
         }
     }
 

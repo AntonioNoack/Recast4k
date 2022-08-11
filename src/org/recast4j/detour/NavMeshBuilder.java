@@ -398,7 +398,7 @@ public class NavMeshBuilder {
         header.detailMeshCount = params.polyCount;
         header.detailVertCount = uniqueDetailVertCount;
         header.detailTriCount = detailTriCount;
-        header.bvQuantizationFactor = 1.0f / params.cellSize;
+        header.bvQuantizationFactor = 1f / params.cellSize;
         header.offMeshBase = params.polyCount;
         header.walkableHeight = params.walkableHeight;
         header.walkableRadius = params.walkableRadius;
@@ -448,18 +448,18 @@ public class NavMeshBuilder {
                     // Border or portal edge.
                     int dir = params.polys[src + nvp + j] & 0xf;
                     if (dir == 0xf) // Border
-                        p.neis[j] = 0;
+                        p.neighborData[j] = 0;
                     else if (dir == 0) // Portal x-
-                        p.neis[j] = NavMesh.DT_EXT_LINK | 4;
+                        p.neighborData[j] = NavMesh.DT_EXT_LINK | 4;
                     else if (dir == 1) // Portal z+
-                        p.neis[j] = NavMesh.DT_EXT_LINK | 2;
+                        p.neighborData[j] = NavMesh.DT_EXT_LINK | 2;
                     else if (dir == 2) // Portal x+
-                        p.neis[j] = NavMesh.DT_EXT_LINK;
+                        p.neighborData[j] = NavMesh.DT_EXT_LINK;
                     else if (dir == 3) // Portal z-
-                        p.neis[j] = NavMesh.DT_EXT_LINK | 6;
+                        p.neighborData[j] = NavMesh.DT_EXT_LINK | 6;
                 } else {
                     // Normal connection
-                    p.neis[j] = params.polys[src + nvp + j] + 1;
+                    p.neighborData[j] = params.polys[src + nvp + j] + 1;
                 }
 
                 p.vertCount++;

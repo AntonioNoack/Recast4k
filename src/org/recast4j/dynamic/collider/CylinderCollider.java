@@ -23,10 +23,10 @@ import org.recast4j.recast.Heightfield;
 import org.recast4j.recast.RecastFilledVolumeRasterization;
 import org.recast4j.recast.Telemetry;
 
+@SuppressWarnings("unused")
 public class CylinderCollider extends AbstractCollider {
 
-    private final Vector3f start;
-    private final Vector3f end;
+    private final Vector3f start, end;
     private final float radius;
 
     @SuppressWarnings("unused")

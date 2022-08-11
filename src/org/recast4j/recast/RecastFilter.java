@@ -23,17 +23,12 @@ import static org.recast4j.recast.RecastConstants.SPAN_MAX_HEIGHT;
 
 public class RecastFilter {
 
-    /// @par
-    ///
-    /// Allows the formation of walkable regions that will flow over low lying
-    /// objects such as curbs, and up structures such as stairways.
-    ///
-    /// Two neighboring spans are walkable if: <tt>rcAbs(currentSpan.smax - neighborSpan.smax) < waklableClimb</tt>
-    ///
-    /// @warning Will override the effect of #rcFilterLedgeSpans. So if both filters are used, call
-    /// #rcFilterLedgeSpans after calling this filter.
-    ///
-    /// @see rcHeightfield, rcConfig
+    /**
+     * Allows the formation of walkable regions that will flow over low lying objects such as curbs, and up structures such as stairways.
+     * Two neighboring spans are walkable if: <tt>rcAbs(currentSpan.smax - neighborSpan.smax) < waklableClimb</tt>
+     *
+     * @warning Will override the effect of #rcFilterLedgeSpans. So if both filters are used, call #rcFilterLedgeSpans after calling this filter.
+     * */
     public static void filterLowHangingWalkableObstacles(Telemetry ctx, int walkableClimb, Heightfield solid) {
 
         if (ctx != null) ctx.startTimer("FILTER_LOW_OBSTACLES");
@@ -66,16 +61,11 @@ public class RecastFilter {
         if (ctx != null) ctx.stopTimer("FILTER_LOW_OBSTACLES");
     }
 
-    /// @par
-    ///
-    /// A ledge is a span with one or more neighbors whose maximum is further away than @p walkableClimb
-    /// from the current span's maximum.
-    /// This method removes the impact of the overestimation of conservative voxelization
-    /// so the resulting mesh will not have regions hanging in the air over ledges.
-    ///
-    /// A span is a ledge if: <tt>rcAbs(currentSpan.smax - neighborSpan.smax) > walkableClimb</tt>
-    ///
-    /// @see rcHeightfield, rcConfig
+    /**
+     * A ledge is a span with one or more neighbors whose maximum is further away than @p walkableClimb from the current span's maximum.
+     * This method removes the impact of the overestimation of conservative voxelization, so the resulting mesh will not have regions hanging in the air over ledges.
+     * A span is a ledge if: <tt>rcAbs(currentSpan.smax - neighborSpan.smax) > walkableClimb</tt>
+     * */
     public static void filterLedgeSpans(Telemetry ctx, int walkableHeight, int walkableClimb, Heightfield solid) {
         if (ctx != null) ctx.startTimer("FILTER_LEDGE");
 
@@ -154,12 +144,9 @@ public class RecastFilter {
         if (ctx != null) ctx.stopTimer("FILTER_LEDGE");
     }
 
-    /// @par
-    ///
-    /// For this filter, the clearance above the span is the distance from the span's
-    /// maximum to the next higher span's minimum. (Same grid column.)
-    ///
-    /// @see rcHeightfield, rcConfig
+    /**
+     * For this filter, the clearance above the span is the distance from the span's maximum to the next higher span's minimum. (Same grid column.)
+     * */
     public static void filterWalkableLowHeightSpans(Telemetry ctx, int walkableHeight, Heightfield solid) {
         if (ctx != null) ctx.startTimer("FILTER_WALKABLE");
 

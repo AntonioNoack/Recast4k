@@ -182,7 +182,7 @@ public class ConvexConvexIntersection {
         if (i.isPresent()) {
             float s = i.get().first;
             float t = i.get().second;
-            if (s >= 0.0f && s <= 1.0f && t >= 0.0f && t <= 1.0f) {
+            if (s >= 0f && s <= 1f && t >= 0f && t <= 1f) {
                 p.set(a).lerp(b, s);
                 return Intersection.Single;
             }

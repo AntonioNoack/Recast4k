@@ -26,15 +26,12 @@ import org.recast4j.recast.Heightfield;
 import org.recast4j.recast.Span;
 
 /**
- * Voxel raycast based on the algorithm described in
- * <p>
- * "A Fast Voxel Traversal Algorithm for Ray Tracing" by John Amanatides and Andrew Woo
+ * Voxel raycast based on the algorithm described in "A Fast Voxel Traversal Algorithm for Ray Tracing" by John Amanatides and Andrew Woo
  */
 public class VoxelQuery {
 
     private final Vector3f origin;
-    private final float tileWidth;
-    private final float tileDepth;
+    private final float tileWidth, tileDepth;
     private final BiFunction<Integer, Integer, Optional<Heightfield>> heightfieldProvider;
 
     public VoxelQuery(Vector3f origin, float tileWidth, float tileDepth,
@@ -47,9 +44,9 @@ public class VoxelQuery {
 
     /**
      * Perform raycast using voxels heightfields.
-     *
      * @return Optional with hit parameter (t) or empty if no hit found
      */
+    @SuppressWarnings("unused")
     public Optional<Float> raycast(Vector3f start, Vector3f end) {
         return traverseTiles(start, end);
     }
@@ -133,11 +130,11 @@ public class VoxelQuery {
                 if (sx >= 0 && sx < hf.width && sz >= 0 && sz < hf.height) {
                     float y1 = start.y + ty * (tMin + t) - hf.bmin.y;
                     float y2 = start.y + ty * (tMin + Math.min(tMaxX, tMaxZ)) - hf.bmin.y;
-                    float ymin = Math.min(y1, y2) / hf.cellHeight;
-                    float ymax = Math.max(y1, y2) / hf.cellHeight;
+                    float minY = Math.min(y1, y2) / hf.cellHeight;
+                    float maxY = Math.max(y1, y2) / hf.cellHeight;
                     Span span = hf.spans[sx + sz * hf.width];
                     while (span != null) {
-                        if (span.min <= ymin && span.max >= ymax) {
+                        if (span.min <= minY && span.max >= maxY) {
                             return Optional.of(Math.min(1, tMin + t));
                         }
                         span = span.next;

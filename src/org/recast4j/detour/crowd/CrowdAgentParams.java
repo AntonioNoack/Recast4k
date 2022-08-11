@@ -20,8 +20,9 @@ package org.recast4j.detour.crowd;
 
 /** Configuration parameters for a crowd agent. */
 public class CrowdAgentParams {
-    public float radius; /// < Agent radius. [Limit: >= 0]
-    public float height; /// < Agent height. [Limit: > 0]
+
+    public float radius; // >= 0
+    public float height; // > 0
 
     /** Maximum allowed acceleration. >= 0 */
     public float maxAcceleration;
@@ -39,17 +40,21 @@ public class CrowdAgentParams {
     public float separationWeight;
 
     /** Crowd agent update flags. */
-    public static final int DT_CROWD_ANTICIPATE_TURNS = 1;
-    public static final int DT_CROWD_OBSTACLE_AVOIDANCE = 2;
-    public static final int DT_CROWD_SEPARATION = 4;
-    public static final int DT_CROWD_OPTIMIZE_VIS = 8; /// < Use #dtPathCorridor::optimizePathVisibility() to optimize the agent path.
-    public static final int DT_CROWD_OPTIMIZE_TOPO = 16; /// < Use dtPathCorridor::optimizePathTopology() to optimize the agent path.
+    public static final int CROWD_ANTICIPATE_TURNS = 1;
+    public static final int CROWD_OBSTACLE_AVOIDANCE = 2;
+    public static final int CROWD_SEPARATION = 4;
+    /** Use #dtPathCorridor::optimizePathVisibility() to optimize the agent path. */
+    public static final int CROWD_OPTIMIZE_VIS = 8;
+    /** Use dtPathCorridor::optimizePathTopology() to optimize the agent path. */
+    public static final int CROWD_OPTIMIZE_TOPO = 16;
 
     /** Flags that impact steering behavior. (See: #UpdateFlags) */
     public int updateFlags;
 
-    /// The index of the avoidance configuration to use for the agent.
-    /// [Limits: 0 <= value < #DT_CROWD_MAX_OBSTAVOIDANCE_PARAMS]
+    /**
+     * The index of the avoidance configuration to use for the agent.
+     * [Limits: 0 <= value < #CROWD_MAX_OBSTAVOIDANCE_PARAMS]
+     * */
     public int obstacleAvoidanceType;
 
     /** The index of the query filter used by this agent. */
