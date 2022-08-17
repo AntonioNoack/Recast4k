@@ -18,8 +18,8 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.crowd;
 
+import kotlin.Pair;
 import org.joml.Vector3f;
-import org.recast4j.Pair;
 import org.recast4j.detour.crowd.debug.ObstacleAvoidanceDebugData;
 
 import static org.joml.Math.clamp;
@@ -190,7 +190,7 @@ public class ObstacleAvoidanceQuery {
             // Precalc if the agent is really close to the segment.
             float r = 0.01f;
             Pair<Float, Float> dt = distancePtSegSqr2D(pos, seg.p, seg.q);
-            seg.touch = dt.first < sqr(r);
+            seg.touch = dt.getFirst() < sqr(r);
         }
     }
 

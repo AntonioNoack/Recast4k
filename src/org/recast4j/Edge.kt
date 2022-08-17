@@ -1,5 +1,16 @@
-package org.recast4j;
+package org.recast4j
 
-public class Edge {
-    public int vert0, vert1, polyEdge0, polyEdge1, poly0, poly1;
+class Edge {
+    @JvmField
+    var vert0 = 0
+    @JvmField
+    var vert1 = 0
+    @JvmField
+    var polyEdge0 = 0
+    @JvmField
+    var polyEdge1 = 0
+    @JvmField
+    var poly0 = 0
+    @JvmField
+    var poly1 = 0
 }

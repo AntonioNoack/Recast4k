@@ -18,6 +18,7 @@ freely, subject to the following restrictions:
 */
 package org.recast4j;
 
+import kotlin.Pair;
 import org.joml.Vector3f;
 import org.joml.Vector3i;
 import org.recast4j.detour.BVNode;
@@ -325,8 +326,8 @@ public class Vectors {
                 c = !c;
             }
             Pair<Float, Float> dist = distancePtSegSqr2D(pt, vertices, vj, vi);
-            ed[j] = dist.first;
-            et[j] = dist.second;
+            ed[j] = dist.getFirst();
+            et[j] = dist.getSecond();
         }
         return c;
     }

@@ -18,9 +18,9 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.tilecache;
 
+import kotlin.Pair;
 import org.joml.Vector3f;
 import org.recast4j.Edge;
-import org.recast4j.Pair;
 import org.recast4j.detour.tilecache.io.TileCacheLayerHeaderReader;
 import org.recast4j.detour.tilecache.io.TileCacheLayerHeaderWriter;
 
@@ -637,8 +637,8 @@ public class TileCacheBuilder {
                         // segment.
                         Pair<Integer, Boolean> res = getCornerHeight(layer, temp.vertices.get(v), temp.vertices.get(v + 1),
                                 temp.vertices.get(v + 2), walkableClimb);
-                        int lh = res.first;
-                        boolean shouldRemove = res.second;
+                        int lh = res.getFirst();
+                        boolean shouldRemove = res.getSecond();
                         cont.vertices[dst] = temp.vertices.get(v);
                         cont.vertices[dst + 1] = lh;
                         cont.vertices[dst + 2] = temp.vertices.get(v + 2);

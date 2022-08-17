@@ -15,13 +15,10 @@ freely, subject to the following restrictions:
  misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
+package org.recast4j.recast.geom
 
-package org.recast4j.recast.geom;
+import org.recast4j.recast.ConvexVolume
 
-import org.recast4j.recast.ConvexVolume;
-
-public interface ConvexVolumeProvider {
-
-    Iterable<ConvexVolume> convexVolumes();
-
+interface ConvexVolumeProvider {
+    fun convexVolumes(): Iterable<ConvexVolume>
 }

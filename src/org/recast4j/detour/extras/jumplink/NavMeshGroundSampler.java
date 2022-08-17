@@ -1,7 +1,7 @@
 package org.recast4j.detour.extras.jumplink;
 
+import kotlin.Pair;
 import org.joml.Vector3f;
-import org.recast4j.Pair;
 import org.recast4j.detour.*;
 import org.recast4j.recast.RecastBuilder.RecastBuilderResult;
 

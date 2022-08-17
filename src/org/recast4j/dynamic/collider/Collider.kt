@@ -15,14 +15,12 @@ freely, subject to the following restrictions:
  misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
+package org.recast4j.dynamic.collider
 
-package org.recast4j.dynamic.collider;
+import org.recast4j.recast.Heightfield
+import org.recast4j.recast.Telemetry
 
-import org.recast4j.recast.Heightfield;
-import org.recast4j.recast.Telemetry;
-
-public interface Collider {
-
-    float[] bounds();
-    void rasterize(Heightfield hf, Telemetry telemetry);
+interface Collider {
+    fun bounds(): FloatArray
+    fun rasterize(hf: Heightfield, telemetry: Telemetry?)
 }

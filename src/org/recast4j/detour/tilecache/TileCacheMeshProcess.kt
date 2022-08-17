@@ -16,11 +16,10 @@ freely, subject to the following restrictions:
  misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
-package org.recast4j.detour.tilecache;
+package org.recast4j.detour.tilecache
 
-import org.recast4j.detour.NavMeshDataCreateParams;
+import org.recast4j.detour.NavMeshDataCreateParams
 
-public interface TileCacheMeshProcess {
-
-    void process(NavMeshDataCreateParams params);
+interface TileCacheMeshProcess {
+    fun process(params: NavMeshDataCreateParams)
 }

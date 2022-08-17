@@ -18,11 +18,11 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour;
 
+import kotlin.Pair;
 import org.joml.Vector3f;
 import org.joml.Vector3i;
 import org.recast4j.FloatArrayList;
 import org.recast4j.LongArrayList;
-import org.recast4j.Pair;
 
 import java.util.*;
 
@@ -206,8 +206,8 @@ public class NavMeshQuery {
         }
 
         Pair<MeshTile, Poly> tileAndPoly = nav.getTileAndPolyByRefUnsafe(startRef);
-        MeshTile startTile = tileAndPoly.first;
-        Poly startPoly = tileAndPoly.second;
+        MeshTile startTile = tileAndPoly.getFirst();
+        Poly startPoly = tileAndPoly.getSecond();
         if (!filter.passFilter(startRef, startTile, startPoly)) {
             return Result.invalidParam("Invalid start ref");
         }
@@ -239,8 +239,8 @@ public class NavMeshQuery {
             // The API input has been cheked already, skip checking internal data.
             long bestRef = bestNode.polygonRef;
             Pair<MeshTile, Poly> bestTilePoly = nav.getTileAndPolyByRefUnsafe(bestRef);
-            MeshTile bestTile = bestTilePoly.first;
-            Poly bestPoly = bestTilePoly.second;
+            MeshTile bestTile = bestTilePoly.getFirst();
+            Poly bestPoly = bestTilePoly.getSecond();
 
             // Place random locations on on ground.
             if (bestPoly.getType() == Poly.DT_POLYTYPE_GROUND) {
@@ -286,8 +286,8 @@ public class NavMeshQuery {
 
                 // Expand to neighbour
                 Pair<MeshTile, Poly> neighbourTilePoly = nav.getTileAndPolyByRefUnsafe(neighbourRef);
-                MeshTile neighbourTile = neighbourTilePoly.first;
-                Poly neighbourPoly = neighbourTilePoly.second;
+                MeshTile neighbourTile = neighbourTilePoly.getFirst();
+                Poly neighbourPoly = neighbourTilePoly.getSecond();
 
                 // Do not advance if the polygon is excluded by the filter.
                 if (!filter.passFilter(neighbourRef, neighbourTile, neighbourPoly)) {
@@ -305,7 +305,7 @@ public class NavMeshQuery {
 
                 // If the circle is not touching the next polygon, skip it.
                 Pair<Float, Float> distseg = distancePtSegSqr2D(centerPos, va, vb);
-                float distSqr = distseg.first;
+                float distSqr = distseg.getFirst();
                 if (distSqr > radiusSqr) {
                     continue;
                 }
@@ -398,8 +398,8 @@ public class NavMeshQuery {
         if (tileAndPoly.failed()) {
             return Result.of(tileAndPoly.status, tileAndPoly.message);
         }
-        MeshTile tile = tileAndPoly.result.first;
-        Poly poly = tileAndPoly.result.second;
+        MeshTile tile = tileAndPoly.result.getFirst();
+        Poly poly = tileAndPoly.result.getSecond();
         if (tile == null) {
             return Result.invalidParam("Invalid tile");
         }
@@ -450,8 +450,8 @@ public class NavMeshQuery {
             // return Result.of(tileAndPoly.status, tileAndPoly.message);
             return Float.NEGATIVE_INFINITY;
         }
-        MeshTile tile = tileAndPoly.result.first;
-        Poly poly = tileAndPoly.result.second;
+        MeshTile tile = tileAndPoly.result.getFirst();
+        Poly poly = tileAndPoly.result.getSecond();
 
         if (Objects.isNull(pos) || !isFinite2D(pos)) {
             return Float.POSITIVE_INFINITY;
@@ -465,7 +465,7 @@ public class NavMeshQuery {
             copy(v0, tile.data.vertices, poly.vertices[0] * 3);
             copy(v1, tile.data.vertices, poly.vertices[1] * 3);
             Pair<Float, Float> dt = distancePtSegSqr2D(pos, v0, v1);
-            return v0.y + (v1.y - v0.y) * dt.second;
+            return v0.y + (v1.y - v0.y) * dt.getSecond();
         }
         return nav.getPolyHeight(tile, poly, pos); // value / NaN
     }
@@ -696,8 +696,8 @@ public class NavMeshQuery {
             // The API input has been cheked already, skip checking internal data.
             long bestRef = bestNode.polygonRef;
             Pair<MeshTile, Poly> tileAndPoly = nav.getTileAndPolyByRefUnsafe(bestRef);
-            MeshTile bestTile = tileAndPoly.first;
-            Poly bestPoly = tileAndPoly.second;
+            MeshTile bestTile = tileAndPoly.getFirst();
+            Poly bestPoly = tileAndPoly.getSecond();
 
             // Get parent poly and tile.
             long parentRef = 0, grandpaRef = 0;
@@ -713,8 +713,8 @@ public class NavMeshQuery {
             }
             if (parentRef != 0) {
                 tileAndPoly = nav.getTileAndPolyByRefUnsafe(parentRef);
-                parentTile = tileAndPoly.first;
-                parentPoly = tileAndPoly.second;
+                parentTile = tileAndPoly.getFirst();
+                parentPoly = tileAndPoly.getSecond();
             }
 
             // decide whether to test raycast to previous nodes
@@ -737,8 +737,8 @@ public class NavMeshQuery {
                 // Get neighbour poly and tile.
                 // The API input has been cheked already, skip checking internal data.
                 tileAndPoly = nav.getTileAndPolyByRefUnsafe(neighbourRef);
-                MeshTile neighbourTile = tileAndPoly.first;
-                Poly neighbourPoly = tileAndPoly.second;
+                MeshTile neighbourTile = tileAndPoly.getFirst();
+                Poly neighbourPoly = tileAndPoly.getSecond();
 
                 if (!filter.passFilter(neighbourRef, neighbourTile, neighbourPoly)) {
                     continue;
@@ -964,8 +964,8 @@ public class NavMeshQuery {
                 // The polygon has disappeared during the sliced query, fail.
                 return Result.of(queryData.status, iter);
             }
-            MeshTile bestTile = tileAndPoly.result.first;
-            Poly bestPoly = tileAndPoly.result.second;
+            MeshTile bestTile = tileAndPoly.result.getFirst();
+            Poly bestPoly = tileAndPoly.result.getSecond();
             // Get parent and grand parent poly and tile.
             long parentRef = 0, grandpaRef = 0;
             MeshTile parentTile = null;
@@ -987,8 +987,8 @@ public class NavMeshQuery {
                     queryData.status = Status.FAILURE;
                     return Result.of(queryData.status, iter);
                 }
-                parentTile = tileAndPoly.result.first;
-                parentPoly = tileAndPoly.result.second;
+                parentTile = tileAndPoly.result.getFirst();
+                parentPoly = tileAndPoly.result.getSecond();
             }
 
             // decide whether to test raycast to previous nodes
@@ -1013,8 +1013,8 @@ public class NavMeshQuery {
                 // The API input has been cheked already, skip checking internal
                 // data.
                 Pair<MeshTile, Poly> tileAndPolyUns = nav.getTileAndPolyByRefUnsafe(neighbourRef);
-                MeshTile neighbourTile = tileAndPolyUns.first;
-                Poly neighbourPoly = tileAndPolyUns.second;
+                MeshTile neighbourTile = tileAndPolyUns.getFirst();
+                Poly neighbourPoly = tileAndPolyUns.getSecond();
 
                 if (!queryData.filter.passFilter(neighbourRef, neighbourTile, neighbourPoly)) {
                     continue;
@@ -1235,16 +1235,16 @@ public class NavMeshQuery {
             if (tileAndPoly.failed()) {
                 return Status.FAILURE;
             }
-            MeshTile fromTile = tileAndPoly.result.first;
-            Poly fromPoly = tileAndPoly.result.second;
+            MeshTile fromTile = tileAndPoly.result.getFirst();
+            Poly fromPoly = tileAndPoly.result.getSecond();
 
             long to = path.get(i + 1);
             tileAndPoly = nav.getTileAndPolyByRef(to);
             if (tileAndPoly.failed()) {
                 return Status.FAILURE;
             }
-            MeshTile toTile = tileAndPoly.result.first;
-            Poly toPoly = tileAndPoly.result.second;
+            MeshTile toTile = tileAndPoly.result.getFirst();
+            Poly toPoly = tileAndPoly.result.getSecond();
 
             Result<PortalResult> portals = getPortalPoints(from, fromPoly, fromTile, to, toPoly, toTile, 0, 0);
             if (portals.failed()) {
@@ -1263,7 +1263,7 @@ public class NavMeshQuery {
             // Append intersection
             Optional<Pair<Float, Float>> interect = intersectSegSeg2D(startPos, endPos, left, right);
             if (interect.isPresent()) {
-                float t = interect.get().second;
+                float t = interect.get().getSecond();
                 Vector3f pt = lerp(left, right, t);
                 stat = appendVertex(pt, 0, path.get(i + 1), straightPath, maxStraightPath);
                 if (!stat.isInProgress()) {
@@ -1368,7 +1368,7 @@ public class NavMeshQuery {
                     // If starting really close the portal, advance.
                     if (i == 0) {
                         Pair<Float, Float> dt = distancePtSegSqr2D(portalApex, left, right);
-                        if (dt.first < sqr(0.001f)) {
+                        if (dt.getFirst() < sqr(0.001f)) {
                             continue;
                         }
                     }
@@ -1546,8 +1546,8 @@ public class NavMeshQuery {
             // The API input has been cheked already, skip checking internal data.
             long curRef = curNode.polygonRef;
             Pair<MeshTile, Poly> tileAndPoly = nav.getTileAndPolyByRefUnsafe(curRef);
-            MeshTile curTile = tileAndPoly.first;
-            Poly curPoly = tileAndPoly.second;
+            MeshTile curTile = tileAndPoly.getFirst();
+            Poly curPoly = tileAndPoly.getSecond();
 
             // Collect vertices.
             int nvertices = curPoly.vertCount;
@@ -1576,8 +1576,8 @@ public class NavMeshQuery {
                         if (link.indexOfPolyEdge == j) {
                             if (link.neighborRef != 0) {
                                 tileAndPoly = nav.getTileAndPolyByRefUnsafe(link.neighborRef);
-                                MeshTile neiTile = tileAndPoly.first;
-                                Poly neiPoly = tileAndPoly.second;
+                                MeshTile neiTile = tileAndPoly.getFirst();
+                                Poly neiPoly = tileAndPoly.getSecond();
                                 if (filter.passFilter(link.neighborRef, neiTile, neiPoly)) {
                                     if (nneis < MAX_NEIS) {
                                         neis[nneis++] = link.neighborRef;
@@ -1600,8 +1600,8 @@ public class NavMeshQuery {
                     int vj = j * 3;
                     int vi = i * 3;
                     Pair<Float, Float> distSeg = distancePtSegSqr2D(endPos, vertices, vj, vi);
-                    float distSqr = distSeg.first;
-                    float tseg = distSeg.second;
+                    float distSqr = distSeg.getFirst();
+                    float tseg = distSeg.getSecond();
                     if (distSqr < bestDist) {
                         // Update nearest distance.
                         bestPos = lerp(vertices, vj, vi, tseg);
@@ -1621,7 +1621,7 @@ public class NavMeshQuery {
                         int vj = j * 3;
                         int vi = i * 3;
                         Pair<Float, Float> distseg = distancePtSegSqr2D(searchPos, vertices, vj, vi);
-                        float distSqr = distseg.first;
+                        float distSqr = distseg.getFirst();
                         if (distSqr > searchRadSqr) {
                             continue;
                         }
@@ -1678,8 +1678,8 @@ public class NavMeshQuery {
             return Result.of(tileAndPolyResult.status, tileAndPolyResult.message);
         }
         Pair<MeshTile, Poly> tileAndPoly = tileAndPolyResult.result;
-        MeshTile fromTile = tileAndPoly.first;
-        Poly fromPoly = tileAndPoly.second;
+        MeshTile fromTile = tileAndPoly.getFirst();
+        Poly fromPoly = tileAndPoly.getSecond();
         int fromType = fromPoly.getType();
 
         tileAndPolyResult = nav.getTileAndPolyByRef(to);
@@ -1687,8 +1687,8 @@ public class NavMeshQuery {
             return Result.of(tileAndPolyResult.status, tileAndPolyResult.message);
         }
         tileAndPoly = tileAndPolyResult.result;
-        MeshTile toTile = tileAndPoly.first;
-        Poly toPoly = tileAndPoly.second;
+        MeshTile toTile = tileAndPoly.getFirst();
+        Poly toPoly = tileAndPoly.getSecond();
         int toType = toPoly.getType();
 
         return getPortalPoints(from, fromPoly, fromTile, to, toPoly, toTile, fromType, toType);
@@ -1776,7 +1776,7 @@ public class NavMeshQuery {
         float t = 0.5f;
         Optional<Pair<Float, Float>> interect = intersectSegSeg2D(fromPos, toPos, left, right);
         if (interect.isPresent()) {
-            t = clamp(interect.get().second, 0.1f, 0.9f);
+            t = clamp(interect.get().getSecond(), 0.1f, 0.9f);
         }
         Vector3f pt = lerp(left, right, t);
         return Result.success(pt);
@@ -1858,14 +1858,14 @@ public class NavMeshQuery {
         // The API input has been checked already, skip checking internal data.
         long curRef = startRef;
         Pair<MeshTile, Poly> tileAndPolyUns = nav.getTileAndPolyByRefUnsafe(curRef);
-        tile = tileAndPolyUns.first;
-        poly = tileAndPolyUns.second;
+        tile = tileAndPolyUns.getFirst();
+        poly = tileAndPolyUns.getSecond();
         nextTile = prevTile = tile;
         nextPoly = prevPoly = poly;
         if (prevRef != 0) {
             tileAndPolyUns = nav.getTileAndPolyByRefUnsafe(prevRef);
-            prevTile = tileAndPolyUns.first;
-            prevPoly = tileAndPolyUns.second;
+            prevTile = tileAndPolyUns.getFirst();
+            prevPoly = tileAndPolyUns.getSecond();
         }
         while (curRef != 0) {
             // Cast ray against current polygon.
@@ -1918,8 +1918,8 @@ public class NavMeshQuery {
 
                 // Get pointer to the next polygon.
                 tileAndPolyUns = nav.getTileAndPolyByRefUnsafe(link.neighborRef);
-                nextTile = tileAndPolyUns.first;
-                nextPoly = tileAndPolyUns.second;
+                nextTile = tileAndPolyUns.getFirst();
+                nextPoly = tileAndPolyUns.getSecond();
                 // Skip off-mesh connections.
                 if (nextPoly.getType() == Poly.DT_POLYTYPE_OFFMESH_CONNECTION) {
                     continue;
@@ -2117,8 +2117,8 @@ public class NavMeshQuery {
             // The API input has been cheked already, skip checking internal data.
             long bestRef = bestNode.polygonRef;
             Pair<MeshTile, Poly> tileAndPoly = nav.getTileAndPolyByRefUnsafe(bestRef);
-            MeshTile bestTile = tileAndPoly.first;
-            Poly bestPoly = tileAndPoly.second;
+            MeshTile bestTile = tileAndPoly.getFirst();
+            Poly bestPoly = tileAndPoly.getSecond();
 
             // Get parent poly and tile.
             long parentRef = 0;
@@ -2129,8 +2129,8 @@ public class NavMeshQuery {
             }
             if (parentRef != 0) {
                 tileAndPoly = nav.getTileAndPolyByRefUnsafe(parentRef);
-                parentTile = tileAndPoly.first;
-                parentPoly = tileAndPoly.second;
+                parentTile = tileAndPoly.getFirst();
+                parentPoly = tileAndPoly.getSecond();
             }
 
             resultRef.add(bestRef);
@@ -2147,8 +2147,8 @@ public class NavMeshQuery {
 
                 // Expand to neighbour
                 tileAndPoly = nav.getTileAndPolyByRefUnsafe(neighbourRef);
-                MeshTile neighbourTile = tileAndPoly.first;
-                Poly neighbourPoly = tileAndPoly.second;
+                MeshTile neighbourTile = tileAndPoly.getFirst();
+                Poly neighbourPoly = tileAndPoly.getSecond();
 
                 // Do not advance if the polygon is excluded by the filter.
                 if (!filter.passFilter(neighbourRef, neighbourTile, neighbourPoly)) {
@@ -2166,7 +2166,7 @@ public class NavMeshQuery {
 
                 // If the circle is not touching the next polygon, skip it.
                 Pair<Float, Float> distseg = distancePtSegSqr2D(centerPos, va, vb);
-                float distSqr = distseg.first;
+                float distSqr = distseg.getFirst();
                 if (distSqr > radiusSqr) {
                     continue;
                 }
@@ -2284,8 +2284,8 @@ public class NavMeshQuery {
             // The API input has been checked already, skip checking internal data.
             long bestRef = bestNode.polygonRef;
             Pair<MeshTile, Poly> tileAndPoly = nav.getTileAndPolyByRefUnsafe(bestRef);
-            MeshTile bestTile = tileAndPoly.first;
-            Poly bestPoly = tileAndPoly.second;
+            MeshTile bestTile = tileAndPoly.getFirst();
+            Poly bestPoly = tileAndPoly.getSecond();
 
             // Get parent poly and tile.
             long parentRef = 0;
@@ -2296,8 +2296,8 @@ public class NavMeshQuery {
             }
             if (parentRef != 0) {
                 tileAndPoly = nav.getTileAndPolyByRefUnsafe(parentRef);
-                parentTile = tileAndPoly.first;
-                parentPoly = tileAndPoly.second;
+                parentTile = tileAndPoly.getFirst();
+                parentPoly = tileAndPoly.getSecond();
             }
 
             resultRef.add(bestRef);
@@ -2314,8 +2314,8 @@ public class NavMeshQuery {
 
                 // Expand to neighbour
                 tileAndPoly = nav.getTileAndPolyByRefUnsafe(neighbourRef);
-                MeshTile neighbourTile = tileAndPoly.first;
-                Poly neighbourPoly = tileAndPoly.second;
+                MeshTile neighbourTile = tileAndPoly.getFirst();
+                Poly neighbourPoly = tileAndPoly.getSecond();
 
                 // Do not advance if the polygon is excluded by the filter.
                 if (!filter.passFilter(neighbourRef, neighbourTile, neighbourPoly)) {
@@ -2449,8 +2449,8 @@ public class NavMeshQuery {
             // The API input has been cheked already, skip checking internal data.
             long curRef = curNode.polygonRef;
             Pair<MeshTile, Poly> tileAndPoly = nav.getTileAndPolyByRefUnsafe(curRef);
-            MeshTile curTile = tileAndPoly.first;
-            Poly curPoly = tileAndPoly.second;
+            MeshTile curTile = tileAndPoly.getFirst();
+            Poly curPoly = tileAndPoly.getSecond();
 
             for (int i = curTile.polyLinks[curPoly.index]; i != NavMesh.DT_NULL_LINK; i = curTile.links.get(i).indexOfNextLink) {
                 Link link = curTile.links.get(i);
@@ -2468,8 +2468,8 @@ public class NavMeshQuery {
 
                 // Expand to neighbour
                 tileAndPoly = nav.getTileAndPolyByRefUnsafe(neighbourRef);
-                MeshTile neighbourTile = tileAndPoly.first;
-                Poly neighbourPoly = tileAndPoly.second;
+                MeshTile neighbourTile = tileAndPoly.getFirst();
+                Poly neighbourPoly = tileAndPoly.getSecond();
 
                 // Skip off-mesh connections.
                 if (neighbourPoly.getType() == Poly.DT_POLYTYPE_OFFMESH_CONNECTION) {
@@ -2492,7 +2492,7 @@ public class NavMeshQuery {
 
                 // If the circle is not touching the next polygon, skip it.
                 Pair<Float, Float> distseg = distancePtSegSqr2D(centerPos, va, vb);
-                float distSqr = distseg.first;
+                float distSqr = distseg.getFirst();
                 if (distSqr > radiusSqr) {
                     continue;
                 }
@@ -2527,8 +2527,8 @@ public class NavMeshQuery {
 
                     // Potentially overlapping.
                     tileAndPoly = nav.getTileAndPolyByRefUnsafe(pastRef);
-                    MeshTile pastTile = tileAndPoly.first;
-                    Poly pastPoly = tileAndPoly.second;
+                    MeshTile pastTile = tileAndPoly.getFirst();
+                    Poly pastPoly = tileAndPoly.getSecond();
 
                     // Get vertices and test overlap
                     int npb = pastPoly.vertCount;
@@ -2607,8 +2607,8 @@ public class NavMeshQuery {
         if (Objects.isNull(filter)) {
             return Result.invalidParam();
         }
-        MeshTile tile = tileAndPoly.result.first;
-        Poly poly = tileAndPoly.result.second;
+        MeshTile tile = tileAndPoly.result.getFirst();
+        Poly poly = tileAndPoly.result.getSecond();
 
         LongArrayList segmentRefs = new LongArrayList();
         List<float[]> segmentVertices = new ArrayList<>();
@@ -2624,8 +2624,8 @@ public class NavMeshQuery {
                     if (link.indexOfPolyEdge == j) {
                         if (link.neighborRef != 0) {
                             Pair<MeshTile, Poly> tileAndPolyUnsafe = nav.getTileAndPolyByRefUnsafe(link.neighborRef);
-                            MeshTile neiTile = tileAndPolyUnsafe.first;
-                            Poly neiPoly = tileAndPolyUnsafe.second;
+                            MeshTile neiTile = tileAndPolyUnsafe.getFirst();
+                            Poly neiPoly = tileAndPolyUnsafe.getSecond();
                             if (filter.passFilter(link.neighborRef, neiTile, neiPoly)) {
                                 insertInterval(ints, link.bmin, link.bmax, link.neighborRef);
                             }
@@ -2749,8 +2749,8 @@ public class NavMeshQuery {
             // The API input has been checked already, skip checking internal data.
             long bestRef = bestNode.polygonRef;
             Pair<MeshTile, Poly> tileAndPoly = nav.getTileAndPolyByRefUnsafe(bestRef);
-            MeshTile bestTile = tileAndPoly.first;
-            Poly bestPoly = tileAndPoly.second;
+            MeshTile bestTile = tileAndPoly.getFirst();
+            Poly bestPoly = tileAndPoly.getSecond();
 
             // Get parent poly and tile.
             long parentRef = 0;
@@ -2769,8 +2769,8 @@ public class NavMeshQuery {
                         if (link.indexOfPolyEdge == j) {
                             if (link.neighborRef != 0) {
                                 Pair<MeshTile, Poly> linkTileAndPoly = nav.getTileAndPolyByRefUnsafe(link.neighborRef);
-                                MeshTile neiTile = linkTileAndPoly.first;
-                                Poly neiPoly = linkTileAndPoly.second;
+                                MeshTile neiTile = linkTileAndPoly.getFirst();
+                                Poly neiPoly = linkTileAndPoly.getSecond();
                                 if (filter.passFilter(link.neighborRef, neiTile, neiPoly)) {
                                     solid = false;
                                 }
@@ -2794,8 +2794,8 @@ public class NavMeshQuery {
                 int vj = bestPoly.vertices[j] * 3;
                 int vi = bestPoly.vertices[i] * 3;
                 Pair<Float, Float> distseg = distancePtSegSqr2D(centerPos, bestTile.data.vertices, vj, vi);
-                float distSqr = distseg.first;
-                float tseg = distseg.second;
+                float distSqr = distseg.getFirst();
+                float tseg = distseg.getSecond();
 
                 // Edge is too far, skip.
                 if (distSqr > radiusSqr) {
@@ -2822,8 +2822,8 @@ public class NavMeshQuery {
 
                 // Expand to neighbour.
                 Pair<MeshTile, Poly> neighbourTileAndPoly = nav.getTileAndPolyByRefUnsafe(neighbourRef);
-                MeshTile neighbourTile = neighbourTileAndPoly.first;
-                Poly neighbourPoly = neighbourTileAndPoly.second;
+                MeshTile neighbourTile = neighbourTileAndPoly.getFirst();
+                Poly neighbourPoly = neighbourTileAndPoly.getSecond();
 
                 // Skip off-mesh connections.
                 if (neighbourPoly.getType() == Poly.DT_POLYTYPE_OFFMESH_CONNECTION) {
@@ -2834,7 +2834,7 @@ public class NavMeshQuery {
                 int va = bestPoly.vertices[link.indexOfPolyEdge] * 3;
                 int vb = bestPoly.vertices[(link.indexOfPolyEdge + 1) % bestPoly.vertCount] * 3;
                 Pair<Float, Float> distseg = distancePtSegSqr2D(centerPos, bestTile.data.vertices, va, vb);
-                float distSqr = distseg.first;
+                float distSqr = distseg.getFirst();
                 // If the circle is not touching the next polygon, skip it.
                 if (distSqr > radiusSqr) {
                     continue;
@@ -2902,7 +2902,7 @@ public class NavMeshQuery {
         }
         Pair<MeshTile, Poly> tileAndPoly = tileAndPolyResult.result;
         // If cannot pass filter, assume flags has changed and boundary is invalid.
-        return filter.passFilter(ref, tileAndPoly.first, tileAndPoly.second);
+        return filter.passFilter(ref, tileAndPoly.getFirst(), tileAndPoly.getSecond());
     }
 
     /// Gets the navigation mesh the query object is using.

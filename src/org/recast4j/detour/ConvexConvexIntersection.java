@@ -18,8 +18,8 @@ freely, subject to the following restrictions:
 
 package org.recast4j.detour;
 
+import kotlin.Pair;
 import org.joml.Vector3f;
-import org.recast4j.Pair;
 
 import java.util.Arrays;
 import java.util.Optional;
@@ -180,8 +180,8 @@ public class ConvexConvexIntersection {
     private static Intersection segSegInt(Vector3f a, Vector3f b, Vector3f c, Vector3f d, Vector3f p) {
         Optional<Pair<Float, Float>> i = intersectSegSeg2D(a, b, c, d);
         if (i.isPresent()) {
-            float s = i.get().first;
-            float t = i.get().second;
+            float s = i.get().getFirst();
+            float t = i.get().getSecond();
             if (s >= 0f && s <= 1f && t >= 0f && t <= 1f) {
                 p.set(a).lerp(b, s);
                 return Intersection.Single;

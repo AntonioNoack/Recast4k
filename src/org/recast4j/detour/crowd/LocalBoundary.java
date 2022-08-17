@@ -18,9 +18,9 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.crowd;
 
+import kotlin.Pair;
 import org.joml.Vector3f;
 import org.recast4j.LongArrayList;
-import org.recast4j.Pair;
 import org.recast4j.detour.*;
 
 import java.util.ArrayList;
@@ -100,10 +100,10 @@ public class LocalBoundary {
                         float[] s = res2.segmentVertices.get(k);
                         // Skip too distant segments.
                         Pair<Float, Float> distSeg = distancePtSegSqr2D(pos, s, 0, 3);
-                        if (distSeg.first > sqr(collisionQueryRange)) {
+                        if (distSeg.getFirst() > sqr(collisionQueryRange)) {
                             continue;
                         }
-                        addSegment(distSeg.first, s);
+                        addSegment(distSeg.getFirst(), s);
                     }
                 }
             }

@@ -1,7 +1,7 @@
 package org.recast4j.detour.extras.jumplink;
 
+import kotlin.Pair;
 import org.joml.Vector3f;
-import org.recast4j.Pair;
 import org.recast4j.Vectors;
 
 import java.util.function.BiFunction;
@@ -29,8 +29,8 @@ abstract class AbstractGroundSampler implements GroundSampler {
             Vector3f pt = Vectors.lerp(seg.p, seg.q, u);
             Pair<Boolean, Float> height = heightFunc.apply(pt, seg.height);
             s.p.set(pt);
-            s.p.y = height.second;
-            if (!height.first) continue;
+            s.p.y = height.getSecond();
+            if (!height.getFirst()) continue;
             s.validHeight = true;
         }
     }

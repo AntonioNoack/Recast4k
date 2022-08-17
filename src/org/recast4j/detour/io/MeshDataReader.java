@@ -116,7 +116,7 @@ public class MeshDataReader {
         for (int i = 0; i < polys.length; i++) {
             polys[i] = new Poly(i, maxVertPerPoly);
             if (header.version < MeshHeader.DT_NAVMESH_VERSION_RECAST4J_NO_POLY_FIRSTLINK) {
-                buf.getInt(); // polys[i].firstLink
+                buf.getInt(); // polys[i].getFirst()Link
             }
             for (int j = 0; j < polys[i].vertices.length; j++) {
                 polys[i].vertices[j] = buf.getShort() & 0xFFFF;

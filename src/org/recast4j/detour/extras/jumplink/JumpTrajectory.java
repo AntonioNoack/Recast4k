@@ -1,5 +1,6 @@
 package org.recast4j.detour.extras.jumplink;
 
+import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3f;
 
 public class JumpTrajectory implements Trajectory {
@@ -10,6 +11,7 @@ public class JumpTrajectory implements Trajectory {
         this.jumpHeight = jumpHeight;
     }
 
+    @NotNull
     @Override
     public Vector3f apply(Vector3f start, Vector3f end, float u) {
         return new Vector3f(
@@ -42,4 +44,8 @@ public class JumpTrajectory implements Trajectory {
         return ys + h1 - h2 * v * v;
     }
 
+    @Override
+    public float lerp(float f, float g, float u) {
+        return Trajectory.super.lerp(f, g, u);
+    }
 }

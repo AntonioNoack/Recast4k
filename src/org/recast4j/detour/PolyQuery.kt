@@ -1,6 +1,5 @@
-package org.recast4j.detour;
+package org.recast4j.detour
 
-public interface PolyQuery {
-
-    void process(MeshTile tile, Poly poly, long ref);
+interface PolyQuery {
+    fun process(tile: MeshTile, poly: Poly, ref: Long)
 }

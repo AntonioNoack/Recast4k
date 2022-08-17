@@ -18,9 +18,9 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.crowd;
 
+import kotlin.Pair;
 import org.joml.Vector3f;
 import org.recast4j.LongArrayList;
-import org.recast4j.Pair;
 import org.recast4j.detour.*;
 
 import java.util.ArrayList;
@@ -343,9 +343,9 @@ public class PathCorridor {
         NavMesh nav = navquery.getAttachedNavMesh();
         Result<Pair<Vector3f, Vector3f>> startEnd = nav.getOffMeshConnectionPolyEndPoints(refs[0], refs[1]);
         if (startEnd.succeeded()) {
-            copy(pos, startEnd.result.second);
-            copy(start, startEnd.result.first);
-            copy(end, startEnd.result.second);
+            copy(pos, startEnd.result.getSecond());
+            copy(start, startEnd.result.getFirst());
+            copy(end, startEnd.result.getSecond());
             return true;
         }
         return false;

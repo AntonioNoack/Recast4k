@@ -36,15 +36,22 @@ import static org.recast4j.Vectors.*;
 
 public class TileCache {
 
-    int tileLutSize; /// < Tile hash lookup size (must be pot).
-    int tileLutMask; /// < Tile hash lookup mask.
+    /** Tile hash lookup size (must be pot). */
+    int tileLutSize;
+    /**  Tile hash lookup mask. */
+    int tileLutMask;
 
-    private final CompressedTile[] posLookup; /// < Tile hash lookup.
-    private CompressedTile nextFreeTile; /// < Freelist of tiles.
-    private final CompressedTile[] tiles; /// < List of tiles. // TODO: (PP) replace with list
+    /** Tile hash lookup. */
+    private final CompressedTile[] posLookup;
+    /** Freelist of tiles. */
+    private CompressedTile nextFreeTile;
+    /** List of tiles. // TODO: (PP) replace with list */
+    private final CompressedTile[] tiles;
 
-    private final int m_saltBits; /// < Number of salt bits in the tile ID.
-    private final int m_tileBits; /// < Number of tile bits in the tile ID.
+    /** Number of salt bits in the tile ID. */
+    private final int m_saltBits;
+    /** Number of tile bits in the tile ID. */
+    private final int m_tileBits;
 
     private final NavMesh m_navmesh;
     private final TileCacheParams params;

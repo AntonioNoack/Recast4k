@@ -18,23 +18,7 @@ freely, subject to the following restrictions:
 
 package org.recast4j.dynamic;
 
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Queue;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.recast4j.detour.NavMesh;
-import org.recast4j.detour.NavMeshDataCreateParams;
 import org.recast4j.detour.NavMeshParams;
 import org.recast4j.dynamic.collider.Collider;
 import org.recast4j.dynamic.io.VoxelFile;
@@ -43,6 +27,15 @@ import org.recast4j.recast.Heightfield;
 import org.recast4j.recast.RecastBuilder;
 import org.recast4j.recast.RecastBuilder.RecastBuilderResult;
 import org.recast4j.recast.Telemetry;
+
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicLong;
+
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
 public class DynamicNavMesh {
 
@@ -168,7 +161,7 @@ public class DynamicNavMesh {
 
     private CompletableFuture<Boolean> rebuild(Collection<DynamicTile> tiles, ExecutorService executor) {
         CompletableFuture<Boolean> future = CompletableFuture.allOf(tiles.stream()
-                .map(tile -> CompletableFuture.runAsync(() -> rebuild(tile), executor)).toArray(CompletableFuture[]::new))
+                        .map(tile -> CompletableFuture.runAsync(() -> rebuild(tile), executor)).toArray(CompletableFuture[]::new))
                 .thenApply(__ -> updateNavMesh());
         return future;
     }

@@ -18,11 +18,11 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour;
 
+import kotlin.Pair;
+import kotlin.Triple;
 import org.joml.Vector3f;
 import org.joml.Vector3i;
 import org.recast4j.LongArrayList;
-import org.recast4j.Pair;
-import org.recast4j.Triple;
 import org.recast4j.Vectors;
 
 import java.util.*;
@@ -644,9 +644,9 @@ public class NavMesh {
                 int vb = poly.vertices[(j + 1) % nv] * 3;
                 Triple<long[], float[], Integer> connectedPolys = findConnectingPolys(tile.data.vertices, va, vb, target,
                         oppositeTile(dir), 4);
-                long[] nei = connectedPolys.first;
-                float[] neia = connectedPolys.second;
-                int nnei = connectedPolys.third;
+                long[] nei = connectedPolys.getFirst();
+                float[] neia = connectedPolys.getSecond();
+                int nnei = connectedPolys.getThird();
                 for (int k = 0; k < nnei; ++k) {
                     int idx = allocLink(tile);
                     Link link = tile.links.get(idx);
@@ -982,8 +982,8 @@ public class NavMesh {
                     }
 
                     Pair<Float, Float> dt = distancePtSegSqr2D(pos, v[j], v[k]);
-                    float d = dt.first;
-                    float t = dt.second;
+                    float d = dt.getFirst();
+                    float t = dt.getSecond();
                     if (d < dmin) {
                         dmin = d;
                         tmin = t;
@@ -1000,8 +1000,8 @@ public class NavMesh {
                 copy(v0, tile.data.vertices, poly.vertices[j] * 3);
                 copy(v1, tile.data.vertices, poly.vertices[k] * 3);
                 Pair<Float, Float> dt = distancePtSegSqr2D(pos, v0, v1);
-                float d = dt.first;
-                float t = dt.second;
+                float d = dt.getFirst();
+                float t = dt.getSecond();
                 if (d < dmin) {
                     dmin = d;
                     tmin = t;
@@ -1075,8 +1075,8 @@ public class NavMesh {
 
     ClosestPointOnPolyResult closestPointOnPoly(long ref, Vector3f pos) {
         Pair<MeshTile, Poly> tileAndPoly = getTileAndPolyByRefUnsafe(ref);
-        MeshTile tile = tileAndPoly.first;
-        Poly poly = tileAndPoly.second;
+        MeshTile tile = tileAndPoly.getFirst();
+        Poly poly = tileAndPoly.getSecond();
         Vector3f closest = new Vector3f(pos);
         float h = getPolyHeight(tile, poly, pos);
         if (Float.isFinite(h)) {
@@ -1091,7 +1091,7 @@ public class NavMesh {
             i = poly.vertices[1] * 3;
             Vector3f v1 = new Vector3f(tile.data.vertices[i], tile.data.vertices[i + 1], tile.data.vertices[i + 2]);
             Pair<Float, Float> dt = distancePtSegSqr2D(pos, v0, v1);
-            return new ClosestPointOnPolyResult(false, lerp(v0, v1, dt.second));
+            return new ClosestPointOnPolyResult(false, lerp(v0, v1, dt.getSecond()));
         }
         // Outside poly that is not an offmesh connection.
         return new ClosestPointOnPolyResult(false, closestPointOnDetailEdges(tile, poly, pos, true));

@@ -18,9 +18,9 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.crowd;
 
+import kotlin.Pair;
 import org.joml.Vector3f;
 import org.recast4j.LongArrayList;
-import org.recast4j.Pair;
 import org.recast4j.Vectors;
 import org.recast4j.detour.*;
 import org.recast4j.detour.crowd.CrowdAgent.CrowdAgentState;
@@ -951,8 +951,8 @@ public class Crowd {
 
                 ObstacleAvoidanceParams params = m_obstacleQueryParams[ag.params.obstacleAvoidanceType];
                 Pair<Integer, Vector3f> nsnvel = obstacleAvoidanceQuery.sampleVelocityAdaptive(ag.currentPosition, ag.params.radius, ag.desiredSpeed, ag.actualVelocity, ag.desiredVelocity, params, vod);
-                ag.desiredVelAdjusted = nsnvel.second;
-                m_velocitySampleCount += nsnvel.first;
+                ag.desiredVelAdjusted = nsnvel.getSecond();
+                m_velocitySampleCount += nsnvel.getFirst();
             } else {
                 // If not using velocity planning, new velocity is directly the desired velocity.
                 copy(ag.desiredVelAdjusted, ag.desiredVelocity);

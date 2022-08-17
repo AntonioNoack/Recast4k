@@ -1,13 +1,8 @@
-package org.recast4j.detour.extras.jumplink;
+package org.recast4j.detour.extras.jumplink
 
-import org.joml.Vector3f;
+import org.joml.Vector3f
 
-public interface Trajectory {
-
-    default float lerp(float f, float g, float u) {
-        return u * g + (1f - u) * f;
-    }
-
-    Vector3f apply(Vector3f start, Vector3f end, float u);
-
+interface Trajectory {
+    fun lerp(f: Float, g: Float, u: Float) = u * g + (1f - u) * f
+    fun apply(start: Vector3f, end: Vector3f, u: Float): Vector3f
 }

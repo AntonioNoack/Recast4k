@@ -16,16 +16,12 @@ freely, subject to the following restrictions:
  misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
-package org.recast4j.recast.geom;
+package org.recast4j.recast.geom
 
-import org.joml.Vector3f;
+import org.joml.Vector3f
 
-public interface InputGeomProvider extends ConvexVolumeProvider {
-
-    Vector3f getMeshBoundsMin();
-
-    Vector3f getMeshBoundsMax();
-
-    Iterable<TriMesh> meshes();
-
+interface InputGeomProvider : ConvexVolumeProvider {
+    val meshBoundsMin: Vector3f
+    val meshBoundsMax: Vector3f
+    fun meshes(): Iterable<TriMesh>
 }

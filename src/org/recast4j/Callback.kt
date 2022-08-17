@@ -1,5 +1,5 @@
-package org.recast4j;
+package org.recast4j
 
-public interface Callback<V> {
-    void call(V v);
+interface Callback<V> {
+    fun call(v: V)
 }

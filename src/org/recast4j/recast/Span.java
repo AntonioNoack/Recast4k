@@ -20,7 +20,6 @@ package org.recast4j.recast;
 
 /** Represents a span in a heightfield. */
 public class Span {
-
     /** The lower limit of the span. [Limit: &lt; smax] */
     public int min;
     /** The upper limit of the span. [Limit: &lt;= SPAN_MAX_HEIGHT] */
@@ -29,5 +28,4 @@ public class Span {
     public int area;
     /** The next span higher up in column. */
     public Span next;
-
 }

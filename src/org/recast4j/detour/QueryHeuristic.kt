@@ -15,13 +15,10 @@ freely, subject to the following restrictions:
  misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
+package org.recast4j.detour
 
-package org.recast4j.detour;
+import org.joml.Vector3f
 
-import org.joml.Vector3f;
-
-public interface QueryHeuristic {
-
-    float getCost(Vector3f neighbourPos, Vector3f endPos);
-
+interface QueryHeuristic {
+    fun getCost(neighbourPos: Vector3f, endPos: Vector3f): Float
 }
