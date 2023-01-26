@@ -20,7 +20,6 @@ package org.recast4j.recast
 
 import org.joml.Vector3f
 import org.recast4j.recast.RecastConstants.PartitionType
-import org.recast4j.recast.RecastMeshDetail.buildPolyMeshDetail
 import org.recast4j.recast.geom.ConvexVolumeProvider
 import org.recast4j.recast.geom.InputGeomProvider
 import java.util.concurrent.CountDownLatch
@@ -201,7 +200,7 @@ class RecastBuilder {
         // on each polygon.
         //
         val dmesh = if (cfg.buildMeshDetail)
-            RecastMeshDetail0.buildPolyMeshDetail(ctx, pmesh, chf, cfg.detailSampleDist, cfg.detailSampleMaxError)
+            RecastMeshDetail.buildPolyMeshDetail(ctx, pmesh, chf, cfg.detailSampleDist, cfg.detailSampleMaxError)
         else null
         return RecastBuilderResult(tileX, tileZ, solid, chf, cset, pmesh, dmesh, ctx)
     }
