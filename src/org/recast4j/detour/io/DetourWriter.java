@@ -30,9 +30,9 @@ public abstract class DetourWriter {
     }
 
     protected void write(OutputStream stream, Vector3f value, ByteOrder order) throws IOException {
-        write(stream, Float.floatToIntBits(value.x), order);
-        write(stream, Float.floatToIntBits(value.y), order);
-        write(stream, Float.floatToIntBits(value.z), order);
+        write(stream, Float.floatToIntBits(value.getX()), order);
+        write(stream, Float.floatToIntBits(value.getY()), order);
+        write(stream, Float.floatToIntBits(value.getZ()), order);
     }
 
     protected void write(OutputStream stream, short value, ByteOrder order) throws IOException {

@@ -16,5 +16,5 @@ class FloatArrayList(cap: Int = 16) {
         values[size++] = v
     }
 
-    fun get(index: Int) = values[index]
+    operator fun get(index: Int) = values[index]
 }
