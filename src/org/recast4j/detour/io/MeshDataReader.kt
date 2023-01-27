@@ -80,8 +80,8 @@ class MeshDataReader {
         header.walkableHeight = buf.float
         header.walkableRadius = buf.float
         header.walkableClimb = buf.float
-        header.bmin[buf.float, buf.float] = buf.float
-        header.bmax[buf.float, buf.float] = buf.float
+        header.bmin.set(buf.float, buf.float, buf.float)
+        header.bmax.set(buf.float, buf.float, buf.float)
         header.bvQuantizationFactor = buf.float
         data.vertices = readVertices(buf, header.vertCount)
         data.polygons = readPolys(buf, header, maxVertPerPoly)
@@ -146,7 +146,7 @@ class MeshDataReader {
     }
 
     private fun readBVTree(buf: ByteBuffer, header: MeshHeader): Array<BVNode> {
-        val nodes = Array(header.bvNodeCount){BVNode()}
+        val nodes = Array(header.bvNodeCount) { BVNode() }
         for (i in nodes.indices) {
             val n = nodes[i]
             n.minX = buf.int
@@ -161,14 +161,14 @@ class MeshDataReader {
     }
 
     private fun readOffMeshCons(buf: ByteBuffer, header: MeshHeader): Array<OffMeshConnection> {
-        val cons = Array(header.offMeshConCount){OffMeshConnection()}
+        val cons = Array(header.offMeshConCount) { OffMeshConnection() }
         for (i in cons.indices) {
-            cons[i].posA[buf.float, buf.float] = buf.float
-            cons[i].posB[buf.float, buf.float] = buf.float
+            cons[i].posA.set(buf.float, buf.float, buf.float)
+            cons[i].posB.set(buf.float, buf.float, buf.float)
             cons[i].rad = buf.float
-            cons[i].poly = buf.short.toInt() and 0xFFFF
-            cons[i].flags = buf.get().toInt() and 0xFF
-            cons[i].side = buf.get().toInt() and 0xFF
+            cons[i].poly = buf.short.toInt() and 0xffff
+            cons[i].flags = buf.get().toInt() and 0xff
+            cons[i].side = buf.get().toInt() and 0xff
             cons[i].userId = buf.int
         }
         return cons

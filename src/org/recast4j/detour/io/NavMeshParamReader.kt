@@ -6,7 +6,7 @@ import java.nio.ByteBuffer
 class NavMeshParamReader {
     fun read(bb: ByteBuffer): NavMeshParams {
         val params = NavMeshParams()
-        params.origin[bb.float, bb.float] = bb.float
+        params.origin.set(bb.float, bb.float, bb.float)
         params.tileWidth = bb.float
         params.tileHeight = bb.float
         params.maxTiles = bb.int

@@ -209,7 +209,7 @@ object RecastLayers {
             stack.add(i)
             while (!stack.isEmpty()) {
                 // Pop front
-                val reg = regions[stack.removeAt(0)]
+                val reg = regions[stack.remove(0)]
                 for (neii in 0 until reg.neis.size) {
                     val nei = reg.neis[neii]
                     val region = regions[nei]

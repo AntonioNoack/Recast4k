@@ -238,9 +238,9 @@ object RecastRegion {
         val lev = if (level >= 2) level - 2 else 0
         var count = 0
         while (stack.size > 0) {
-            val ci = stack.removeAt(stack.size - 1)
-            val cy = stack.removeAt(stack.size - 1)
-            val cx = stack.removeAt(stack.size - 1)
+            val ci = stack.remove(stack.size - 1)
+            val cy = stack.remove(stack.size - 1)
+            val cx = stack.remove(stack.size - 1)
             val cs = chf.spans[ci]
 
             // Check if any of the neighbours already have a valid region set.
@@ -472,7 +472,7 @@ object RecastRegion {
         while (i < reg!!.connections.size && reg.connections.size > 1) {
             val ni = (i + 1) % reg.connections.size
             if (reg.connections[i] == reg.connections[ni]) {
-                reg.connections.removeAt(i)
+                reg.connections.remove(i)
             } else {
                 ++i
             }
@@ -669,7 +669,7 @@ object RecastRegion {
             while (j < cont.size) {
                 val nj = (j + 1) % cont.size
                 if (cont[j] == cont[nj]) {
-                    cont.removeAt(j)
+                    cont.remove(j)
                 } else {
                     ++j
                 }
@@ -771,7 +771,7 @@ object RecastRegion {
             stack.add(i)
             while (stack.size > 0) {
                 // Pop
-                val ri = stack.removeAt(stack.size - 1)
+                val ri = stack.remove(stack.size - 1)
                 val creg = regions[ri]
                 spanCount += creg!!.spanCount
                 trace.add(ri)
@@ -1015,7 +1015,7 @@ object RecastRegion {
             stack.add(i)
             while (stack.size > 0) {
                 // Pop front
-                val reg = regions[stack.removeAt(0)]
+                val reg = regions[stack.remove(0)]
                 val ncons = reg.connections.size
                 for (j in 0 until ncons) {
                     val nei = reg.connections[j]

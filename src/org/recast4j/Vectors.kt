@@ -56,7 +56,7 @@ object Vectors {
     }
 
     fun copy(out: Vector3f, input: FloatArray, i: Int) {
-        out[input[i], input[i + 1]] = input[i + 2]
+        out.set(input[i], input[i + 1], input[i + 2])
     }
 
     fun copy(out: FloatArray, input: FloatArray) {
@@ -155,7 +155,7 @@ object Vectors {
     }
 
     fun copy(out: Vector3f, input: IntArray, i: Int) {
-        out[input[i].toFloat(), input[i + 1].toFloat()] = input[i + 2].toFloat()
+        out.set(input[i].toFloat(), input[i + 1].toFloat(), input[i + 2].toFloat())
     }
 
     fun sqr(a: Float): Float {

@@ -5,13 +5,12 @@ import org.joml.Vector3f
 class EdgeSampler(edge: Edge, val trajectory: Trajectory) {
     val start = GroundSegment()
     val end = ArrayList<GroundSegment>()
-    val ax = Vector3f()
-    val ay = Vector3f()
+    val ax = Vector3f(edge.b).sub(edge.a)
+    val ay = Vector3f(0f, 1f, 0f)
     val az = Vector3f()
 
     init {
-        ax.set(edge.b).sub(edge.a).normalize()
+        ax.normalize()
         az.set(ax.z, 0f, -ax.x).normalize()
-        ay[0f, 1f] = 0f
     }
 }

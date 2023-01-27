@@ -78,7 +78,7 @@ class TileCacheReader {
 
     private fun readCacheParams(bb: ByteBuffer): TileCacheParams {
         val params = TileCacheParams()
-        params.orig[bb.float, bb.float] = bb.float
+        params.orig.set(bb.float, bb.float, bb.float)
         params.cellSize = bb.float
         params.cellHeight = bb.float
         params.width = bb.int

@@ -474,10 +474,10 @@ object RecastContour {
             // if (vequal(&simplified[i*4], &simplified[ni*4]))
             if (simplified[i * 4] == simplified[ni * 4] && simplified[i * 4 + 2] == simplified[ni * 4 + 2]) {
                 // Degenerate segment, remove.
-                simplified.removeAt(i * 4)
-                simplified.removeAt(i * 4)
-                simplified.removeAt(i * 4)
-                simplified.removeAt(i * 4)
+                simplified.remove(i * 4)
+                simplified.remove(i * 4)
+                simplified.remove(i * 4)
+                simplified.remove(i * 4)
                 npts--
             }
         }

@@ -65,16 +65,11 @@ class IntArrayList(cap: Int = 16) {
         size += listSize
     }
 
-    fun removeAt(index: Int): Int {
+    fun remove(index: Int): Int {
         val oldValue = values[index]
         System.arraycopy(values, index + 1, values, index, size - index - 1)
         size--
         return oldValue
-    }
-
-    fun remove(value: Int) {
-        val i = indexOf(value)
-        if (i >= 0) remove(i)
     }
 
     @Suppress("MemberVisibilityCanBePrivate")

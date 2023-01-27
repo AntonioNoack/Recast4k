@@ -63,7 +63,7 @@ class VoxelFileReader {
         file.useTiles = buf.get().toInt() != 0
         file.tileSizeX = buf.int
         file.tileSizeZ = buf.int
-        file.rotation[buf.float, buf.float] = buf.float
+        file.rotation.set(buf.float, buf.float, buf.float)
         file.bounds[0] = buf.float
         file.bounds[1] = buf.float
         file.bounds[2] = buf.float

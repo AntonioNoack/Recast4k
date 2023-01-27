@@ -32,8 +32,8 @@ class TileCacheLayerHeaderReader {
         header.tx = data.int
         header.ty = data.int
         header.tlayer = data.int
-        header.bmin[data.float, data.float] = data.float
-        header.bmax[data.float, data.float] = data.float
+        header.bmin.set(data.float, data.float, data.float)
+        header.bmax.set(data.float, data.float, data.float)
         header.hmin = data.short.toInt() and 0xFFFF
         header.hmax = data.short.toInt() and 0xFFFF
         header.width = data.get().toInt() and 0xFF
