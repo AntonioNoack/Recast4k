@@ -25,7 +25,7 @@ import java.nio.ByteOrder
 
 class MeshDataReader {
 
-    fun read(stream: InputStream?, maxVertPerPoly: Int): MeshData {
+    fun read(stream: InputStream, maxVertPerPoly: Int): MeshData {
         val buf = IOUtils.toByteBuffer(stream)
         return read(buf, maxVertPerPoly, false)
     }
@@ -34,7 +34,7 @@ class MeshDataReader {
         return read(buf, maxVertPerPoly, false)
     }
 
-    fun read32Bit(stream: InputStream?, maxVertPerPoly: Int): MeshData {
+    fun read32Bit(stream: InputStream, maxVertPerPoly: Int): MeshData {
         val buf = IOUtils.toByteBuffer(stream)
         return read(buf, maxVertPerPoly, true)
     }

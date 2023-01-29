@@ -26,6 +26,8 @@ import org.recast4j.Vectors.overlapBounds
 import org.recast4j.detour.NavMesh
 import org.recast4j.detour.NavMeshBuilder.createNavMeshData
 import org.recast4j.detour.NavMeshDataCreateParams
+import org.recast4j.detour.extras.jumplink.NavMeshGroundSampler.Companion.f0
+import org.recast4j.detour.extras.jumplink.NavMeshGroundSampler.Companion.i0
 import org.recast4j.detour.tilecache.TileCacheObstacle.TileCacheObstacleType
 import org.recast4j.detour.tilecache.io.TileCacheLayerHeaderReader
 import java.io.IOException
@@ -481,13 +483,12 @@ class TileCache(
                 continue
             }
             if (contains(ob.touched, ref)) {
-                if (ob.type == TileCacheObstacleType.CYLINDER) {
-                    builder.markCylinderArea(
+                when (ob.type) {
+                    TileCacheObstacleType.CYLINDER -> builder.markCylinderArea(
                         layer, tile.header!!.bmin, params.cellSize, params.cellHeight, ob.pos, ob.radius,
                         ob.height, 0
                     )
-                } else if (ob.type == TileCacheObstacleType.BOX) {
-                    builder.markBoxArea(
+                    TileCacheObstacleType.BOX -> builder.markBoxArea(
                         layer,
                         tile.header!!.bmin,
                         params.cellSize,
@@ -496,11 +497,11 @@ class TileCache(
                         ob.bmax,
                         0
                     )
-                } else if (ob.type == TileCacheObstacleType.ORIENTED_BOX) {
-                    builder.markBoxArea(
+                    TileCacheObstacleType.ORIENTED_BOX -> builder.markBoxArea(
                         layer, tile.header!!.bmin, params.cellSize, params.cellHeight, ob.center, ob.extents,
                         ob.rotAux, 0
                     )
+                    else -> {}
                 }
             }
         }
@@ -516,25 +517,22 @@ class TileCache(
             navMesh.removeTile(navMesh.getTileRefAt(tile.header!!.tx, tile.header!!.ty, tile.header!!.tlayer))
             return
         }
-        val params = NavMeshDataCreateParams()
-        params.vertices = polyMesh.vertices
-        params.vertCount = polyMesh.numVertices
-        params.polys = polyMesh.polys
-        params.polyAreas = polyMesh.areas
-        params.polyFlags = polyMesh.flags
-        params.polyCount = polyMesh.numPolygons
-        params.maxVerticesPerPolygon = navMesh.maxVerticesPerPoly
-        params.walkableHeight = this.params.walkableHeight
-        params.walkableRadius = this.params.walkableRadius
-        params.walkableClimb = this.params.walkableClimb
-        params.tileX = tile.header!!.tx
-        params.tileZ = tile.header!!.ty
-        params.tileLayer = tile.header!!.tlayer
-        params.cellSize = this.params.cellSize
-        params.cellHeight = this.params.cellHeight
-        params.buildBvTree = false
-        params.bmin = tile.header!!.bmin
-        params.bmax = tile.header!!.bmax
+        val tileHeader = tile.header!!
+        val params0 = this.params
+        val params = NavMeshDataCreateParams(
+            polyMesh.vertices, polyMesh.numVertices,
+            polyMesh.polys, polyMesh.flags, polyMesh.areas, polyMesh.numPolygons,
+            navMesh.maxVerticesPerPoly,
+            i0, f0, 0, i0, 0,
+            f0, f0, i0, i0, i0, i0, 0, 0, tileHeader.tx,
+            tileHeader.ty, tileHeader.tlayer, tileHeader.bmin, tileHeader.bmax,
+            params0.walkableHeight,
+            params0.walkableRadius,
+            params0.walkableClimb,
+            params0.cellSize,
+            params0.cellHeight,
+            false
+        )
         tmProcess?.process(params)
         val meshData = createNavMeshData(params)
         // Remove existing tile.

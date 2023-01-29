@@ -58,8 +58,8 @@ object NavMeshBuilder {
         return if (z > maxVal) 2 else axis
     }
 
-    fun subdivide(items: Array<BVNode>, iMin: Int, imax: Int, curBVNode: Int, BVNodes: Array<BVNode>): Int {
-        var curBVNode = curBVNode
+    fun subdivide(items: Array<BVNode>, iMin: Int, imax: Int, curBVNode0: Int, BVNodes: Array<BVNode>): Int {
+        var curBVNode = curBVNode0
         val iNum = imax - iMin
         val icur = curBVNode
         val n = BVNodes[curBVNode++]
@@ -102,7 +102,7 @@ object NavMeshBuilder {
             val it = items[i]
             it.index = i
             // Calc polygon bounds. Use detail meshes if available.
-            if (params.detailMeshes != null) {
+            if (params.detailMeshes.isNotEmpty()) {
                 val vb = params.detailMeshes[i * 4]
                 val ndv = params.detailMeshes[i * 4 + 1]
                 val bmin = Vector3f()
@@ -182,8 +182,8 @@ object NavMeshBuilder {
      */
     fun createNavMeshData(params: NavMeshDataCreateParams): MeshData? {
         if (params.vertCount >= 0xffff) return null
-        if (params.vertCount == 0 || params.vertices == null) return null
-        if (params.polyCount == 0 || params.polys == null) return null
+        if (params.vertCount == 0 || params.vertices.isEmpty()) return null
+        if (params.polyCount == 0 || params.polys.isEmpty()) return null
         val nvp = params.maxVerticesPerPolygon
 
         // Classify off-mesh connection points. We store only the connections
@@ -194,11 +194,11 @@ object NavMeshBuilder {
         if (params.offMeshConCount > 0) {
             offMeshConClass = IntArray(params.offMeshConCount * 2)
 
-            // Find tight heigh bounds, used for culling out off-mesh start
+            // Find tight height bounds, used for culling out off-mesh start
             // locations.
             var hmin = Float.MAX_VALUE
             var hmax = -Float.MAX_VALUE
-            if (params.detailVertices != null && params.detailVerticesCount != 0) {
+            if (params.detailVertices .isNotEmpty() && params.detailVerticesCount != 0) {
                 for (i in 0 until params.detailVerticesCount) {
                     val h = params.detailVertices[i * 3 + 1]
                     hmin = min(hmin, h)
@@ -226,7 +226,7 @@ object NavMeshBuilder {
                 offMeshConClass[i * 2] = classifyOffMeshPoint(p0, bmin, bmax)
                 offMeshConClass[i * 2 + 1] = classifyOffMeshPoint(p1, bmin, bmax)
 
-                // Zero out off-mesh start positions which are not even
+                // Zero out off-mesh start positions, which are not even
                 // potentially touching the mesh.
                 if (offMeshConClass[i * 2] == 0xff) {
                     if (p0[1] < bmin.y || p0[1] > bmax.y) offMeshConClass[i * 2] = 0
@@ -240,11 +240,11 @@ object NavMeshBuilder {
             }
         }
 
-        // Off-mesh connectionss are stored as polygons, adjust values.
+        // Off-mesh connections are stored as polygons, adjust values.
         val totPolyCount = params.polyCount + storedOffMeshConCount
         val totVertCount = params.vertCount + storedOffMeshConCount * 2
 
-        // Find portal edges which are at tile borders.
+        // Find portal edges, which are at tile borders.
         var edgeCount = 0
         var portalCount = 0
         for (i in 0 until params.polyCount) {
@@ -263,7 +263,7 @@ object NavMeshBuilder {
         // Find unique detail vertices.
         var uniqueDetailVertCount = 0
         var detailTriCount = 0
-        if (params.detailMeshes != null) {
+        if (params.detailMeshes.isNotEmpty()) {
             // Has detail mesh, count unique detail vertex count and use input
             // detail tri count.
             detailTriCount = params.detailTriCount
@@ -379,7 +379,7 @@ object NavMeshBuilder {
         // Off-mesh connection vertices.
         n = 0
         for (i in 0 until params.offMeshConCount) {
-            // Only store connections which start from this tile.
+            // Only store connections, which start from this tile.
             if (offMeshConClass!![i * 2] == 0xff) {
                 val p = Poly(offMeshPolyBase + n, nvp)
                 navPolys[offMeshPolyBase + n] = p
@@ -398,7 +398,7 @@ object NavMeshBuilder {
         // mesh.
         // We compress the mesh data by skipping them and using the navmesh
         // coordinates.
-        if (params.detailMeshes != null) {
+        if (params.detailMeshes.isNotEmpty()) {
             var vbase = 0
             for (i in 0 until params.polyCount) {
                 val dtl = navDMeshes[i]
@@ -464,7 +464,7 @@ object NavMeshBuilder {
                 con.rad = params.offMeshConRad[i]
                 con.flags = if (params.offMeshConDir[i] != 0) NavMesh.DT_OFFMESH_CON_BIDIR else 0
                 con.side = offMeshConClass[i * 2 + 1]
-                if (params.offMeshConUserID != null) con.userId = params.offMeshConUserID[i]
+                if (params.offMeshConUserID.isNotEmpty()) con.userId = params.offMeshConUserID[i]
                 n++
             }
         }

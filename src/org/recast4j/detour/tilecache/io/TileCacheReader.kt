@@ -31,8 +31,10 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 class TileCacheReader {
+
     private val paramReader = NavMeshParamReader()
-    fun read(s: InputStream?, maxVertPerPoly: Int, meshProcessor: TileCacheMeshProcess?): TileCache {
+
+    fun read(s: InputStream, maxVertPerPoly: Int, meshProcessor: TileCacheMeshProcess?): TileCache {
         val bb = IOUtils.toByteBuffer(s)
         return read(bb, maxVertPerPoly, meshProcessor)
     }
