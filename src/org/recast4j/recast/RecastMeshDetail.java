@@ -19,108 +19,6 @@ public class RecastMeshDetail {
     static int EV_UNDEF = -1;
     static int EV_HULL = -2;
 
-    static float circumCircle(float[] vertices, int p1, int p2, int p3, Vector3f c) {
-        float EPS = 1e-6f;
-        // Calculate the circle relative to p1, to avoid some precision issues.
-        Vector3f v1 = new Vector3f();
-        Vector3f v2 = new Vector3f();
-        Vector3f v3 = new Vector3f();
-        sub(v2, vertices, p2, p1);
-        sub(v3, vertices, p3, p1);
-
-        float cp = vcross2(v1, v2, v3);
-        if (Math.abs(cp) > EPS) {
-            float v1Sq = vdot2(v1, v1);
-            float v2Sq = vdot2(v2, v2);
-            float v3Sq = vdot2(v3, v3);
-            float n = 0.5f / cp;
-            c.set(
-                    (v1Sq * (v2.getZ() - v3.getZ()) +
-                            v2Sq * (v3.getZ() - v1.getZ()) +
-                            v3Sq * (v1.getZ() - v2.getZ())) * n,
-                    0f,
-                    (v1Sq * (v3.getX() - v2.getX()) +
-                            v2Sq * (v1.getX() - v3.getX()) +
-                            v3Sq * (v2.getX() - v1.getX())) * n
-            );
-            float r = vdist2(c, v1);
-            add(c, c, vertices, p1);
-            return r;
-        } else {
-            copy(c, vertices, p1);
-            return 0f;
-        }
-    }
-
-    static float distancePtSeg(float[] vertices, int pt, int p, int q) {
-        float pqx = vertices[q] - vertices[p];
-        float pqy = vertices[q + 1] - vertices[p + 1];
-        float pqz = vertices[q + 2] - vertices[p + 2];
-        float dx = vertices[pt] - vertices[p];
-        float dy = vertices[pt + 1] - vertices[p + 1];
-        float dz = vertices[pt + 2] - vertices[p + 2];
-        float d = pqx * pqx + pqy * pqy + pqz * pqz;
-        float t = pqx * dx + pqy * dy + pqz * dz;
-        if (d > 0) {
-            t /= d;
-        }
-        if (t < 0) {
-            t = 0;
-        } else if (t > 1) {
-            t = 1;
-        }
-
-        dx = vertices[p] + t * pqx - vertices[pt];
-        dy = vertices[p + 1] + t * pqy - vertices[pt + 1];
-        dz = vertices[p + 2] + t * pqz - vertices[pt + 2];
-
-        return dx * dx + dy * dy + dz * dz;
-    }
-
-    static float distancePtSeg2d(float[] vertices, int pt, float[] poly, int p, int q) {
-        float pqx = poly[q] - poly[p];
-        float pqz = poly[q + 2] - poly[p + 2];
-        float dx = vertices[pt] - poly[p];
-        float dz = vertices[pt + 2] - poly[p + 2];
-        float d = pqx * pqx + pqz * pqz;
-        float t = pqx * dx + pqz * dz;
-        if (d > 0) {
-            t /= d;
-        }
-        if (t < 0) {
-            t = 0;
-        } else if (t > 1) {
-            t = 1;
-        }
-
-        dx = poly[p] + t * pqx - vertices[pt];
-        dz = poly[p + 2] + t * pqz - vertices[pt + 2];
-
-        return dx * dx + dz * dz;
-    }
-
-    static float distancePtSeg2d(Vector3f vertices, float[] poly, int p, int q) {
-        float pqx = poly[q] - poly[p];
-        float pqz = poly[q + 2] - poly[p + 2];
-        float dx = vertices.getX() - poly[p];
-        float dz = vertices.getZ() - poly[p + 2];
-        float d = pqx * pqx + pqz * pqz;
-        float t = pqx * dx + pqz * dz;
-        if (d > 0) {
-            t /= d;
-        }
-        if (t < 0) {
-            t = 0;
-        } else if (t > 1) {
-            t = 1;
-        }
-
-        dx = poly[p] + t * pqx - vertices.getX();
-        dz = poly[p + 2] + t * pqz - vertices.getZ();
-
-        return dx * dx + dz * dz;
-    }
-
     static int getHeight(float fx, float fy, float fz, float ics, float ch, int radius, RecastMeshDetail0.HeightPatch hp) {
         int ix = (int) Math.floor(fx * ics + 0.01f);
         int iz = (int) Math.floor(fz * ics + 0.01f);
@@ -192,41 +90,6 @@ public class RecastMeshDetail {
         return h;
     }
 
-    static void updateLeftFace(IntArrayList edges, int e, int s, int t, int f) {
-        if (edges.get(e) == s && edges.get(e + 1) == t && edges.get(e + 2) == EV_UNDEF) {
-            edges.set(e + 2, f);
-        } else if (edges.get(e + 1) == s && edges.get(e) == t && edges.get(e + 3) == EV_UNDEF) {
-            edges.set(e + 3, f);
-        }
-    }
-
-    static boolean overlapSegSeg2d(float[] vertices, int a, int b, int c, int d) {
-        float a1 = vcross2(vertices, a, b, d);
-        float a2 = vcross2(vertices, a, b, c);
-        if (a1 * a2 < 0.0f) {
-            float a3 = vcross2(vertices, c, d, a);
-            float a4 = a3 + a2 - a1;
-            return a3 * a4 < 0.0f;
-        }
-        return false;
-    }
-
-    static boolean doesNotOverlapEdges(float[] pts, IntArrayList edges, int s1, int t1) {
-        int[] edgeData = edges.getValues();
-        for (int e = 0, l = edges.getSize(); e < l; e += 4) {
-            int s0 = edgeData[e];
-            int t0 = edgeData[e + 1];
-            // Same or connected edges do not overlap.
-            if (s0 == s1 || s0 == t1 || t0 == s1 || t0 == t1) {
-                continue;
-            }
-            if (overlapSegSeg2d(pts, s0 * 3, t0 * 3, s1 * 3, t1 * 3)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     static int completeFacet(float[] pts, int npts, IntArrayList edges, int maxEdges, int nfaces, int e) {
         float EPS = 1e-5f;
 
@@ -254,7 +117,7 @@ public class RecastMeshDetail {
                 if (r < 0) {
                     // The circle is not updated yet, do it now.
                     pt = u;
-                    r = circumCircle(pts, s * 3, t * 3, u * 3, c);
+                    r = circumcircle(pts, s * 3, t * 3, u * 3, c);
                 } else {
                     float d = vdist2(c, pts, u * 3);
                     float tol = 0.001f;
@@ -262,14 +125,14 @@ public class RecastMeshDetail {
                         if (d < r * (1 - tol)) {
                             // Inside safe circumcircle, update circle.
                             pt = u;
-                            r = circumCircle(pts, s * 3, t * 3, u * 3, c);
+                            r = circumcircle(pts, s * 3, t * 3, u * 3, c);
                         } else {
-                            // Inside epsilon circum circle, do extra tests to make sure the edge is valid.
-                            // s-u and t-u cannot overlap with s-pt nor t-pt if they exists.
+                            // Inside epsilon circumcircle, do extra tests to make sure the edge is valid.
+                            // s-u and t-u cannot overlap with s-pt nor t-pt if they exist.
                             if (doesNotOverlapEdges(pts, edges, s, u) && doesNotOverlapEdges(pts, edges, t, u)) {
                                 // Edge is valid.
                                 pt = u;
-                                r = circumCircle(pts, s * 3, t * 3, u * 3, c);
+                                r = circumcircle(pts, s * 3, t * 3, u * 3, c);
                             }
                         }
                     } // else Outside current circumcircle, skip.
@@ -370,31 +233,11 @@ public class RecastMeshDetail {
         }
     }
 
-    // Calculate minimum extend of the polygon.
-    static float polyMinExtent(float[] vertices, int nverts) {
-        float minDist = Float.MAX_VALUE;
-        for (int i = 0; i < nverts; i++) {
-            int ni = (i + 1) % nverts;
-            int p1 = i * 3;
-            int p2 = ni * 3;
-            float maxEdgeDist = 0;
-            for (int j = 0; j < nverts; j++) {
-                if (j == i || j == ni) {
-                    continue;
-                }
-                float d = distancePtSeg2d(vertices, j * 3, vertices, p1, p2);
-                maxEdgeDist = Math.max(maxEdgeDist, d);
-            }
-            minDist = Math.min(minDist, maxEdgeDist);
-        }
-        return (float) Math.sqrt(minDist);
-    }
-
     static void triangulateHull(float[] vertices, int nhull, int[] hull, int nin, IntArrayList tris) {
         int start = 0, left = 1, right = nhull - 1;
 
-        // Start from an ear with shortest perimeter.
-        // This tends to favor well formed triangles as starting point.
+        // Start from an ear with the shortest perimeter.
+        // This tends to favor well-formed triangles as starting point.
         float dmin = Float.MAX_VALUE;
         for (int i = 0; i < nhull; i++) {
             if (hull[i] >= nin) {

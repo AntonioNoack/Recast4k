@@ -2,6 +2,7 @@ package org.recast4j.recast
 
 import org.joml.Vector3f
 import org.recast4j.IntArrayList
+import org.recast4j.recast.RecastMeshDetail.EV_UNDEF
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -32,15 +33,15 @@ object RecastMeshDetail0 {
     }
 
     @JvmStatic
-    fun vdistSq2(verts: FloatArray, p: Int, q: Int): Float {
-        val dx = verts[q] - verts[p]
-        val dy = verts[q + 2] - verts[p + 2]
+    fun vdistSq2(vertices: FloatArray, p: Int, q: Int): Float {
+        val dx = vertices[q] - vertices[p]
+        val dy = vertices[q + 2] - vertices[p + 2]
         return dx * dx + dy * dy
     }
 
     @JvmStatic
-    fun vdist2(verts: FloatArray, p: Int, q: Int): Float {
-        return sqrt(vdistSq2(verts, p, q))
+    fun vdist2(vertices: FloatArray, p: Int, q: Int): Float {
+        return sqrt(vdistSq2(vertices, p, q))
     }
 
     @JvmStatic
@@ -56,23 +57,23 @@ object RecastMeshDetail0 {
     }
 
     @JvmStatic
-    fun vdistSq2(p: Vector3f, verts: FloatArray, q: Int): Float {
-        val dx = verts[q] - p.x
-        val dy = verts[q + 2] - p.z
+    fun vdistSq2(p: Vector3f, vertices: FloatArray, q: Int): Float {
+        val dx = vertices[q] - p.x
+        val dy = vertices[q + 2] - p.z
         return dx * dx + dy * dy
     }
 
     @JvmStatic
-    fun vdist2(p: Vector3f, verts: FloatArray, q: Int): Float {
-        return sqrt(vdistSq2(p, verts, q))
+    fun vdist2(p: Vector3f, vertices: FloatArray, q: Int): Float {
+        return sqrt(vdistSq2(p, vertices, q))
     }
 
     @JvmStatic
-    fun vcross2(verts: FloatArray, p1: Int, p2: Int, p3: Int): Float {
-        val u1 = verts[p2] - verts[p1]
-        val v1 = verts[p2 + 2] - verts[p1 + 2]
-        val u2 = verts[p3] - verts[p1]
-        val v2 = verts[p3 + 2] - verts[p1 + 2]
+    fun vcross2(vertices: FloatArray, p1: Int, p2: Int, p3: Int): Float {
+        val u1 = vertices[p2] - vertices[p1]
+        val v1 = vertices[p2 + 2] - vertices[p1 + 2]
+        val u2 = vertices[p3] - vertices[p1]
+        val v2 = vertices[p3 + 2] - vertices[p1 + 2]
         return u1 * v2 - v1 * u2
     }
 
@@ -148,15 +149,15 @@ object RecastMeshDetail0 {
     }
 
     @JvmStatic
-    fun getEdgeFlags(verts: FloatArray?, va: Int, vb: Int, vpoly: FloatArray?, npoly: Int): Int {
+    fun getEdgeFlags(vertices: FloatArray, va: Int, vb: Int, vpoly: FloatArray, npoly: Int): Int {
         // The flag returned by this function matches getDetailTriEdgeFlags in Detour.
         // Figure out if edge (va,vb) is part of the polygon boundary.
         val thrSqr = 0.001f * 0.001f
         var i = 0
         var j = npoly - 1
         while (i < npoly) {
-            if (RecastMeshDetail.distancePtSeg2d(verts, va, vpoly, j * 3, i * 3) < thrSqr
-                && RecastMeshDetail.distancePtSeg2d(verts, vb, vpoly, j * 3, i * 3) < thrSqr
+            if (distancePtSeg2d(vertices, va, vpoly, j * 3, i * 3) < thrSqr
+                && distancePtSeg2d(vertices, vb, vpoly, j * 3, i * 3) < thrSqr
             ) return 1
             j = i++
         }
@@ -172,13 +173,13 @@ object RecastMeshDetail0 {
     }
 
     @JvmStatic
-    fun distToTriMesh(p: Vector3f, verts: FloatArray, tris: IntArrayList, ntris: Int): Float {
+    fun distToTriMesh(p: Vector3f, vertices: FloatArray, tris: IntArrayList, ntris: Int): Float {
         var dmin = Float.MAX_VALUE
         for (i in 0 until ntris) {
             val va = tris[i * 4] * 3
             val vb = tris[i * 4 + 1] * 3
             val vc = tris[i * 4 + 2] * 3
-            val d = distPtTri(p, verts, va, vb, vc)
+            val d = distPtTri(p, vertices, va, vb, vc)
             if (d < dmin) {
                 dmin = d
             }
@@ -187,7 +188,7 @@ object RecastMeshDetail0 {
     }
 
     @JvmStatic
-    fun distToPoly(nvert: Int, verts: FloatArray, p: Vector3f): Float {
+    fun distToPoly(nvert: Int, vertices: FloatArray, p: Vector3f): Float {
         var dmin = Float.MAX_VALUE
         var c = false
         val px = p.x
@@ -196,10 +197,10 @@ object RecastMeshDetail0 {
         for (i in 0 until nvert) {
             val vi = i * 3
             val vj = j * 3
-            if (((verts[vi + 2] > pz) != (verts[vj + 2] > pz)) &&
-                (px < (verts[vj] - verts[vi]) * (pz - verts[vi + 2]) / (verts[vj + 2] - verts[vi + 2]) + verts[vi])
+            if (((vertices[vi + 2] > pz) != (vertices[vj + 2] > pz)) &&
+                (px < (vertices[vj] - vertices[vi]) * (pz - vertices[vi + 2]) / (vertices[vj + 2] - vertices[vi + 2]) + vertices[vi])
             ) c = !c
-            dmin = min(dmin, RecastMeshDetail.distancePtSeg2d(p, verts, vj, vi))
+            dmin = min(dmin, distancePtSeg2d(p, vertices, vj, vi))
             j = i
         }
         return if (c) -dmin else dmin
@@ -255,6 +256,151 @@ object RecastMeshDetail0 {
             return abs(y - p.y)
         }
         return Float.MAX_VALUE
+    }
+
+    /** Calculate minimum extend of the polygon. */
+    @JvmStatic
+    fun polyMinExtent(vertices: FloatArray, numVertices: Int): Float {
+        var minDist = Float.MAX_VALUE
+        for (i in 0 until numVertices) {
+            val ni = (i + 1) % numVertices
+            val p1 = i * 3
+            val p2 = ni * 3
+            var maxEdgeDist = 0f
+            for (j in 0 until numVertices) {
+                if (j == i || j == ni) {
+                    continue
+                }
+                val d = distancePtSeg2d(vertices, j * 3, vertices, p1, p2)
+                maxEdgeDist = max(maxEdgeDist, d)
+            }
+            minDist = min(minDist, maxEdgeDist)
+        }
+        return sqrt(minDist)
+    }
+
+    private fun td(t0: Float, d: Float): Float {
+        var t = t0
+        if (d > 0) {
+            t /= d
+        }
+        if (t < 0) {
+            t = 0f
+        } else if (t > 1) {
+            t = 1f
+        }
+        return t
+    }
+
+    @JvmStatic
+    fun distancePtSeg2d(vx: Float, vz: Float, poly: FloatArray, p: Int, q: Int): Float {
+        val pqx = poly[q] - poly[p]
+        val pqz = poly[q + 2] - poly[p + 2]
+        var dx = vx - poly[p]
+        var dz = vz - poly[p + 2]
+        val d = pqx * pqx + pqz * pqz
+        val t = td(pqx * dx + pqz * dz, d)
+        dx = poly[p] + t * pqx - vx
+        dz = poly[p + 2] + t * pqz - vz
+        return dx * dx + dz * dz
+    }
+
+    @JvmStatic
+    fun distancePtSeg2d(vertices: FloatArray, pt: Int, poly: FloatArray, p: Int, q: Int): Float {
+        return distancePtSeg2d(vertices[pt], vertices[pt + 2], poly, p, q)
+    }
+
+    @JvmStatic
+    fun distancePtSeg2d(v: Vector3f, poly: FloatArray, p: Int, q: Int): Float {
+        return distancePtSeg2d(v.x, v.z, poly, p, q)
+    }
+
+    @JvmStatic
+    fun distancePtSeg(vertices: FloatArray, pt: Int, p: Int, q: Int): Float {
+        val pqx = vertices[q] - vertices[p]
+        val pqy = vertices[q + 1] - vertices[p + 1]
+        val pqz = vertices[q + 2] - vertices[p + 2]
+        var dx = vertices[pt] - vertices[p]
+        var dy = vertices[pt + 1] - vertices[p + 1]
+        var dz = vertices[pt + 2] - vertices[p + 2]
+        val d = pqx * pqx + pqy * pqy + pqz * pqz
+        val t = td(pqx * dx + pqy * dy + pqz * dz, d)
+        dx = vertices[p] + t * pqx - vertices[pt]
+        dy = vertices[p + 1] + t * pqy - vertices[pt + 1]
+        dz = vertices[p + 2] + t * pqz - vertices[pt + 2]
+        return dx * dx + dy * dy + dz * dz
+    }
+
+    @JvmStatic
+    fun circumcircle(vertices: FloatArray?, p1: Int, p2: Int, p3: Int, c: Vector3f): Float {
+        val EPS = 1e-6f
+        // Calculate the circle relative to p1, to avoid some precision issues.
+        val v1 = Vector3f()
+        val v2 = Vector3f()
+        val v3 = Vector3f()
+        sub(v2, vertices!!, p2, p1)
+        sub(v3, vertices, p3, p1)
+        val cp = vcross2(v1, v2, v3)
+        return if (abs(cp) > EPS) {
+            val v1Sq = vdot2(v1, v1)
+            val v2Sq = vdot2(v2, v2)
+            val v3Sq = vdot2(v3, v3)
+            val n = 0.5f / cp
+            c.set(
+                (v1Sq * (v2.z - v3.z) + v2Sq * (v3.z - v1.z) + v3Sq * (v1.z - v2.z)) * n,
+                0f,
+                (v1Sq * (v3.x - v2.x) + v2Sq * (v1.x - v3.x) + v3Sq * (v2.x - v1.x)) * n
+            )
+            val r = vdist2(c, v1)
+            add(c, c, vertices, p1)
+            r
+        } else {
+            copy(c, vertices, p1)
+            0f
+        }
+    }
+
+    @JvmStatic
+    fun updateLeftFace(edges0: IntArrayList, e: Int, s: Int, t: Int, f: Int) {
+        val edges = edges0.values
+        if (edges[e] == s && edges[e + 1] == t && edges[e + 2] == EV_UNDEF) {
+            edges[e + 2] = f
+        } else if (edges[e + 1] == s && edges[e] == t && edges[e + 3] == EV_UNDEF) {
+            edges[e + 3] = f
+        }
+    }
+
+    @JvmStatic
+    fun overlapSegSeg2d(vertices: FloatArray, a: Int, b: Int, c: Int, d: Int): Boolean {
+        val a1 = vcross2(vertices, a, b, d)
+        val a2 = vcross2(vertices, a, b, c)
+        if (a1 * a2 < 0.0f) {
+            val a3 = vcross2(vertices, c, d, a)
+            val a4 = a3 + a2 - a1
+            return a3 * a4 < 0.0f
+        }
+        return false
+    }
+
+    @JvmStatic
+    fun doesNotOverlapEdges(points: FloatArray, edges: IntArrayList, s1: Int, t1: Int): Boolean {
+        val edgeData = edges.values
+        var e = 0
+        val l = edges.size
+        while (e < l) {
+            val s0 = edgeData[e]
+            val t0 = edgeData[e + 1]
+            // Same or connected edges do not overlap.
+            if ((s0 == s1) || (s0 == t1) || (t0 == s1) || (t0 == t1)) {
+                e += 4
+                continue
+            }
+            if (overlapSegSeg2d(points, s0 * 3, t0 * 3, s1 * 3, t1 * 3)) {
+                return false
+            }
+            e += 4
+        }
+        return true
     }
 
 }
