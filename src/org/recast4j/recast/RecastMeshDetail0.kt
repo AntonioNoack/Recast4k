@@ -2,11 +2,18 @@ package org.recast4j.recast
 
 import org.joml.Vector3f
 import org.recast4j.IntArrayList
+import org.recast4j.Vectors.clamp
+import org.recast4j.recast.RecastCommon.getCon
+import org.recast4j.recast.RecastCommon.getDirOffsetX
+import org.recast4j.recast.RecastCommon.getDirOffsetY
+import org.recast4j.recast.RecastConstants.RC_MESH_NULL_IDX
+import org.recast4j.recast.RecastConstants.RC_MULTIPLE_REGS
+import org.recast4j.recast.RecastConstants.RC_NOT_CONNECTED
+import org.recast4j.recast.RecastMesh.next
+import org.recast4j.recast.RecastMesh.prev
 import org.recast4j.recast.RecastMeshDetail.EV_UNDEF
-import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.sqrt
+import java.util.*
+import kotlin.math.*
 
 object RecastMeshDetail0 {
 
@@ -129,7 +136,7 @@ object RecastMeshDetail0 {
             }
             e += 4
         }
-        return RecastMeshDetail.EV_UNDEF
+        return EV_UNDEF
     }
 
     @JvmStatic
@@ -140,7 +147,7 @@ object RecastMeshDetail0 {
 
         // Add edge if not already in the triangulation.
         val e = findEdge(edges, s, t)
-        if (e == RecastMeshDetail.EV_UNDEF) {
+        if (e == EV_UNDEF) {
             edges.add(s)
             edges.add(t)
             edges.add(l)
@@ -401,6 +408,554 @@ object RecastMeshDetail0 {
             e += 4
         }
         return true
+    }
+
+    @JvmStatic
+    fun getHeight(fx: Float, fy: Float, fz: Float, ics: Float, ch: Float, radius: Int, hp: HeightPatch): Int {
+        var ix = floor(fx * ics + 0.01f).toInt()
+        var iz = floor(fz * ics + 0.01f).toInt()
+        ix = clamp(ix - hp.xmin, 0, hp.width - 1)
+        iz = clamp(iz - hp.ymin, 0, hp.height - 1)
+        var h = hp.data[ix + iz * hp.width]
+        if (h == RecastMeshDetail.RC_UNSET_HEIGHT) {
+            // Special case when data might be bad.
+            // Walk adjacent cells in a spiral up to 'radius', and look
+            // for a pixel, which has a valid height.
+            var x = 1
+            var z = 0
+            var dx = 1
+            var dz = 0
+            val maxSize = radius * 2 + 1
+            val maxIter = maxSize * maxSize - 1
+            var nextRingIterStart = 8
+            var nextRingIterations = 16
+            var dmin = Float.MAX_VALUE
+            for (i in 0 until maxIter) {
+                val nx = ix + x
+                val nz = iz + z
+                if ((nx >= 0) && (nz >= 0) && (nx < hp.width) && (nz < hp.height)) {
+                    val nh = hp.data[nx + nz * hp.width]
+                    if (nh != RecastMeshDetail.RC_UNSET_HEIGHT) {
+                        val d = abs(nh * ch - fy)
+                        if (d < dmin) {
+                            h = nh
+                            dmin = d
+                        }
+                    }
+                }
+
+                // We are searching in a grid, which looks approximately like this:
+                // __________
+                // |2 ______ 2|
+                // | |1 __ 1| |
+                // | | |__| | |
+                // | |______| |
+                // |__________|
+                // We want to find the best height as close to the center cell as possible. This means that
+                // if we find a height in one of the neighbor cells to the center, we don't want to
+                // expand further out than the 8 neighbors - we want to limit our search to the closest
+                // of these "rings", but the best height in the ring.
+                // For example, the center is just 1 cell. We checked that at the entrance to the function.
+                // The next "ring" contains 8 cells (marked 1 above). Those are all the neighbors to the center cell.
+                // The next one again contains 16 cells (marked 2). In general each ring has 8 additional cells, which
+                // can be thought of as adding 2 cells around the "center" of each side when we expand the ring.
+                // Here we detect if we are about to enter the next ring, and if we are and we have found
+                // a height, we abort the search.
+                if (i + 1 == nextRingIterStart) {
+                    if (h != RecastMeshDetail.RC_UNSET_HEIGHT) {
+                        break
+                    }
+                    nextRingIterStart += nextRingIterations
+                    nextRingIterations += 8
+                }
+                if ((x == z) || ((x < 0) && (x == -z)) || ((x > 0) && (x == 1 - z))) {
+                    val tmp = dx
+                    dx = -dz
+                    dz = tmp
+                }
+                x += dx
+                z += dz
+            }
+        }
+        return h
+    }
+
+    @JvmStatic
+    fun triangulateHull(vertices: FloatArray, nhull: Int, hull: IntArray, nin: Int, tris: IntArrayList) {
+        var start = 0
+        var left = 1
+        var right = nhull - 1
+
+        // Start from an ear with the shortest perimeter.
+        // This tends to favor well-formed triangles as starting point.
+        var dmin = Float.MAX_VALUE
+        for (i in 0 until nhull) {
+            if (hull[i] >= nin) {
+                continue  // Ears are triangles with original vertices as middle vertex while others are actually line
+            }
+            // segments on edges
+            val pi = prev(i, nhull)
+            val ni = next(i, nhull)
+            val pv = hull[pi] * 3
+            val cv = hull[i] * 3
+            val nv = hull[ni] * 3
+            val d = vdist2(vertices, pv, cv) + vdist2(vertices, cv, nv) + vdist2(vertices, nv, pv)
+            if (d < dmin) {
+                start = i
+                left = ni
+                right = pi
+                dmin = d
+            }
+        }
+
+        // Add first triangle
+        tris.add(hull[start])
+        tris.add(hull[left])
+        tris.add(hull[right])
+        tris.add(0)
+
+        // Triangulate the polygon by moving left or right,
+        // depending on which triangle has shorter perimeter.
+        // This heuristic was chose emprically, since it seems
+        // handle tesselated straight edges well.
+        while (next(left, nhull) != right) {
+            // Check to see if se should advance left or right.
+            val nleft = next(left, nhull)
+            val nright = prev(right, nhull)
+            val cvleft = hull[left] * 3
+            val nvleft = hull[nleft] * 3
+            val cvright = hull[right] * 3
+            val nvright = hull[nright] * 3
+            val dleft = vdist2(vertices, cvleft, nvleft) + vdist2(vertices, nvleft, cvright)
+            val dright = vdist2(vertices, cvright, nvright) + vdist2(vertices, cvleft, nvright)
+            tris.add(hull[left])
+            if (dleft < dright) {
+                tris.add(hull[nleft])
+                tris.add(hull[right])
+                tris.add(0)
+                left = nleft
+            } else {
+                tris.add(hull[nright])
+                tris.add(hull[right])
+                tris.add(0)
+                right = nright
+            }
+        }
+    }
+
+    @JvmStatic
+    fun buildPolyMeshDetail(
+        ctx: Telemetry, mesh: PolyMesh, chf: CompactHeightfield,
+        sampleDist: Float, sampleMaxError: Float
+    ): PolyMeshDetail? {
+        ctx.startTimer("POLYMESHDETAIL")
+        if (mesh.numVertices == 0 || mesh.numPolygons == 0) {
+            return null
+        }
+        val nvp = mesh.maxVerticesPerPolygon
+        val cs = mesh.cellSize
+        val ch = mesh.cellHeight
+        val orig = mesh.bmin
+        val borderSize = mesh.borderSize
+        val heightSearchRadius = max(1f, ceil(mesh.maxEdgeError)).toInt()
+        val tris = IntArrayList(512)
+        val vertices = FloatArray(256 * 3)
+        var nPolyVerts = 0
+        var maxhw = 0
+        var maxhh = 0
+        val bounds = IntArray(mesh.numPolygons * 4)
+        val poly = FloatArray(nvp * 3)
+
+        // Find max size for a polygon area.
+        for (i in 0 until mesh.numPolygons) {
+            val p = i * nvp * 2
+            var minX = chf.width
+            var maxX = 0
+            var minY = chf.height
+            var maxY = 0
+            val meshVerts = mesh.vertices
+            val meshPolys = mesh.polygons
+            val nullIdx = RC_MESH_NULL_IDX
+            for (j in 0 until nvp) {
+                if (meshPolys[p + j] == nullIdx) {
+                    break
+                }
+                val v = meshPolys[p + j] * 3
+                minX = min(minX, meshVerts[v])
+                maxX = max(maxX, meshVerts[v])
+                minY = min(minY, meshVerts[v + 2])
+                maxY = max(maxY, meshVerts[v + 2])
+                nPolyVerts++
+            }
+            bounds[i * 4] = max(0, minX - 1)
+            bounds[i * 4 + 1] = min(chf.width, maxX + 1)
+            bounds[i * 4 + 2] = max(0, minY - 1)
+            bounds[i * 4 + 3] = min(chf.height, maxY + 1)
+            if (bounds[i * 4] >= bounds[i * 4 + 1] || bounds[i * 4 + 2] >= bounds[i * 4 + 3]) {
+                continue
+            }
+            maxhw = max(maxhw, bounds[i * 4 + 1] - bounds[i * 4])
+            maxhh = max(maxhh, bounds[i * 4 + 3] - bounds[i * 4 + 2])
+        }
+        val hp = HeightPatch(IntArray(maxhw * maxhh))
+        var vcap = nPolyVerts + nPolyVerts / 2
+        var tcap = vcap * 2
+        val dmesh = PolyMeshDetail(IntArray(mesh.numPolygons * 4), FloatArray(vcap * 3), IntArray(tcap * 4))
+        dmesh.numSubMeshes = mesh.numPolygons
+        val meshPolygons = mesh.polygons
+        for (i in 0 until mesh.numPolygons) {
+            val p = i * nvp * 2
+
+            // Store polygon vertices for processing.
+            var npoly = 0
+            val meshVerts = mesh.vertices
+            val nullIdx = RC_MESH_NULL_IDX
+
+            for (j in 0 until nvp) {
+                val v = meshPolygons[p + j]
+                if (v == nullIdx) break
+                val v3 = v * 3
+                val j3 = j * 3
+                poly[j3] = meshVerts[v3] * cs
+                poly[j3 + 1] = meshVerts[v3 + 1] * ch
+                poly[j3 + 2] = meshVerts[v3 + 2] * cs
+                npoly++
+            }
+
+            // Get the height data from the area of the polygon.
+            hp.xmin = bounds[i * 4]
+            hp.ymin = bounds[i * 4 + 2]
+            hp.width = bounds[i * 4 + 1] - bounds[i * 4]
+            hp.height = bounds[i * 4 + 3] - bounds[i * 4 + 2]
+            getHeightData(
+                ctx, chf, meshPolygons, p, npoly, mesh.vertices, borderSize, hp,
+                mesh.regionIds[i]
+            )
+
+            // Build detail mesh.
+            val nverts = RecastMeshDetail.buildPolyDetail(
+                poly, npoly, sampleDist, sampleMaxError, heightSearchRadius, chf, hp,
+                vertices, tris
+            )
+
+            // Move detail vertices to world space.
+            for (j in 0 until nverts) {
+                vertices[j * 3] += orig.x
+                vertices[j * 3 + 1] += orig.y + chf.cellHeight // Is this offset necessary? See
+                // https://groups.google.com/d/msg/recastnavigation/UQFN6BGCcV0/-1Ny4koOBpkJ
+                vertices[j * 3 + 2] += orig.z
+            }
+
+            // Offset poly too, will be used to flag checking.
+            for (j in 0 until npoly) {
+                poly[j * 3] += orig.x
+                poly[j * 3 + 1] += orig.y
+                poly[j * 3 + 2] += orig.z
+            }
+
+            // Store detail submesh.
+            val ntris = tris.size shr 2
+            val dmeshSubMeshes = dmesh.subMeshes
+            dmeshSubMeshes[i * 4] = dmesh.numVertices
+            dmeshSubMeshes[i * 4 + 1] = nverts
+            dmeshSubMeshes[i * 4 + 2] = dmesh.numTriangles
+            dmeshSubMeshes[i * 4 + 3] = ntris
+            val dMeshNverts = dmesh.numVertices
+            // Store vertices, allocate more memory if necessary.
+            if (dMeshNverts + nverts > vcap) {
+                vcap += max(dMeshNverts + nverts - vcap + 255 shr 8, 0) shl 8
+                val newv = FloatArray(vcap * 3)
+                if (dMeshNverts != 0) {
+                    System.arraycopy(dmesh.vertices, 0, newv, 0, 3 * dMeshNverts)
+                }
+                dmesh.vertices = newv
+            }
+            val dMeshVerts = dmesh.vertices
+            System.arraycopy(vertices, 0, dMeshVerts, dMeshNverts * 3, nverts * 3)
+            dmesh.numVertices = dMeshNverts + nverts
+
+            // Store triangles, allocate more memory if necessary.
+            if (dmesh.numTriangles + ntris > tcap) {
+                tcap += max(dmesh.numTriangles + ntris - tcap + 255 shr 8, 0) shl 8
+                val newt = IntArray(tcap * 4)
+                if (dmesh.numTriangles != 0) {
+                    System.arraycopy(dmesh.triangles, 0, newt, 0, 4 * dmesh.numTriangles)
+                }
+                dmesh.triangles = newt
+            }
+            val dmeshTris = dmesh.triangles
+            var l = dmesh.numTriangles shl 2
+            for (j in 0 until ntris) {
+                val t = j * 4
+                dmeshTris[l++] = tris[t]
+                dmeshTris[l++] = tris[t + 1]
+                dmeshTris[l++] = tris[t + 2]
+                dmeshTris[l++] = getTriFlags(vertices, tris[t] * 3, tris[t + 1] * 3, tris[t + 2] * 3, poly, npoly)
+            }
+            dmesh.numTriangles = l shr 2
+        }
+        ctx.stopTimer("POLYMESHDETAIL")
+        return dmesh
+    }
+
+    const val RETRACT_SIZE_X3 = 256 * 3
+
+    @JvmStatic
+    fun getHeightData(
+        ctx: Telemetry, chf: CompactHeightfield,
+        meshpolys: IntArray, poly: Int, npoly: Int, vertices: IntArray,
+        bs: Int, hp: HeightPatch, region: Int
+    ) {
+        // Note: Reads to the compact heightfield are offset by border size (bs)
+        // since border size offset is already removed from the polymesh vertices.
+        var queue = IntArrayList(512)
+        Arrays.fill(hp.data, 0, hp.width * hp.height, RecastMeshDetail.RC_UNSET_HEIGHT)
+        var empty = true
+
+        // We cannot sample from this poly if it was created from polys
+        // of different regions. If it was then it could potentially be overlapping
+        // with polys of that region, and the heights sampled here could be wrong.
+        if (region != RC_MULTIPLE_REGS) {
+            // Copy the height from the same region, and mark region borders
+            // as seed points to fill the rest.
+            for (hy in 0 until hp.height) {
+                val y = hp.ymin + hy + bs
+                for (hx in 0 until hp.width) {
+                    val x = hp.xmin + hx + bs
+                    val c = chf.cells[x + y * chf.width]
+                    var i = c.index
+                    val ni = c.index + c.count
+                    while (i < ni) {
+                        val s = chf.spans[i]
+                        if (s.reg == region) {
+                            // Store height
+                            hp.data[hx + hy * hp.width] = s.y
+                            empty = false
+                            // If any of the neighbours is not in same region,
+                            // add the current location as flood fill start
+                            var border = false
+                            for (dir in 0..3) {
+                                if (getCon(s, dir) != RC_NOT_CONNECTED) {
+                                    val ax = x + getDirOffsetX(dir)
+                                    val ay = y + getDirOffsetY(dir)
+                                    val ai = chf.cells[ax + ay * chf.width].index + getCon(s, dir)
+                                    val span = chf.spans[ai]
+                                    if (span.reg != region) {
+                                        border = true
+                                        break
+                                    }
+                                }
+                            }
+                            if (border) {
+                                queue.add(x)
+                                queue.add(y)
+                                queue.add(i)
+                            }
+                            break
+                        }
+                        ++i
+                    }
+                }
+            }
+        }
+
+        // if the polygon does not contain any points from the current region (rare, but happens)
+        // or if it could potentially be overlapping polygons of the same region,
+        // then use the center as the seed point.
+        if (empty) {
+            RecastMeshDetail.seedArrayWithPolyCenter(ctx, chf, meshpolys, poly, npoly, vertices, bs, hp, queue)
+        }
+
+        // We assume the seed is centered in the polygon, so a BFS to collect
+        // height data will ensure we do not move onto overlapping polygons and
+        // sample wrong heights.
+        var head = 0
+        while (head < queue.size) {
+            val cx = queue[head]
+            val cy = queue[head + 1]
+            val ci = queue[head + 2]
+            head += 3
+            if (head >= RETRACT_SIZE_X3) {
+                head = 0
+                queue = queue.subList(RETRACT_SIZE_X3, queue.size)
+            }
+            val cs = chf.spans[ci]
+            for (dir in 0..3) {
+                if (getCon(cs, dir) == RC_NOT_CONNECTED) {
+                    continue
+                }
+                val ax = cx + getDirOffsetX(dir)
+                val ay = cy + getDirOffsetY(dir)
+                val hx = ax - hp.xmin - bs
+                val hy = ay - hp.ymin - bs
+                if ((hx < 0) || (hx >= hp.width) || (hy < 0) || (hy >= hp.height)) {
+                    continue
+                }
+                if (hp.data[hx + hy * hp.width] != RecastMeshDetail.RC_UNSET_HEIGHT) {
+                    continue
+                }
+                val ai = chf.cells[ax + ay * chf.width].index + getCon(cs, dir)
+                val span = chf.spans[ai]
+                hp.data[hx + hy * hp.width] = span.y
+                queue.add(ax)
+                queue.add(ay)
+                queue.add(ai)
+            }
+        }
+    }
+
+    @JvmStatic
+    fun delaunayHull(npts: Int, pts: FloatArray, nhull: Int, hull: IntArray, tris: IntArrayList) {
+        var nfaces = 0
+        val maxEdges = npts * 10
+        val edges = IntArrayList(64)
+        var i = 0
+        var j = nhull - 1
+        while (i < nhull) {
+            addEdge(edges, maxEdges, hull[j], hull[i], RecastMeshDetail.EV_HULL, EV_UNDEF)
+            j = i++
+        }
+        var currentEdge = 0
+        while (currentEdge < (edges.size shr 2)) {
+            if (edges[currentEdge * 4 + 2] == EV_UNDEF) {
+                nfaces = completeFacet(pts, npts, edges, maxEdges, nfaces, currentEdge)
+            }
+            if (edges[currentEdge * 4 + 3] == EV_UNDEF) {
+                nfaces = completeFacet(pts, npts, edges, maxEdges, nfaces, currentEdge)
+            }
+            currentEdge++
+        }
+        // Create tris
+        tris.clear()
+        tris.ensureExtra(nfaces * 4)
+        tris.values.fill(-1, 0, nfaces * 4)
+        tris.size = nfaces * 4
+        var e = 0
+        val l = edges.size
+        val edgeData = edges.values
+        val trisData = tris.values
+        while (e < l) {
+            if (edgeData[e + 3] >= 0) {
+                // Left face
+                val t = edgeData[e + 3] * 4
+                if (trisData[t] == -1) {
+                    trisData[t] = edgeData[e]
+                    trisData[t + 1] = edgeData[e + 1]
+                } else if (trisData[t] == edgeData[e + 1]) {
+                    trisData[t + 2] = edgeData[e]
+                } else if (trisData[t + 1] == edgeData[e]) {
+                    trisData[t + 2] = edgeData[e + 1]
+                }
+            }
+            if (edgeData[e + 2] >= 0) {
+                // Right
+                val t = edgeData[e + 2] * 4
+                if (trisData[t] == -1) {
+                    trisData[t] = edgeData[e + 1]
+                    trisData[t + 1] = edgeData[e]
+                } else if (trisData[t] == edgeData[e]) {
+                    trisData[t + 2] = edgeData[e + 1]
+                } else if (trisData[t + 1] == edgeData[e + 1]) {
+                    trisData[t + 2] = edgeData[e]
+                }
+            }
+            e += 4
+        }
+        var size = trisData.size
+        var t = 0
+        while (t < size) {
+            if (trisData[t] == -1 || trisData[t + 1] == -1 || trisData[t + 2] == -1) {
+                System.err.println("Dangling! " + trisData[t] + " " + trisData[t + 1] + "  " + trisData[t + 2])
+                trisData[t] = trisData[size - 4]
+                trisData[t + 1] = trisData[size - 3]
+                trisData[t + 2] = trisData[size - 2]
+                trisData[t + 3] = trisData[size - 1]
+                size -= 4
+                t -= 4
+            }
+            t += 4
+        }
+        tris.size = size
+    }
+
+    @JvmStatic
+    fun completeFacet(pts: FloatArray, npts: Int, edges: IntArrayList, maxEdges: Int, nfaces0: Int, e0: Int): Int {
+        var nfaces = nfaces0
+        var e = e0
+        val EPS = 1e-5f
+        val edge = e * 4
+
+        // Cache s and t.
+        val s: Int
+        val t: Int
+        if (edges[edge + 2] == EV_UNDEF) {
+            s = edges[edge]
+            t = edges[edge + 1]
+        } else if (edges[edge + 3] == EV_UNDEF) {
+            s = edges[edge + 1]
+            t = edges[edge]
+        } else {
+            // Edge already completed.
+            return nfaces
+        }
+
+        // Find best point on left of edge.
+        var pt = npts
+        val c = Vector3f()
+        var r = -1f
+        for (u in 0 until npts) {
+            if (u != s && u != t && vcross2(pts, s * 3, t * 3, u * 3) > EPS) {
+                if (r < 0) {
+                    // The circle is not updated yet, do it now.
+                    pt = u
+                    r = circumcircle(pts, s * 3, t * 3, u * 3, c)
+                } else {
+                    val d = vdist2(c, pts, u * 3)
+                    val tol = 0.001f
+                    if (d <= r * (1 + tol)) {
+                        if (d < r * (1 - tol)) {
+                            // Inside safe circumcircle, update circle.
+                            pt = u
+                            r = circumcircle(pts, s * 3, t * 3, u * 3, c)
+                        } else {
+                            // Inside epsilon circumcircle, do extra tests to make sure the edge is valid.
+                            // s-u and t-u cannot overlap with s-pt nor t-pt if they exist.
+                            if (doesNotOverlapEdges(pts, edges, s, u) && doesNotOverlapEdges(pts, edges, t, u)) {
+                                // Edge is valid.
+                                pt = u
+                                r = circumcircle(pts, s * 3, t * 3, u * 3, c)
+                            }
+                        }
+                    } // else Outside current circumcircle, skip.
+                }
+            }
+        }
+
+        // Add new triangle or update edge info if s-t is on hull.
+        if (pt < npts) {
+            // Update face information of edge being completed.
+            updateLeftFace(edges, e * 4, s, t, nfaces)
+
+            // Add new edge or update face info of old edge.
+            e = findEdge(edges, pt, s)
+            if (e == EV_UNDEF) {
+                addEdge(edges, maxEdges, pt, s, nfaces, EV_UNDEF)
+            } else {
+                updateLeftFace(edges, e * 4, pt, s, nfaces)
+            }
+
+            // Add new edge or update face info of old edge.
+            e = findEdge(edges, t, pt)
+            if (e == EV_UNDEF) {
+                addEdge(edges, maxEdges, t, pt, nfaces, EV_UNDEF)
+            } else {
+                updateLeftFace(edges, e * 4, t, pt, nfaces)
+            }
+            nfaces++
+        } else {
+            updateLeftFace(edges, e * 4, s, t, RecastMeshDetail.EV_HULL)
+        }
+        return nfaces
     }
 
 }

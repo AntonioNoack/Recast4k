@@ -200,7 +200,7 @@ class RecastBuilder {
         // on each polygon.
         //
         val dmesh = if (cfg.buildMeshDetail)
-            RecastMeshDetail.buildPolyMeshDetail(ctx, pmesh, chf, cfg.detailSampleDist, cfg.detailSampleMaxError)
+            RecastMeshDetail0.buildPolyMeshDetail(ctx, pmesh, chf, cfg.detailSampleDist, cfg.detailSampleMaxError)
         else null
         return RecastBuilderResult(tileX, tileZ, solid, chf, cset, pmesh, dmesh, ctx)
     }

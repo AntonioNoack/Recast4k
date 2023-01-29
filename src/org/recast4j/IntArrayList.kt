@@ -24,7 +24,7 @@ class IntArrayList(cap: Int = 16) {
 
     fun add(index: Int, value: Int) {
         add(value)
-        System.arraycopy(values, index , values, index + 1, size - index)
+        System.arraycopy(values, index, values, index + 1, size - index)
         values[index] = value
     }
 
@@ -86,6 +86,21 @@ class IntArrayList(cap: Int = 16) {
 
     fun clear() {
         size = 0
+    }
+
+    fun ensureExtra(extra: Int) {
+        ensureCapacity(size + extra)
+    }
+
+    @Suppress("MemberVisibilityCanBePrivate")
+    fun ensureCapacity(size: Int) {
+        if (values.size < size) {
+            val newSize = max(values.size * 2, max(size, 16))
+            val old = values
+            val new = IntArray(newSize)
+            System.arraycopy(old, 0, new, 0, this.size)
+            values = new
+        }
     }
 
     fun isEmpty() = size <= 0
