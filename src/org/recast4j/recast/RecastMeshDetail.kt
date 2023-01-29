@@ -4,35 +4,37 @@ import org.joml.Vector3f
 import org.recast4j.IntArrayList
 import org.recast4j.Vectors.clamp
 import org.recast4j.recast.RecastCommon.getCon
+import org.recast4j.recast.RecastCommon.getDirForOffset
 import org.recast4j.recast.RecastCommon.getDirOffsetX
 import org.recast4j.recast.RecastCommon.getDirOffsetY
 import org.recast4j.recast.RecastConstants.RC_MESH_NULL_IDX
 import org.recast4j.recast.RecastConstants.RC_MULTIPLE_REGS
 import org.recast4j.recast.RecastConstants.RC_NOT_CONNECTED
+import org.recast4j.recast.RecastConstants.SPAN_MAX_HEIGHT
 import org.recast4j.recast.RecastMesh.next
 import org.recast4j.recast.RecastMesh.prev
-import org.recast4j.recast.RecastMeshDetail.EV_UNDEF
 import java.util.*
 import kotlin.math.*
 
-object RecastMeshDetail0 {
+object RecastMeshDetail {
 
-    class HeightPatch(
-        @JvmField
-        val data: IntArray
-    ) {
-        @JvmField
+    private class HeightPatch(val data: IntArray) {
         var xmin = 0
-
-        @JvmField
         var ymin = 0
-
-        @JvmField
         var width = 0
-
-        @JvmField
         var height = 0
     }
+
+    var MAX_VERTS = 127
+    var MAX_TRIS = 255 // Max tris for delaunay is 2n-2-k (n=num vertices, k=num hull vertices).
+
+    var MAX_VERTS_PER_EDGE = 32
+
+    var RC_UNSET_HEIGHT = SPAN_MAX_HEIGHT
+    const val EV_UNDEF = -1
+    const val EV_HULL = -2
+
+    val offset = intArrayOf(0, 0, -1, -1, 0, -1, 1, -1, 1, 0, 1, 1, 0, 1, -1, 1, -1, 0)
 
     @JvmStatic
     fun vdot2(a: Vector3f, b: Vector3f): Float {
@@ -215,12 +217,12 @@ object RecastMeshDetail0 {
 
     @JvmStatic
     fun getJitterX(i: Int): Float {
-        return (i * -0x72594cbd and 0xffff) / 65535.0f * 2.0f - 1.0f
+        return (i * -0x72594cbd and 0xffff) / 65535f * 2f - 1f
     }
 
     @JvmStatic
     fun getJitterY(i: Int): Float {
-        return (i * -0x27e9c7bf and 0xffff) / 65535.0f * 2.0f - 1.0f
+        return (i * -0x27e9c7bf and 0xffff) / 65535f * 2f - 1f
     }
 
     @JvmStatic
@@ -252,13 +254,13 @@ object RecastMeshDetail0 {
         val dot12 = vdot2(v1, v2)
 
         // Compute barycentric coordinates
-        val invDenom = 1.0f / (dot00 * dot11 - dot01 * dot01)
+        val invDenom = 1f / (dot00 * dot11 - dot01 * dot01)
         val u = (dot11 * dot02 - dot01 * dot12) * invDenom
         val v = (dot00 * dot12 - dot01 * dot02) * invDenom
 
         // If point lies inside the triangle, return interpolated y-coord.
-        val EPS = 1e-4f
-        if (u >= -EPS && v >= -EPS && (u + v) <= 1 + EPS) {
+        val epsilon = 1e-4f
+        if (u >= -epsilon && v >= -epsilon && (u + v) <= 1 + epsilon) {
             val y = vertices[a + 1] + v0.y * u + v1.y * v
             return abs(y - p.y)
         }
@@ -339,16 +341,16 @@ object RecastMeshDetail0 {
     }
 
     @JvmStatic
-    fun circumcircle(vertices: FloatArray?, p1: Int, p2: Int, p3: Int, c: Vector3f): Float {
-        val EPS = 1e-6f
+    fun circumcircle(vertices: FloatArray, p1: Int, p2: Int, p3: Int, c: Vector3f): Float {
+        val epsilon = 1e-6f
         // Calculate the circle relative to p1, to avoid some precision issues.
         val v1 = Vector3f()
         val v2 = Vector3f()
         val v3 = Vector3f()
-        sub(v2, vertices!!, p2, p1)
+        sub(v2, vertices, p2, p1)
         sub(v3, vertices, p3, p1)
         val cp = vcross2(v1, v2, v3)
-        return if (abs(cp) > EPS) {
+        return if (abs(cp) > epsilon) {
             val v1Sq = vdot2(v1, v1)
             val v2Sq = vdot2(v2, v2)
             val v3Sq = vdot2(v3, v3)
@@ -381,10 +383,10 @@ object RecastMeshDetail0 {
     fun overlapSegSeg2d(vertices: FloatArray, a: Int, b: Int, c: Int, d: Int): Boolean {
         val a1 = vcross2(vertices, a, b, d)
         val a2 = vcross2(vertices, a, b, c)
-        if (a1 * a2 < 0.0f) {
+        if (a1 * a2 < 0f) {
             val a3 = vcross2(vertices, c, d, a)
             val a4 = a3 + a2 - a1
-            return a3 * a4 < 0.0f
+            return a3 * a4 < 0f
         }
         return false
     }
@@ -411,13 +413,13 @@ object RecastMeshDetail0 {
     }
 
     @JvmStatic
-    fun getHeight(fx: Float, fy: Float, fz: Float, ics: Float, ch: Float, radius: Int, hp: HeightPatch): Int {
+    private fun getHeight(fx: Float, fy: Float, fz: Float, ics: Float, ch: Float, radius: Int, hp: HeightPatch): Int {
         var ix = floor(fx * ics + 0.01f).toInt()
         var iz = floor(fz * ics + 0.01f).toInt()
         ix = clamp(ix - hp.xmin, 0, hp.width - 1)
         iz = clamp(iz - hp.ymin, 0, hp.height - 1)
         var h = hp.data[ix + iz * hp.width]
-        if (h == RecastMeshDetail.RC_UNSET_HEIGHT) {
+        if (h == RC_UNSET_HEIGHT) {
             // Special case when data might be bad.
             // Walk adjacent cells in a spiral up to 'radius', and look
             // for a pixel, which has a valid height.
@@ -435,7 +437,7 @@ object RecastMeshDetail0 {
                 val nz = iz + z
                 if ((nx >= 0) && (nz >= 0) && (nx < hp.width) && (nz < hp.height)) {
                     val nh = hp.data[nx + nz * hp.width]
-                    if (nh != RecastMeshDetail.RC_UNSET_HEIGHT) {
+                    if (nh != RC_UNSET_HEIGHT) {
                         val d = abs(nh * ch - fy)
                         if (d < dmin) {
                             h = nh
@@ -462,7 +464,7 @@ object RecastMeshDetail0 {
                 // Here we detect if we are about to enter the next ring, and if we are and we have found
                 // a height, we abort the search.
                 if (i + 1 == nextRingIterStart) {
-                    if (h != RecastMeshDetail.RC_UNSET_HEIGHT) {
+                    if (h != RC_UNSET_HEIGHT) {
                         break
                     }
                     nextRingIterStart += nextRingIterations
@@ -633,7 +635,7 @@ object RecastMeshDetail0 {
             )
 
             // Build detail mesh.
-            val nverts = RecastMeshDetail.buildPolyDetail(
+            val nverts = buildPolyDetail(
                 poly, npoly, sampleDist, sampleMaxError, heightSearchRadius, chf, hp,
                 vertices, tris
             )
@@ -698,10 +700,10 @@ object RecastMeshDetail0 {
         return dmesh
     }
 
-    const val RETRACT_SIZE_X3 = 256 * 3
+    private const val RETRACT_SIZE_X3 = 256 * 3
 
     @JvmStatic
-    fun getHeightData(
+    private fun getHeightData(
         ctx: Telemetry, chf: CompactHeightfield,
         meshpolys: IntArray, poly: Int, npoly: Int, vertices: IntArray,
         bs: Int, hp: HeightPatch, region: Int
@@ -709,7 +711,7 @@ object RecastMeshDetail0 {
         // Note: Reads to the compact heightfield are offset by border size (bs)
         // since border size offset is already removed from the polymesh vertices.
         var queue = IntArrayList(512)
-        Arrays.fill(hp.data, 0, hp.width * hp.height, RecastMeshDetail.RC_UNSET_HEIGHT)
+        Arrays.fill(hp.data, 0, hp.width * hp.height, RC_UNSET_HEIGHT)
         var empty = true
 
         // We cannot sample from this poly if it was created from polys
@@ -723,9 +725,7 @@ object RecastMeshDetail0 {
                 for (hx in 0 until hp.width) {
                     val x = hp.xmin + hx + bs
                     val c = chf.cells[x + y * chf.width]
-                    var i = c.index
-                    val ni = c.index + c.count
-                    while (i < ni) {
+                    for (i in c.index until c.index + c.count) {
                         val s = chf.spans[i]
                         if (s.reg == region) {
                             // Store height
@@ -753,7 +753,6 @@ object RecastMeshDetail0 {
                             }
                             break
                         }
-                        ++i
                     }
                 }
             }
@@ -763,7 +762,7 @@ object RecastMeshDetail0 {
         // or if it could potentially be overlapping polygons of the same region,
         // then use the center as the seed point.
         if (empty) {
-            RecastMeshDetail.seedArrayWithPolyCenter(ctx, chf, meshpolys, poly, npoly, vertices, bs, hp, queue)
+            seedArrayWithPolyCenter(ctx, chf, meshpolys, poly, npoly, vertices, bs, hp, queue)
         }
 
         // We assume the seed is centered in the polygon, so a BFS to collect
@@ -791,7 +790,7 @@ object RecastMeshDetail0 {
                 if ((hx < 0) || (hx >= hp.width) || (hy < 0) || (hy >= hp.height)) {
                     continue
                 }
-                if (hp.data[hx + hy * hp.width] != RecastMeshDetail.RC_UNSET_HEIGHT) {
+                if (hp.data[hx + hy * hp.width] != RC_UNSET_HEIGHT) {
                     continue
                 }
                 val ai = chf.cells[ax + ay * chf.width].index + getCon(cs, dir)
@@ -809,11 +808,10 @@ object RecastMeshDetail0 {
         var nfaces = 0
         val maxEdges = npts * 10
         val edges = IntArrayList(64)
-        var i = 0
         var j = nhull - 1
-        while (i < nhull) {
-            addEdge(edges, maxEdges, hull[j], hull[i], RecastMeshDetail.EV_HULL, EV_UNDEF)
-            j = i++
+        for (i in 0 until nhull) {
+            addEdge(edges, maxEdges, hull[j], hull[i], EV_HULL, EV_UNDEF)
+            j = i
         }
         var currentEdge = 0
         while (currentEdge < (edges.size shr 2)) {
@@ -830,11 +828,9 @@ object RecastMeshDetail0 {
         tris.ensureExtra(nfaces * 4)
         tris.values.fill(-1, 0, nfaces * 4)
         tris.size = nfaces * 4
-        var e = 0
-        val l = edges.size
         val edgeData = edges.values
         val trisData = tris.values
-        while (e < l) {
+        for (e in 0 until edges.size step 4) {
             if (edgeData[e + 3] >= 0) {
                 // Left face
                 val t = edgeData[e + 3] * 4
@@ -859,7 +855,6 @@ object RecastMeshDetail0 {
                     trisData[t + 2] = edgeData[e]
                 }
             }
-            e += 4
         }
         var size = trisData.size
         var t = 0
@@ -882,29 +877,26 @@ object RecastMeshDetail0 {
     fun completeFacet(pts: FloatArray, npts: Int, edges: IntArrayList, maxEdges: Int, nfaces0: Int, e0: Int): Int {
         var nfaces = nfaces0
         var e = e0
-        val EPS = 1e-5f
+        val epsilon = 1e-5f
         val edge = e * 4
 
-        // Cache s and t.
-        val s: Int
-        val t: Int
-        if (edges[edge + 2] == EV_UNDEF) {
-            s = edges[edge]
-            t = edges[edge + 1]
-        } else if (edges[edge + 3] == EV_UNDEF) {
-            s = edges[edge + 1]
-            t = edges[edge]
-        } else {
-            // Edge already completed.
-            return nfaces
-        }
+        val x = edges[edge + 2] == EV_UNDEF
+        val y = edges[edge + 3] == EV_UNDEF
 
+        // Edge already completed.
+        if (!x && !y) return nfaces
+
+        // Cache s and t.
+        val x01 = if (x) 1 else 0
+        val s = edges[edge + 1 - x01]
+        val t = edges[edge + x01]
+        
         // Find best point on left of edge.
         var pt = npts
         val c = Vector3f()
         var r = -1f
         for (u in 0 until npts) {
-            if (u != s && u != t && vcross2(pts, s * 3, t * 3, u * 3) > EPS) {
+            if (u != s && u != t && vcross2(pts, s * 3, t * 3, u * 3) > epsilon) {
                 if (r < 0) {
                     // The circle is not updated yet, do it now.
                     pt = u
@@ -953,9 +945,360 @@ object RecastMeshDetail0 {
             }
             nfaces++
         } else {
-            updateLeftFace(edges, e * 4, s, t, RecastMeshDetail.EV_HULL)
+            updateLeftFace(edges, e * 4, s, t, EV_HULL)
         }
         return nfaces
     }
+
+    @JvmStatic
+    private fun seedArrayWithPolyCenter(
+        ctx: Telemetry, chf: CompactHeightfield, meshpoly: IntArray, poly: Int, npoly: Int,
+        vertices: IntArray, bs: Int, hp: HeightPatch, array: IntArrayList
+    ) {
+        // Note: Reads to the compact heightfield are offset by border size (bs)
+        // since border size offset is already removed from the polymesh vertices.
+
+        // Find cell closest to a poly vertex
+        var startCellX = 0
+        var startCellY = 0
+        var startSpanIndex = -1
+        var dmin = RC_UNSET_HEIGHT
+
+        loop@ for (j in 0 until npoly) {
+            for (k in 0 until 9) {
+                val ax = vertices[meshpoly[poly + j] * 3] + offset[k * 2]
+                val ay = vertices[meshpoly[poly + j] * 3 + 1]
+                val az = vertices[meshpoly[poly + j] * 3 + 2] + offset[k * 2 + 1]
+                if (ax < hp.xmin || ax >= hp.xmin + hp.width || az < hp.ymin || az >= hp.ymin + hp.height) {
+                    continue
+                }
+                val c = chf.cells[ax + bs + (az + bs) * chf.width]
+                for (i in c.index until c.index + c.count) {
+                    val s = chf.spans[i]
+                    val d = abs(ay - s.y)
+                    if (d < dmin) {
+                        startCellX = ax
+                        startCellY = az
+                        startSpanIndex = i
+                        dmin = d
+                        if (dmin <= 0) break@loop
+                    }
+                }
+            }
+        }
+
+        // Find center of the polygon
+        var pcx = 0
+        var pcy = 0
+        for (j in 0 until npoly) {
+            pcx += vertices[meshpoly[poly + j] * 3]
+            pcy += vertices[meshpoly[poly + j] * 3 + 2]
+        }
+        pcx /= npoly
+        pcy /= npoly
+        array.clear()
+        array.add(startCellX)
+        array.add(startCellY)
+        array.add(startSpanIndex)
+        val dirs = intArrayOf(0, 1, 2, 3)
+        Arrays.fill(hp.data, 0, hp.width * hp.height, 0)
+        // DFS to move to the center. Note that we need a DFS here and can not just move
+        // directly towards the center without recording intermediate nodes, even though the polygons
+        // are convex. In very rare we can get stuck due to contour simplification if we do not
+        // record nodes.
+        var cx = -1
+        var cy = -1
+        var ci = -1
+        while (true) {
+            val size = array.size
+            if (size < 3) {
+                ctx.warn("Walk towards polygon center failed to reach center")
+                break
+            }
+            ci = array[size - 1]
+            cy = array[size - 2]
+            cx = array[size - 3]
+            array.size = size - 3
+
+            // Check if close to center of the polygon.
+            if (cx == pcx && cy == pcy) {
+                break
+            }
+            // If we are already at the correct X-position, prefer direction
+            // directly towards the center in the Y-axis; otherwise prefer
+            // direction in the X-axis
+            val directDir = if (cx == pcx) {
+                getDirForOffset(0, if (pcy > cy) 1 else -1)
+            } else {
+                getDirForOffset(if (pcx > cx) 1 else -1, 0)
+            }
+
+            // Push the direct dir last, so we start with this on next iteration
+            var tmp = dirs[3]
+            dirs[3] = dirs[directDir]
+            dirs[directDir] = tmp
+            val cs = chf.spans[ci]
+            for (i in 0..3) {
+                val dir = dirs[i]
+                if (getCon(cs, dir) == RC_NOT_CONNECTED) {
+                    continue
+                }
+                val newX = cx + getDirOffsetX(dir)
+                val newY = cy + getDirOffsetY(dir)
+                val hpx = newX - hp.xmin
+                val hpy = newY - hp.ymin
+                if (hpx < 0 || hpx >= hp.width || hpy < 0 || hpy >= hp.height) {
+                    continue
+                }
+                if (hp.data[hpx + hpy * hp.width] != 0) {
+                    continue
+                }
+                hp.data[hpx + hpy * hp.width] = 1
+                array.add(newX)
+                array.add(newY)
+                array.add(chf.cells[newX + bs + (newY + bs) * chf.width].index + getCon(cs, dir))
+            }
+            tmp = dirs[3]
+            dirs[3] = dirs[directDir]
+            dirs[directDir] = tmp
+        }
+        array.clear()
+        // getHeightData seeds are given in coordinates with borders
+        array.add(cx + bs)
+        array.add(cy + bs)
+        array.add(ci)
+        Arrays.fill(hp.data, 0, hp.width * hp.height, RC_UNSET_HEIGHT)
+        val cs = chf.spans[ci]
+        hp.data[cx - hp.xmin + (cy - hp.ymin) * hp.width] = cs.y
+    }
+
+    @JvmStatic
+    private fun buildPolyDetail(
+        input: FloatArray, nin: Int, sampleDist: Float, sampleMaxError: Float,
+        heightSearchRadius: Int, chf: CompactHeightfield, hp: HeightPatch,
+        vertices: FloatArray, tris: IntArrayList
+    ): Int {
+        val samples = IntArrayList(512)
+        val edge = FloatArray((MAX_VERTS_PER_EDGE + 1) * 3)
+        val hull = IntArray(MAX_VERTS)
+        var nhull = 0
+        var nverts = nin
+
+        System.arraycopy(input, 0, vertices, 0, nin * 3)
+
+        tris.clear()
+        val cs = chf.cellSize
+        val ics = 1f / cs
+
+        // Calculate minimum extents of the polygon based on input data.
+        val minExtent = polyMinExtent(vertices, nverts)
+
+        // Tessellate outlines.
+        // This is done in separate pass to ensure
+        // seamless height values across the ply boundaries.
+        if (sampleDist > 0) {
+            var i = 0
+            var j = nin - 1
+            while (i < nin) {
+                var vj = j * 3
+                var vi = i * 3
+                var swapped = false
+                // Make sure the segments are always handled in same order
+                // using lexological sort or else there will be seams.
+                if (abs(input[vj] - input[vi]) < 1e-6f) {
+                    if (input[vj + 2] > input[vi + 2]) {
+                        val temp = vi
+                        vi = vj
+                        vj = temp
+                        swapped = true
+                    }
+                } else {
+                    if (input[vj] > input[vi]) {
+                        val temp = vi
+                        vi = vj
+                        vj = temp
+                        swapped = true
+                    }
+                }
+                // Create samples along the edge.
+                val dx = input[vi] - input[vj]
+                val dy = input[vi + 1] - input[vj + 1]
+                val dz = input[vi + 2] - input[vj + 2]
+                val d = sqrt(dx * dx + dz * dz)
+                var nn = 1 + floor(d / sampleDist).toInt()
+                if (nn >= MAX_VERTS_PER_EDGE) {
+                    nn = MAX_VERTS_PER_EDGE - 1
+                }
+                if (nverts + nn >= MAX_VERTS) {
+                    nn = MAX_VERTS - 1 - nverts
+                }
+                for (k in 0..nn) {
+                    val u = k.toFloat() / nn.toFloat()
+                    val pos = k * 3
+                    edge[pos] = input[vj] + dx * u
+                    edge[pos + 1] = input[vj + 1] + dy * u
+                    edge[pos + 2] = input[vj + 2] + dz * u
+                    edge[pos + 1] = getHeight(
+                        edge[pos], edge[pos + 1], edge[pos + 2], ics, chf.cellHeight,
+                        heightSearchRadius, hp
+                    ) * chf.cellHeight
+                }
+                // Simplify samples.
+                val idx = IntArray(MAX_VERTS_PER_EDGE)
+                idx[0] = 0
+                idx[1] = nn
+                var nidx = 2
+                var k = 0
+                while (k < nidx - 1) {
+                    val a = idx[k]
+                    val b = idx[k + 1]
+                    val va = a * 3
+                    val vb = b * 3
+                    // Find maximum deviation along the segment.
+                    var maxd = 0f
+                    var maxi = -1
+                    for (m in a + 1 until b) {
+                        val dev = distancePtSeg(edge, m * 3, va, vb)
+                        if (dev > maxd) {
+                            maxd = dev
+                            maxi = m
+                        }
+                    }
+                    // If the max deviation is larger than accepted error,
+                    // add new point, else continue to next segment.
+                    if (maxi != -1 && maxd > sampleMaxError * sampleMaxError) {
+                        if (nidx - k >= 0) System.arraycopy(idx, k, idx, k + 1, nidx - k)
+                        idx[k + 1] = maxi
+                        nidx++
+                    } else {
+                        ++k
+                    }
+                }
+                hull[nhull++] = j
+                // Add new vertices.
+                if (swapped) {
+                    for (x in nidx - 2 downTo 1) {
+                        copy(vertices, nverts * 3, edge, idx[x] * 3)
+                        hull[nhull++] = nverts
+                        nverts++
+                    }
+                } else {
+                    for (x in 1 until nidx - 1) {
+                        copy(vertices, nverts * 3, edge, idx[x] * 3)
+                        hull[nhull++] = nverts
+                        nverts++
+                    }
+                }
+                j = i++
+            }
+        }
+
+        // If the polygon minimum extent is small (sliver or small triangle), do not try to add internal points.
+        if (minExtent < sampleDist * 2) {
+            triangulateHull(vertices, nhull, hull, nin, tris)
+            return nverts
+        }
+
+        // Tessellate the base mesh.
+        // We're using the triangulateHull instead of delaunayHull as it tends to
+        // create a bit better triangulation for long thin triangles when there
+        // are no internal points.
+        triangulateHull(vertices, nhull, hull, nin, tris)
+        if (tris.size == 0) {
+            // Could not triangulate the poly, make sure there is some valid data there.
+            throw RuntimeException("buildPolyDetail: Could not triangulate polygon ($nverts) vertices).")
+        }
+        if (sampleDist > 0) {
+            // Create sample locations in a grid.
+            val bmin = Vector3f(input)
+            val bmax = Vector3f(input)
+            for (i in 1 until nin) {
+                min(bmin, input, i * 3)
+                max(bmax, input, i * 3)
+            }
+            val x0 = floor(bmin.x / sampleDist).toInt()
+            val x1 = ceil(bmax.x / sampleDist).toInt()
+            val z0 = floor(bmin.z / sampleDist).toInt()
+            val z1 = ceil(bmax.z / sampleDist).toInt()
+            samples.clear()
+            for (z in z0 until z1) {
+                for (x in x0 until x1) {
+                    val pt = Vector3f(
+                        x * sampleDist,
+                        (bmax.y + bmin.y) * 0.5f,
+                        z * sampleDist
+                    )
+                    // Make sure the samples are not too close to the edges.
+                    if (distToPoly(nin, input, pt) > -sampleDist / 2) {
+                        continue
+                    }
+                    samples.add(x)
+                    samples.add(getHeight(pt.x, pt.y, pt.z, ics, chf.cellHeight, heightSearchRadius, hp))
+                    samples.add(z)
+                    samples.add(0) // Not added
+                }
+            }
+
+            // Add the samples starting from the one that has the most
+            // error. The procedure stops when all samples are added
+            // or when the max error is within threshold.
+            val nsamples = samples.size shr 2
+            val bestpt = Vector3f()
+            val pt = Vector3f()
+            for (iter in 0 until nsamples) {
+                if (nverts >= MAX_VERTS) {
+                    break
+                }
+
+                // Find sample with most error.
+                var bestd = 0f
+                var besti = -1
+                for (i in 0 until nsamples) {
+                    val s = i * 4
+                    if (samples[s + 3] != 0) {
+                        continue  // skip added.
+                    }
+                    // The sample location is jittered to get rid of some bad triangulations,
+                    // which are caused by symmetrical data from the grid structure.
+                    pt.set(
+                        samples[s] * sampleDist + getJitterX(i) * cs * 0.1f,
+                        samples[s + 1] * chf.cellHeight,
+                        samples[s + 2] * sampleDist + getJitterY(i) * cs * 0.1f
+                    )
+                    val d = distToTriMesh(pt, vertices, tris, tris.size shr 2)
+                    if (d < 0) {
+                        continue  // did not hit the mesh.
+                    }
+                    if (d > bestd) {
+                        bestd = d
+                        besti = i
+                        bestpt.set(pt)
+                    }
+                }
+                // If the max error is within accepted threshold, stop tessellating.
+                if (bestd <= sampleMaxError || besti == -1) {
+                    break
+                }
+                // Mark sample as added.
+                samples[besti * 4 + 3] = 1
+                // Add the new sample point.
+                copy(vertices, nverts * 3, bestpt)
+                nverts++
+
+                // Create new triangulation.
+                // TO DO: Incremental add instead of full rebuild.
+                delaunayHull(nverts, vertices, nhull, hull, tris)
+            }
+        }
+        val ntris = tris.size shr 2
+        if (ntris > MAX_TRIS) {
+            val subList = tris.subList(0, MAX_TRIS * 4)
+            tris.clear()
+            tris.addAll(subList)
+            throw RuntimeException("buildPolyMeshDetail: Shrinking triangle count from $ntris to max $MAX_TRIS")
+        }
+        return nverts
+    }
+
 
 }
