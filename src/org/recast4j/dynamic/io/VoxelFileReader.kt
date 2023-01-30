@@ -25,7 +25,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 class VoxelFileReader {
-
+    @Throws(IOException::class)
     fun read(stream: InputStream): VoxelFile {
         val buf = IOUtils.toByteBuffer(stream)
         val file = VoxelFile()
@@ -107,11 +107,16 @@ class VoxelFileReader {
             data.order(buf.order())
             file.addTile(
                 VoxelTile(
-                    tileX, tileZ,
-                    width, depth,
-                    boundsMin, boundsMax,
-                    cellSize, cellHeight,
-                    borderSize, data
+                    tileX,
+                    tileZ,
+                    width,
+                    depth,
+                    boundsMin,
+                    boundsMax,
+                    cellSize,
+                    cellHeight,
+                    borderSize,
+                    data
                 )
             )
             buf.position(position + voxelSize)

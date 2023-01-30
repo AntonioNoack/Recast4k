@@ -7,13 +7,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 internal class NavMeshGroundSampler : AbstractGroundSampler() {
-
-    companion object {
-        val f0 = FloatArray(0)
-        val i0 = IntArray(0)
-    }
-
     private val filter: QueryFilter = NoOpFilter()
+
     private class NoOpFilter : QueryFilter {
 
         override fun passFilter(ref: Long, tile: MeshTile?, poly: Poly): Boolean {
@@ -45,34 +40,32 @@ internal class NavMeshGroundSampler : AbstractGroundSampler() {
     }
 
     private fun createNavMesh(
-        r: RecastBuilderResult,
+        r: RecastBuilderResult?,
         agentRadius: Float,
         agentHeight: Float,
         agentClimb: Float
     ): NavMeshQuery {
-        val params = NavMeshDataCreateParams(
-            r.mesh.vertices,
-            r.mesh.numVertices,
-            r.mesh.polygons,
-            r.mesh.flags,
-            r.mesh.areaIds,
-            r.mesh.numPolygons,
-            r.mesh.maxVerticesPerPolygon,
-            r.meshDetail!!.subMeshes,
-            r.meshDetail.vertices,
-            r.meshDetail.numVertices,
-            r.meshDetail.triangles,
-            r.meshDetail.numTriangles,
-            f0, f0, i0, i0, i0, i0,
-            0, 0, 0, 0, 0,
-            r.mesh.bmin, r.mesh.bmax,
-            agentRadius,
-            agentHeight,
-            agentClimb,
-            r.mesh.cellSize,
-            r.mesh.cellHeight,
-            true
-        )
+        val params = NavMeshDataCreateParams()
+        params.vertices = r!!.mesh.vertices
+        params.vertCount = r.mesh.numVertices
+        params.polys = r.mesh.polygons
+        params.polyAreas = r.mesh.areaIds
+        params.polyFlags = r.mesh.flags
+        params.polyCount = r.mesh.numPolygons
+        params.maxVerticesPerPolygon = r.mesh.maxVerticesPerPolygon
+        params.detailMeshes = r.meshDetail!!.subMeshes
+        params.detailVertices = r.meshDetail.vertices
+        params.detailVerticesCount = r.meshDetail.numVertices
+        params.detailTris = r.meshDetail.triangles
+        params.detailTriCount = r.meshDetail.numTriangles
+        params.walkableRadius = agentRadius
+        params.walkableHeight = agentHeight
+        params.walkableClimb = agentClimb
+        params.bmin = r.mesh.bmin
+        params.bmax = r.mesh.bmax
+        params.cellSize = r.mesh.cellSize
+        params.cellHeight = r.mesh.cellHeight
+        params.buildBvTree = true
         return NavMeshQuery(NavMesh(NavMeshBuilder.createNavMeshData(params)!!, params.maxVerticesPerPolygon, 0))
     }
 

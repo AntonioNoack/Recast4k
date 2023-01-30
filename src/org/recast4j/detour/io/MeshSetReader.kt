@@ -24,37 +24,41 @@ import java.io.IOException
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import kotlin.math.min
 
 class MeshSetReader {
-
     private val meshReader = MeshDataReader()
     private val paramReader = NavMeshParamReader()
-
-    fun read(i: InputStream, maxVertPerPoly: Int): NavMesh {
-        return read(IOUtils.toByteBuffer(i), maxVertPerPoly, false)
+    @Throws(IOException::class)
+    fun read(`is`: InputStream, maxVertPerPoly: Int): NavMesh {
+        return read(IOUtils.toByteBuffer(`is`), maxVertPerPoly, false)
     }
 
+    @Throws(IOException::class)
     fun read(bb: ByteBuffer, maxVertPerPoly: Int): NavMesh {
         return read(bb, maxVertPerPoly, false)
     }
 
-    fun read32Bit(i: InputStream, maxVertPerPoly: Int): NavMesh {
-        return read(IOUtils.toByteBuffer(i), maxVertPerPoly, true)
+    @Throws(IOException::class)
+    fun read32Bit(`is`: InputStream, maxVertPerPoly: Int): NavMesh {
+        return read(IOUtils.toByteBuffer(`is`), maxVertPerPoly, true)
     }
 
+    @Throws(IOException::class)
     fun read32Bit(bb: ByteBuffer, maxVertPerPoly: Int): NavMesh {
         return read(bb, maxVertPerPoly, true)
     }
 
-    fun read(i: InputStream): NavMesh {
-        return read(IOUtils.toByteBuffer(i))
+    @Throws(IOException::class)
+    fun read(`is`: InputStream): NavMesh {
+        return read(IOUtils.toByteBuffer(`is`))
     }
 
+    @Throws(IOException::class)
     fun read(bb: ByteBuffer): NavMesh {
         return read(bb, -1, false)
     }
 
+    @Throws(IOException::class)
     fun read(bb: ByteBuffer, maxVertPerPoly: Int, is32Bit: Boolean): NavMesh {
         val header = readHeader(bb, maxVertPerPoly)
         if (header.maxVerticesPerPoly <= 0) {
@@ -66,6 +70,7 @@ class MeshSetReader {
         return mesh
     }
 
+    @Throws(IOException::class)
     private fun readHeader(bb: ByteBuffer, maxVerticesPerPoly: Int): NavMeshSetHeader {
         val header = NavMeshSetHeader()
         header.magic = bb.int
@@ -89,6 +94,7 @@ class MeshSetReader {
         return header
     }
 
+    @Throws(IOException::class)
     private fun readTiles(
         bb: ByteBuffer,
         is32Bit: Boolean,
@@ -117,15 +123,15 @@ class MeshSetReader {
     }
 
     private fun convert32BitRef(ref: Int, params: NavMeshParams): Long {
-        val tileBits = Vectors.ilog2(Vectors.nextPow2(params.maxTiles))
-        val polyBits = Vectors.ilog2(Vectors.nextPow2(params.maxPolys))
+        val m_tileBits = Vectors.ilog2(Vectors.nextPow2(params.maxTiles))
+        val m_polyBits = Vectors.ilog2(Vectors.nextPow2(params.maxPolys))
         // Only allow 31 salt bits, since the salt mask is calculated using 32bit uint and it will overflow.
-        val saltBits = min(31, 32 - tileBits - polyBits)
-        val saltMask = (1 shl saltBits) - 1
-        val tileMask = (1 shl tileBits) - 1
-        val polyMask = (1 shl polyBits) - 1
-        val salt = ref shr polyBits + tileBits and saltMask
-        val it = ref shr polyBits and tileMask
+        val m_saltBits = Math.min(31, 32 - m_tileBits - m_polyBits)
+        val saltMask = (1 shl m_saltBits) - 1
+        val tileMask = (1 shl m_tileBits) - 1
+        val polyMask = (1 shl m_polyBits) - 1
+        val salt = ref shr m_polyBits + m_tileBits and saltMask
+        val it = ref shr m_polyBits and tileMask
         val ip = ref and polyMask
         return NavMesh.encodePolyId(salt, it, ip)
     }

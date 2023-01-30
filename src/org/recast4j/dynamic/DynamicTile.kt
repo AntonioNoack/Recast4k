@@ -21,8 +21,6 @@ import org.recast4j.detour.MeshData
 import org.recast4j.detour.NavMesh
 import org.recast4j.detour.NavMeshBuilder.createNavMeshData
 import org.recast4j.detour.NavMeshDataCreateParams
-import org.recast4j.detour.extras.jumplink.NavMeshGroundSampler.Companion.f0
-import org.recast4j.detour.extras.jumplink.NavMeshGroundSampler.Companion.i0
 import org.recast4j.dynamic.collider.Collider
 import org.recast4j.dynamic.io.VoxelTile
 import org.recast4j.recast.*
@@ -36,12 +34,7 @@ class DynamicTile(val voxelTile: VoxelTile) {
     private val colliders: MutableMap<Long, Collider?> = ConcurrentHashMap()
     private var dirty = true
     private var id: Long = 0
-    fun build(
-        builder: RecastBuilder,
-        config: DynamicNavMeshConfig,
-        telemetry: Telemetry,
-        walkableAreaModification: AreaModification
-    ): Boolean {
+    fun build(builder: RecastBuilder, config: DynamicNavMeshConfig, telemetry: Telemetry, walkableAreaModification: AreaModification): Boolean {
         if (dirty) {
             val heightfield = buildHeightfield(config, telemetry)
             val r = buildRecast(builder, config, voxelTile, heightfield, telemetry, walkableAreaModification)
@@ -123,29 +116,47 @@ class DynamicTile(val voxelTile: VoxelTile) {
     }
 
     private fun navMeshCreateParams(
-        tileX: Int, tileZ: Int, cellSize: Float, cellHeight: Float,
+        tilex: Int, tileZ: Int, cellSize: Float, cellHeight: Float,
         config: DynamicNavMeshConfig, rcResult: RecastBuilderResult
     ): NavMeshDataCreateParams {
         val mesh = rcResult.mesh
         val meshDetail = rcResult.meshDetail
-        mesh.flags.fill(1, 0, mesh.numPolygons)
-        return NavMeshDataCreateParams(
-            mesh.vertices, mesh.numVertices,
-            mesh.polygons, mesh.flags, mesh.areaIds,
-            mesh.numPolygons, mesh.maxVerticesPerPolygon,
-            meshDetail?.subMeshes ?: i0,
-            meshDetail?.vertices ?: f0,
-            meshDetail?.numVertices ?: 0,
-            meshDetail?.triangles ?: i0,
-            meshDetail?.numTriangles ?: 0,
-            f0, f0, i0, i0, i0, i0, 0, 0, tileX, tileZ, 0,
-            mesh.bmin, mesh.bmax,
-            config.walkableHeight,
-            config.walkableRadius,
-            config.walkableClimb,
-            cellSize, cellHeight,
-            true
-        )
+        val params = NavMeshDataCreateParams()
+        for (i in 0 until mesh.numPolygons) {
+            mesh.flags[i] = 1
+        }
+        params.tileX = tilex
+        params.tileZ = tileZ
+        params.vertices = mesh.vertices
+        params.vertCount = mesh.numVertices
+        params.polys = mesh.polygons
+        params.polyAreas = mesh.areaIds
+        params.polyFlags = mesh.flags
+        params.polyCount = mesh.numPolygons
+        params.maxVerticesPerPolygon = mesh.maxVerticesPerPolygon
+        if (meshDetail != null) {
+            params.detailMeshes = meshDetail.subMeshes
+            params.detailVertices = meshDetail.vertices
+            params.detailVerticesCount = meshDetail.numVertices
+            params.detailTris = meshDetail.triangles
+            params.detailTriCount = meshDetail.numTriangles
+        }
+        params.walkableHeight = config.walkableHeight
+        params.walkableRadius = config.walkableRadius
+        params.walkableClimb = config.walkableClimb
+        params.bmin = mesh.bmin
+        params.bmax = mesh.bmax
+        params.cellSize = cellSize
+        params.cellHeight = cellHeight
+        params.buildBvTree = true
+        params.offMeshConCount = 0
+        params.offMeshConRad = FloatArray(0)
+        params.offMeshConVertices = params.offMeshConRad
+        params.offMeshConUserID = IntArray(0)
+        params.offMeshConFlags = params.offMeshConUserID
+        params.offMeshConAreas = params.offMeshConFlags
+        params.offMeshConDir = params.offMeshConAreas
+        return params
     }
 
     fun addTo(navMesh: NavMesh) {

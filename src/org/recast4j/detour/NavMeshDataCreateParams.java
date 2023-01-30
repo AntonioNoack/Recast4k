@@ -16,177 +16,161 @@ freely, subject to the following restrictions:
  misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
-package org.recast4j.detour
+package org.recast4j.detour;
 
-import org.joml.Vector3f
+import org.joml.Vector3f;
 
 /**
- * Represents the source data used to build a navigation mesh tile.
+ * Represents the source data used to build an navigation mesh tile.
  */
-class NavMeshDataCreateParams(
+public class NavMeshDataCreateParams {
 
     /// @name Polygon Mesh Attributes
     /// Used to create the base navigation graph.
-    /// See PolyMesh for details related to these attributes.
+    /// See #rcPolyMesh for details related to these attributes.
+    /// @{
+
     /**
      * The polygon mesh vertices. [(x, y, z) * #vertCount] [Unit: vx]
      */
-    val vertices: IntArray,
-
+    public int[] vertices;
     /**
      * The number vertices in the polygon mesh. [Limit: >= 3]
      */
-    val vertCount: Int = 0,
-
+    public int vertCount;
     /**
      * The polygon data. [Size: #polyCount * 2 * #nvp]
      */
-    val polys: IntArray,
-
+    public int[] polys;
     /**
      * The user defined flags assigned to each polygon. [Size: #polyCount]
      */
-    val polyFlags: IntArray,
-
+    public int[] polyFlags;
     /**
      * The user defined area ids assigned to each polygon. [Size: #polyCount]
      */
-    val polyAreas: IntArray,
-
+    public int[] polyAreas;
     /**
      * Number of polygons in the mesh. [Limit: >= 1]
      */
-    val polyCount: Int = 0,
-
+    public int polyCount;
     /**
      * Number maximum number of vertices per polygon. [Limit: >= 3]
      */
-    val maxVerticesPerPolygon: Int = 0,
+    public int maxVerticesPerPolygon;
+
     /// @}
     /// @name Height Detail Attributes (Optional)
     /// See #rcPolyMeshDetail for details related to these attributes.
     /// @{
+
     /**
      * The height detail sub-mesh data. [Size: 4 * #polyCount]
      */
-    val detailMeshes: IntArray,
-
+    public int[] detailMeshes;
     /**
      * The detail mesh vertices. [Size: 3 * #detailVerticesCount]
      */
-    val detailVertices: FloatArray,
-
+    public float[] detailVertices;
     /**
      * The number of vertices in the detail mesh.
      */
-    val detailVerticesCount: Int = 0,
-
+    public int detailVerticesCount;
     /**
      * The detail mesh triangles. [Size: 4 * #detailTriCount]
      */
-    val detailTris: IntArray,
-
+    public int[] detailTris;
     /**
      * The number of triangles in the detail mesh.
      */
-    val detailTriCount: Int = 0,
+    public int detailTriCount;
+
     /// @}
     /// @name Off-Mesh Connections Attributes (Optional)
     /// Used to define a custom point-to-point edge within the navigation graph, an
     /// off-mesh connection is a user defined traversable connection made up to two vertices,
     /// at least one of which resides within a navigation mesh polygon.
     /// @{
+
     /**
      * Off-mesh connection vertices. [(ax, ay, az, bx, by, bz) * #offMeshConCount]
      */
-    val offMeshConVertices: FloatArray,
-
+    public float[] offMeshConVertices;
     /**
      * Off-mesh connection radii. [Size: #offMeshConCount]
      */
-    val offMeshConRad: FloatArray,
-
+    public float[] offMeshConRad;
     /**
      * User defined flags assigned to the off-mesh connections. [Size: #offMeshConCount]
      */
-    val offMeshConFlags: IntArray,
-
+    public int[] offMeshConFlags;
     /**
      * User defined area ids assigned to the off-mesh connections. [Size: #offMeshConCount]
      */
-    val offMeshConAreas: IntArray,
+    public int[] offMeshConAreas;
 
     /**
      * The permitted travel direction of the off-mesh connections. [Size: #offMeshConCount]
      * 0 = Travel only from endpoint A to endpoint B. Bidirectional travel.
-     */
-    val offMeshConDir: IntArray,
+     * */
+    public int[] offMeshConDir;
+    /** The user defined ids of the off-mesh connection. [Size: #offMeshConCount] */
+    public int[] offMeshConUserID;
+    /** The number of off-mesh connections. [Limit: >= 0] */
+    public int offMeshConCount;
 
-    /** The user defined ids of the off-mesh connection. [Size: #offMeshConCount]  */
-    val offMeshConUserID: IntArray,
-
-    /** The number of off-mesh connections. [Limit: >= 0]  */
-    val offMeshConCount: Int = 0,
     /// @}
     /// @name Tile Attributes
     /// @note The tile grid/layer data can be left at zero if the destination is a single tile mesh.
     /// @{
+
     /**
      * The user defined id of the tile.
      */
-    val userId: Int = 0,
-
+    public int userId;
     /**
      * The tile's x-grid location within the multi-tile destination mesh. (Along the x-axis.)
      */
-    val tileX: Int = 0,
-
+    public int tileX;
     /**
      * The tile's y-grid location within the multi-tile desitation mesh. (Along the z-axis.)
      */
-    val tileZ: Int = 0,
-
+    public int tileZ;
     /**
      * The tile's layer within the layered destination mesh. [Limit: >= 0] (Along the y-axis.)
      */
-    val tileLayer: Int = 0,
+    public int tileLayer;
 
-    /**
-     * The bounds of the tile. [(x, y, z)]
-     * */
-    val bmin: Vector3f,
-    val bmax: Vector3f,
+    public Vector3f bmin, bmax; /// < The bounds of the tile. [(x, y, z)]
 
     /* General Configuration Attributes */
+
     /**
      * The agent height.
      */
-    val walkableHeight: Float = 0f,
-
+    public float walkableHeight;
     /**
      * The agent radius.
      */
-    val walkableRadius: Float = 0f,
-
+    public float walkableRadius;
     /**
      * The agent maximum traversable ledge. (Up/Down)
      */
-    val walkableClimb: Float = 0f,
-
+    public float walkableClimb;
     /**
      * The xz-plane cell size of the polygon mesh. [Limit: > 0]
      */
-    val cellSize: Float = 0f,
-
+    public float cellSize;
     /**
      * The y-axis cell height of the polygon mesh. [Limit: > 0]
      */
-    val cellHeight: Float = 0f,
+    public float cellHeight;
 
     /**
      * True if a bounding volume tree should be built for the tile.
      * @note The BVTree is not normally needed for layered navigation meshes.
      */
-    val buildBvTree: Boolean = false
+    public boolean buildBvTree;
 
-)
+
+}
