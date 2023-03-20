@@ -24,11 +24,11 @@ class CompactSpan {
     var y = 0
 
     /** The id of the region the span belongs to. (Or zero if not in a region.)  */
-    var reg = 0
+    var regionId = 0
 
     /** Packed neighbor connection data.  */
-    var con = 0
+    var connectionData = 0
 
     /** The height of the span. (Measured from #y.)  */
-    var h = 0
+    var height = 0
 }

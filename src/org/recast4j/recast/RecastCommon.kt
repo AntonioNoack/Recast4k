@@ -27,7 +27,7 @@ object RecastCommon {
     /// or #RC_NOT_CONNECTED if there is no connection.
     fun getCon(s: CompactSpan, dir: Int): Int {
         val shift = dir * 6
-        return s.con shr shift and 0x3f
+        return s.connectionData shr shift and 0x3f
     }
 
     private val offset = intArrayOf(-1, 0, 1, 0)
@@ -63,7 +63,7 @@ object RecastCommon {
     /// @param[in] i The index of the neighbor span.
     fun setCon(s: CompactSpan, dir: Int, i: Int) {
         val shift = dir * 6
-        val con = s.con
-        s.con = con and (0x3f shl shift).inv() or (i and 0x3f shl shift)
+        val con = s.connectionData
+        s.connectionData = con and (0x3f shl shift).inv() or (i and 0x3f shl shift)
     }
 }

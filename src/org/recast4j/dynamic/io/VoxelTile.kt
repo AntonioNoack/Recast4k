@@ -183,7 +183,7 @@ class VoxelTile {
         if (buf.order() == order) {
             buf[data]
         } else {
-            val l = width * height
+            val l = Math.multiplyExact(width, height)
             var position = 0
             for (i in 0 until l) {
                 val count = buf.short.toInt()

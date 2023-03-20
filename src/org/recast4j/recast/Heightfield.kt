@@ -29,13 +29,14 @@ class Heightfield(
     /** The minimum bounds in world space. [(x, y, z)]  */
     val bmin: Vector3f,
     /** The maximum bounds in world space. [(x, y, z)]  */
-    val bmax: Vector3f, val cellSize: Float,
+    val bmax: Vector3f,
+    val cellSize: Float,
     /** The minimum increment along the y-axis.  */
     val cellHeight: Float,
     /** Border size in cell units  */
     val borderSize: Int
 ) {
     /** Heightfield of spans (width*height).  */
-    val spans: Array<Span?> = arrayOfNulls(width * height)
+    val spans: Array<Span?> = arrayOfNulls(Math.multiplyExact(width, height))
 
 }

@@ -18,6 +18,7 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.recast
 
+// todo this class can be replaced with IntArray x2
 /** Provides information on the content of a cell column in a compact heightfield.  */
 class CompactCell {
     /** Index to the first span in the column.  */

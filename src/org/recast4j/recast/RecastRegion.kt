@@ -39,9 +39,7 @@ object RecastRegion {
         for (y in 0 until h) {
             for (x in 0 until w) {
                 val c = chf.cells[x + y * w]
-                var i = c.index
-                val ni = c.index + c.count
-                while (i < ni) {
+                for (i in c.index until c.index + c.count) {
                     val s = chf.spans[i]
                     val area = chf.areas[i]
                     var nc = 0
@@ -58,7 +56,6 @@ object RecastRegion {
                     if (nc != 4) {
                         src[i] = 0
                     }
-                    ++i
                 }
             }
         }
@@ -67,9 +64,7 @@ object RecastRegion {
         for (y in 0 until h) {
             for (x in 0 until w) {
                 val c = chf.cells[x + y * w]
-                var i = c.index
-                val ni = c.index + c.count
-                while (i < ni) {
+                for (i in c.index until c.index + c.count) {
                     val s = chf.spans[i]
                     if (RecastCommon.getCon(s, 0) != RecastConstants.RC_NOT_CONNECTED) {
                         // (-1,0)
@@ -111,7 +106,6 @@ object RecastRegion {
                             }
                         }
                     }
-                    ++i
                 }
             }
         }
@@ -120,9 +114,7 @@ object RecastRegion {
         for (y in h - 1 downTo 0) {
             for (x in w - 1 downTo 0) {
                 val c = chf.cells[x + y * w]
-                var i = c.index
-                val ni = c.index + c.count
-                while (i < ni) {
+                for (i in c.index until c.index + c.count) {
                     val s = chf.spans[i]
                     if (RecastCommon.getCon(s, 2) != RecastConstants.RC_NOT_CONNECTED) {
                         // (1,0)
@@ -164,7 +156,6 @@ object RecastRegion {
                             }
                         }
                     }
-                    ++i
                 }
             }
         }
@@ -183,14 +174,11 @@ object RecastRegion {
         for (y in 0 until h) {
             for (x in 0 until w) {
                 val c = chf.cells[x + y * w]
-                var i = c.index
-                val ni = c.index + c.count
-                while (i < ni) {
+                for (i in c.index until c.index + c.count) {
                     val s = chf.spans[i]
                     val cd = src[i]
                     if (cd <= thr) {
                         dst[i] = cd
-                        ++i
                         continue
                     }
                     var d = cd
@@ -214,7 +202,7 @@ object RecastRegion {
                             d += cd * 2
                         }
                     }
-                    dst[i++] = (d + 5) / 9
+                    dst[i] = (d + 5) / 9
                 }
             }
         }
@@ -319,15 +307,12 @@ object RecastRegion {
             for (y in 0 until h) {
                 for (x in 0 until w) {
                     val c = chf.cells[x + y * w]
-                    var i = c.index
-                    val ni = c.index + c.count
-                    while (i < ni) {
+                    for (i in c.index until c.index + c.count) {
                         if (chf.dist[i] >= level && srcReg[i] == 0 && chf.areas[i] != RecastConstants.RC_NULL_AREA) {
                             stack.add(x)
                             stack.add(y)
                             stack.add(i)
                         }
-                        ++i
                     }
                 }
             }
@@ -426,17 +411,13 @@ object RecastRegion {
         for (y in 0 until h) {
             for (x in 0 until w) {
                 val c = chf.cells[x + y * w]
-                var i = c.index
-                val ni = c.index + c.count
-                while (i < ni) {
+                for (i in c.index until c.index + c.count) {
                     if (chf.areas[i] == RecastConstants.RC_NULL_AREA || srcReg[i] != 0) {
-                        ++i
                         continue
                     }
                     val level = chf.dist[i] shr loglevelsPerStack
                     var sId = startLevel - level
                     if (sId >= nbStacks) {
-                        ++i
                         continue
                     }
                     if (sId < 0) {
@@ -445,7 +426,6 @@ object RecastRegion {
                     stacks[sId].add(x)
                     stacks[sId].add(y)
                     stacks[sId].add(i)
-                    ++i
                 }
             }
         }
@@ -696,26 +676,19 @@ object RecastRegion {
         for (y in 0 until h) {
             for (x in 0 until w) {
                 val c = chf.cells[x + y * w]
-                var i = c.index
-                val ni = c.index + c.count
-                while (i < ni) {
+                for (i in c.index until c.index + c.count) {
                     val r = srcReg[i]
                     if (r == 0 || r >= nreg) {
-                        ++i
                         continue
                     }
                     val reg = regions[r]
                     reg!!.spanCount++
 
                     // Update floors.
-                    for (j in c.index until ni) {
-                        if (i == j) {
-                            continue
-                        }
+                    for (j in c.index until c.index + c.count) {
+                        if (i == j) continue
                         val floorId = srcReg[j]
-                        if (floorId == 0 || floorId >= nreg) {
-                            continue
-                        }
+                        if (floorId == 0 || floorId >= nreg) continue
                         if (floorId == r) {
                             reg.overlap = true
                         }
@@ -724,7 +697,6 @@ object RecastRegion {
 
                     // Have found contour
                     if (reg.connections.size > 0) {
-                        ++i
                         continue
                     }
                     reg.areaType = chf.areas[i]
@@ -742,7 +714,6 @@ object RecastRegion {
                         // Walk around the contour to find all the neighbours.
                         walkContour(x, y, i, ndir, chf, srcReg, reg.connections)
                     }
-                    ++i
                 }
             }
         }
@@ -943,40 +914,35 @@ object RecastRegion {
             for (x in 0 until w) {
                 val c = chf.cells[x + y * w]
                 lregs.clear()
-                run {
-                    var i = c.index
-                    val ni = c.index + c.count
-                    while (i < ni) {
-                        val s = chf.spans[i]
-                        val ri = srcReg[i]
-                        if (ri == 0 || ri >= nreg) {
-                            ++i
-                            continue
-                        }
-                        val reg = regions[ri]
-                        reg.spanCount++
-                        reg.areaType = chf.areas[i]
-                        reg.ymin = min(reg.ymin, s.y)
-                        reg.ymax = max(reg.ymax, s.y)
-                        // Collect all region layers.
-                        lregs.add(ri)
 
-                        // Update neighbours
-                        for (dir in 0..3) {
-                            if (RecastCommon.getCon(s, dir) != RecastConstants.RC_NOT_CONNECTED) {
-                                val ax = x + RecastCommon.getDirOffsetX(dir)
-                                val ay = y + RecastCommon.getDirOffsetY(dir)
-                                val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, dir)
-                                val rai = srcReg[ai]
-                                if (rai in 1 until nreg && rai != ri) {
-                                    addUniqueConnection(reg, rai)
-                                }
-                                if (rai and RecastConstants.RC_BORDER_REG != 0) {
-                                    reg.connectsToBorder = true
-                                }
+                for (i in c.index until c.index + c.count) {
+                    val s = chf.spans[i]
+                    val ri = srcReg[i]
+                    if (ri == 0 || ri >= nreg) {
+                        continue
+                    }
+                    val reg = regions[ri]
+                    reg.spanCount++
+                    reg.areaType = chf.areas[i]
+                    reg.ymin = min(reg.ymin, s.y)
+                    reg.ymax = max(reg.ymax, s.y)
+                    // Collect all region layers.
+                    lregs.add(ri)
+
+                    // Update neighbours
+                    for (dir in 0..3) {
+                        if (RecastCommon.getCon(s, dir) != RecastConstants.RC_NOT_CONNECTED) {
+                            val ax = x + RecastCommon.getDirOffsetX(dir)
+                            val ay = y + RecastCommon.getDirOffsetY(dir)
+                            val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, dir)
+                            val rai = srcReg[ai]
+                            if (rai in 1 until nreg && rai != ri) {
+                                addUniqueConnection(reg, rai)
+                            }
+                            if (rai and RecastConstants.RC_BORDER_REG != 0) {
+                                reg.connectsToBorder = true
                             }
                         }
-                        ++i
                     }
                 }
 
@@ -1144,13 +1110,10 @@ object RecastRegion {
         for (y in miny until maxy) {
             for (x in minx until maxx) {
                 val c = chf.cells[x + y * w]
-                var i = c.index
-                val ni = c.index + c.count
-                while (i < ni) {
+                for (i in c.index until c.index + c.count) {
                     if (chf.areas[i] != RecastConstants.RC_NULL_AREA) {
                         srcReg[i] = regId
                     }
-                    ++i
                 }
             }
         }
@@ -1219,12 +1182,9 @@ object RecastRegion {
             var rid = 1
             for (x in borderSize until w - borderSize) {
                 val c = chf.cells[x + y * w]
-                var i = c.index
-                val ni = c.index + c.count
-                while (i < ni) {
+                for (i in c.index until c.index + c.count) {
                     val s = chf.spans[i]
                     if (chf.areas[i] == RecastConstants.RC_NULL_AREA) {
-                        ++i
                         continue
                     }
 
@@ -1256,7 +1216,7 @@ object RecastRegion {
                                 sweeps[previd]!!.neighborId = nr
                                 sweeps[previd]!!.numSamples++
                                 if (prev.size <= nr) {
-                                    prev = Arrays.copyOf(prev, prev.size * 2)
+                                    prev = prev.copyOf(prev.size * 2)
                                 }
                                 prev[nr]++
                             } else {
@@ -1265,7 +1225,6 @@ object RecastRegion {
                         }
                     }
                     srcReg[i] = previd
-                    ++i
                 }
             }
 
@@ -1281,13 +1240,10 @@ object RecastRegion {
             // Remap IDs
             for (x in borderSize until w - borderSize) {
                 val c = chf.cells[x + y * w]
-                var i = c.index
-                val ni = c.index + c.count
-                while (i < ni) {
-                    if (srcReg[i] > 0 && srcReg[i] < rid) {
+                for (i in c.index until c.index + c.count) {
+                    if (srcReg[i] in 1 until rid) {
                         srcReg[i] = sweeps[srcReg[i]]!!.regionId
                     }
-                    ++i
                 }
             }
         }
@@ -1302,7 +1258,7 @@ object RecastRegion {
 
         // Store the result out.
         for (i in 0 until chf.spanCount) {
-            chf.spans[i].reg = srcReg[i]
+            chf.spans[i].regionId = srcReg[i]
         }
         ctx?.stopTimer("REGIONS")
     }
@@ -1420,7 +1376,7 @@ object RecastRegion {
 
         // Write the result out.
         for (i in 0 until chf.spanCount) {
-            chf.spans[i].reg = srcReg[i]
+            chf.spans[i].regionId = srcReg[i]
         }
         ctx?.stopTimer("REGIONS")
     }
@@ -1466,12 +1422,9 @@ object RecastRegion {
             var rid = 1
             for (x in borderSize until w - borderSize) {
                 val c = chf.cells[x + y * w]
-                var i = c.index
-                val ni = c.index + c.count
-                while (i < ni) {
+                for (i in c.index until c.index + c.count) {
                     val s = chf.spans[i]
                     if (chf.areas[i] == RecastConstants.RC_NULL_AREA) {
-                        ++i
                         continue
                     }
 
@@ -1512,7 +1465,6 @@ object RecastRegion {
                         }
                     }
                     srcReg[i] = previd
-                    ++i
                 }
             }
 
@@ -1528,13 +1480,10 @@ object RecastRegion {
             // Remap IDs
             for (x in borderSize until w - borderSize) {
                 val c = chf.cells[x + y * w]
-                var i = c.index
-                val ni = c.index + c.count
-                while (i < ni) {
+                for (i in c.index until c.index + c.count) {
                     if (srcReg[i] in 1 until rid) {
                         srcReg[i] = sweeps[srcReg[i]]!!.regionId
                     }
-                    ++i
                 }
             }
         }
@@ -1546,7 +1495,7 @@ object RecastRegion {
 
         // Store the result out.
         for (i in 0 until chf.spanCount) {
-            chf.spans[i].reg = srcReg[i]
+            chf.spans[i].regionId = srcReg[i]
         }
         ctx?.stopTimer("REGIONS")
     }
@@ -1558,7 +1507,8 @@ object RecastRegion {
         var neighborId = 0
     }
 
-    internal class Region(var id: Int) {// ID of the region
+    internal class Region(var id: Int) {
+        // ID of the region
         var spanCount = 0 // Number of spans belonging to this region
         var areaType = 0
         var remap = false

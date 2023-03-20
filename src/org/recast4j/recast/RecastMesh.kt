@@ -889,7 +889,7 @@ object RecastMesh {
             if (nvp > 3) {
                 while (true) {
 
-                    // Find best polygons to merge.
+                    // Find the best polygons to merge.
                     var bestMergeVal = 0
                     var bestPa = 0
                     var bestPb = 0
@@ -989,7 +989,7 @@ object RecastMesh {
             }
         }
 
-        // Just allocate the mesh flags array. The user is resposible to fill it.
+        // Just allocate the mesh flags array. The user is responsible to fill it.
         mesh.flags = IntArray(mesh.numPolygons)
         if (mesh.numVertices > MAX_MESH_VERTICES_POLY) {
             throw RuntimeException(

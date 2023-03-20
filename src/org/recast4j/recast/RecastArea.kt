@@ -39,13 +39,10 @@ class RecastArea {
         for (y in 0 until h) {
             for (x in 0 until w) {
                 val c = chf.cells[x + y * w]
-                var i = c.index
-                val ni = c.index + c.count
-                while (i < ni) {
+                for (i in c.index until c.index + c.count) {
                     val s = chf.spans[i]
                     if (chf.areas[i] == RecastConstants.RC_NULL_AREA) {
                         areas[i] = chf.areas[i]
-                        ++i
                         continue
                     }
                     val nei = IntArray(9)
@@ -56,23 +53,22 @@ class RecastArea {
                             val ay = y + RecastCommon.getDirOffsetY(dir)
                             val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, dir)
                             if (chf.areas[ai] != RecastConstants.RC_NULL_AREA) nei[dir * 2] = chf.areas[ai]
-                            val `as` = chf.spans[ai]
+                            val asp = chf.spans[ai]
                             val dir2 = dir + 1 and 0x3
-                            if (RecastCommon.getCon(`as`, dir2) != RecastConstants.RC_NOT_CONNECTED) {
+                            if (RecastCommon.getCon(asp, dir2) != RecastConstants.RC_NOT_CONNECTED) {
                                 val ax2 = ax + RecastCommon.getDirOffsetX(dir2)
                                 val ay2 = ay + RecastCommon.getDirOffsetY(dir2)
-                                val ai2 = chf.cells[ax2 + ay2 * w].index + RecastCommon.getCon(`as`, dir2)
+                                val ai2 = chf.cells[ax2 + ay2 * w].index + RecastCommon.getCon(asp, dir2)
                                 if (chf.areas[ai2] != RecastConstants.RC_NULL_AREA) nei[dir * 2 + 1] = chf.areas[ai2]
                             }
                         }
                     }
                     Arrays.sort(nei)
                     areas[i] = nei[4]
-                    ++i
                 }
             }
         }
-        chf.areas = areas
+        System.arraycopy(areas, 0, chf.areas, 0, chf.spanCount)
         ctx?.stopTimer("MEDIAN_AREA")
         return true
     }
@@ -99,14 +95,11 @@ class RecastArea {
         for (z in minz..maxz) {
             for (x in minx..maxx) {
                 val c = chf.cells[x + z * chf.width]
-                var i = c.index
-                val ni = c.index + c.count
-                while (i < ni) {
+                for (i in c.index until c.index + c.count) {
                     val s = chf.spans[i]
-                    if (s.y >= miny && s.y <= maxy) {
+                    if (s.y in miny..maxy) {
                         if (chf.areas[i] != RecastConstants.RC_NULL_AREA) chf.areas[i] = areaMod.apply(chf.areas[i])
                     }
-                    ++i
                 }
             }
         }
@@ -145,15 +138,12 @@ class RecastArea {
         for (z in minz..maxz) {
             for (x in minx..maxx) {
                 val c = chf.cells[x + z * chf.width]
-                var i = c.index
-                val ni = c.index + c.count
-                while (i < ni) {
+                for (i in c.index until c.index + c.count) {
                     if (chf.areas[i] == RecastConstants.RC_NULL_AREA) {
-                        ++i
                         continue
                     }
                     val s = chf.spans[i]
-                    if (s.y >= miny && s.y <= maxy) {
+                    if (s.y in miny..maxy) {
                         val sx = chf.bmin.x + (x + 0.5f) * chf.cellSize
                         val sz = chf.bmin.z + (z + 0.5f) * chf.cellSize
                         val dx = sx - pos.x
@@ -162,7 +152,6 @@ class RecastArea {
                             chf.areas[i] = areaMod.apply(chf.areas[i])
                         }
                     }
-                    ++i
                 }
             }
         }
@@ -184,9 +173,7 @@ class RecastArea {
             for (y in 0 until h) {
                 for (x in 0 until w) {
                     val c = chf.cells[x + y * w]
-                    var i = c.index
-                    val ni = c.index + c.count
-                    while (i < ni) {
+                    for (i in c.index until c.index + c.count) {
                         if (chf.areas[i] == RecastConstants.RC_NULL_AREA) {
                             dist[i] = 0
                         } else {
@@ -205,7 +192,6 @@ class RecastArea {
                             // At least one missing neighbour.
                             if (nc != 4) dist[i] = 0
                         }
-                        ++i
                     }
                 }
             }
@@ -215,9 +201,7 @@ class RecastArea {
             for (y in 0 until h) {
                 for (x in 0 until w) {
                     val c = chf.cells[x + y * w]
-                    var i = c.index
-                    val ni = c.index + c.count
-                    while (i < ni) {
+                    for(i in c.index until c.index + c.count) {
                         val s = chf.spans[i]
                         if (RecastCommon.getCon(s, 0) != RecastConstants.RC_NOT_CONNECTED) {
                             // (-1,0)
@@ -255,7 +239,6 @@ class RecastArea {
                                 if (nd < dist[i]) dist[i] = nd
                             }
                         }
-                        ++i
                     }
                 }
             }
@@ -264,9 +247,7 @@ class RecastArea {
             for (y in h - 1 downTo 0) {
                 for (x in w - 1 downTo 0) {
                     val c = chf.cells[x + y * w]
-                    var i = c.index
-                    val ni = c.index + c.count
-                    while (i < ni) {
+                    for(i in c.index until c.index + c.count) {
                         val s = chf.spans[i]
                         if (RecastCommon.getCon(s, 2) != RecastConstants.RC_NOT_CONNECTED) {
                             // (1,0)
@@ -304,7 +285,6 @@ class RecastArea {
                                 if (nd < dist[i]) dist[i] = nd
                             }
                         }
-                        ++i
                     }
                 }
             }
@@ -370,12 +350,9 @@ class RecastArea {
             for (z in minz..maxz) {
                 for (x in minx..maxx) {
                     val c = chf.cells[x + z * chf.width]
-                    var i = c.index
-                    val ni = c.index + c.count
-                    while (i < ni) {
+                    for (i in c.index until c.index + c.count) {
                         val s = chf.spans[i]
                         if (chf.areas[i] == RecastConstants.RC_NULL_AREA) {
-                            ++i
                             continue
                         }
                         if (s.y in miny..maxy) {
@@ -387,7 +364,6 @@ class RecastArea {
                                 chf.areas[i] = areaMod.apply(chf.areas[i])
                             }
                         }
-                        ++i
                     }
                 }
             }

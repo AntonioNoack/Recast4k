@@ -547,10 +547,10 @@ object RecastMeshDetail {
 
     @JvmStatic
     fun buildPolyMeshDetail(
-        ctx: Telemetry, mesh: PolyMesh, chf: CompactHeightfield,
+        ctx: Telemetry?, mesh: PolyMesh, chf: CompactHeightfield,
         sampleDist: Float, sampleMaxError: Float
     ): PolyMeshDetail? {
-        ctx.startTimer("POLYMESHDETAIL")
+        ctx?.startTimer("POLYMESHDETAIL")
         if (mesh.numVertices == 0 || mesh.numPolygons == 0) {
             return null
         }
@@ -630,8 +630,7 @@ object RecastMeshDetail {
             hp.width = bounds[i * 4 + 1] - bounds[i * 4]
             hp.height = bounds[i * 4 + 3] - bounds[i * 4 + 2]
             getHeightData(
-                ctx, chf, meshPolygons, p, npoly, mesh.vertices, borderSize, hp,
-                mesh.regionIds[i]
+                chf, meshPolygons, p, npoly, mesh.vertices, borderSize, hp, mesh.regionIds[i]
             )
 
             // Build detail mesh.
@@ -696,7 +695,7 @@ object RecastMeshDetail {
             }
             dmesh.numTriangles = l shr 2
         }
-        ctx.stopTimer("POLYMESHDETAIL")
+        ctx?.stopTimer("POLYMESHDETAIL")
         return dmesh
     }
 
@@ -704,9 +703,9 @@ object RecastMeshDetail {
 
     @JvmStatic
     private fun getHeightData(
-        ctx: Telemetry, chf: CompactHeightfield,
-        meshpolys: IntArray, poly: Int, npoly: Int, vertices: IntArray,
-        bs: Int, hp: HeightPatch, region: Int
+        chf: CompactHeightfield, meshpolys: IntArray,
+        poly: Int, npoly: Int, vertices: IntArray, bs: Int,
+        hp: HeightPatch, region: Int
     ) {
         // Note: Reads to the compact heightfield are offset by border size (bs)
         // since border size offset is already removed from the polymesh vertices.
@@ -727,7 +726,7 @@ object RecastMeshDetail {
                     val c = chf.cells[x + y * chf.width]
                     for (i in c.index until c.index + c.count) {
                         val s = chf.spans[i]
-                        if (s.reg == region) {
+                        if (s.regionId == region) {
                             // Store height
                             hp.data[hx + hy * hp.width] = s.y
                             empty = false
@@ -740,7 +739,7 @@ object RecastMeshDetail {
                                     val ay = y + getDirOffsetY(dir)
                                     val ai = chf.cells[ax + ay * chf.width].index + getCon(s, dir)
                                     val span = chf.spans[ai]
-                                    if (span.reg != region) {
+                                    if (span.regionId != region) {
                                         border = true
                                         break
                                     }
@@ -762,7 +761,7 @@ object RecastMeshDetail {
         // or if it could potentially be overlapping polygons of the same region,
         // then use the center as the seed point.
         if (empty) {
-            seedArrayWithPolyCenter(ctx, chf, meshpolys, poly, npoly, vertices, bs, hp, queue)
+            seedArrayWithPolyCenter(chf, meshpolys, poly, npoly, vertices, bs, hp, queue)
         }
 
         // We assume the seed is centered in the polygon, so a BFS to collect
@@ -890,7 +889,7 @@ object RecastMeshDetail {
         val x01 = if (x) 1 else 0
         val s = edges[edge + 1 - x01]
         val t = edges[edge + x01]
-        
+
         // Find best point on left of edge.
         var pt = npts
         val c = Vector3f()
@@ -952,8 +951,8 @@ object RecastMeshDetail {
 
     @JvmStatic
     private fun seedArrayWithPolyCenter(
-        ctx: Telemetry, chf: CompactHeightfield, meshpoly: IntArray, poly: Int, npoly: Int,
-        vertices: IntArray, bs: Int, hp: HeightPatch, array: IntArrayList
+        chf: CompactHeightfield, meshpoly: IntArray, poly: Int, npoly: Int, vertices: IntArray,
+        bs: Int, hp: HeightPatch, array: IntArrayList
     ) {
         // Note: Reads to the compact heightfield are offset by border size (bs)
         // since border size offset is already removed from the polymesh vertices.
@@ -1012,7 +1011,7 @@ object RecastMeshDetail {
         while (true) {
             val size = array.size
             if (size < 3) {
-                ctx.warn("Walk towards polygon center failed to reach center")
+                System.err.println("Walk towards polygon center failed to reach center")
                 break
             }
             ci = array[size - 1]

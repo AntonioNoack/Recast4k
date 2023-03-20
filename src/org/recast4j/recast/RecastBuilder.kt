@@ -41,15 +41,16 @@ class RecastBuilder {
         this.progressListener = progressListener
     }
 
+    @Suppress("unused")
     class RecastBuilderResult(
         val tileX: Int,
         val tileZ: Int,
         val solidHeightField: Heightfield,
         val compactHeightField: CompactHeightfield,
-        val countourSet: ContourSet,
+        val contourSet: ContourSet,
         val mesh: PolyMesh,
         val meshDetail: PolyMeshDetail?,
-        val telemetry: Telemetry
+        val telemetry: Telemetry?
     )
 
     fun buildTiles(geom: InputGeomProvider, cfg: RecastConfig, executor: Executor?): List<RecastBuilderResult> {
@@ -123,14 +124,14 @@ class RecastBuilder {
 
     fun build(
         tileX: Int, tileZ: Int, geom: ConvexVolumeProvider?, cfg: RecastConfig, solid: Heightfield,
-        ctx: Telemetry
+        ctx: Telemetry?
     ): RecastBuilderResult {
         filterHeightfield(solid, cfg, ctx)
         val chf = buildCompactHeightfield(geom, cfg, ctx, solid)
 
         // Partition the heightfield so that we can use simple algorithm later
         // to triangulate the walkable areas.
-        // There are 3 martitioning methods, each with some pros and cons:
+        // There are 3 partitioning methods, each with some pros and cons:
         // 1) Watershed partitioning
         // - the classic Recast partitioning
         // - creates the nicest tessellation
@@ -145,14 +146,14 @@ class RecastBuilder {
         // stairs), this make triangulation to fail
         // * generally the best choice if you precompute the nacmesh, use this
         // if you have large open areas
-        // 2) Monotone partioning
+        // 2) Monotone portioning
         // - fastest
         // - partitions the heightfield into regions without holes and overlaps
         // (guaranteed)
         // - creates long thin polygons, which sometimes causes paths with
         // detours
         // * use this if you want fast navmesh generation
-        // 3) Layer partitoining
+        // 3) Layer partitioning
         // - quite fast
         // - partitions the heighfield into non-overlapping regions
         // - relies on the triangulation code to cope with holes (thus slower
@@ -196,7 +197,7 @@ class RecastBuilder {
         val pmesh = RecastMesh.buildPolyMesh(ctx, cset, cfg.maxVerticesPerPoly)
 
         //
-        // Step 7. Create detail mesh which allows to access approximate height
+        // Step 7. Create detail mesh, which allows to access approximate height
         // on each polygon.
         //
         val dmesh = if (cfg.buildMeshDetail)
@@ -208,7 +209,7 @@ class RecastBuilder {
     /*
      * Step 2. Filter walkable surfaces.
      */
-    private fun filterHeightfield(solid: Heightfield, cfg: RecastConfig, ctx: Telemetry) {
+    private fun filterHeightfield(solid: Heightfield, cfg: RecastConfig, ctx: Telemetry?) {
         // Once all geometry is rasterized, we do initial pass of filtering to
         // remove unwanted overhangs caused by the conservative rasterization
         // as well as filter spans where the character cannot possibly stand.
@@ -225,7 +226,7 @@ class RecastBuilder {
 
     /** Step 3. Partition walkable surface to simple regions.  */
     private fun buildCompactHeightfield(
-        volumeProvider: ConvexVolumeProvider?, cfg: RecastConfig, ctx: Telemetry,
+        volumeProvider: ConvexVolumeProvider?, cfg: RecastConfig, ctx: Telemetry?,
         solid: Heightfield
     ): CompactHeightfield {
         // Compact the heightfield so that it is faster to handle from now on.

@@ -37,21 +37,21 @@ object RecastContour {
 
         // Combine region and area codes in order to prevent
         // border vertices which are in between two areas to be removed.
-        regs[0] = chf.spans[i].reg or (chf.areas[i] shl 16)
+        regs[0] = chf.spans[i].regionId or (chf.areas[i] shl 16)
         if (RecastCommon.getCon(s, dir) != RecastConstants.RC_NOT_CONNECTED) {
             val ax = x + RecastCommon.getDirOffsetX(dir)
             val ay = y + RecastCommon.getDirOffsetY(dir)
             val ai = chf.cells[ax + ay * chf.width].index + RecastCommon.getCon(s, dir)
             val `as` = chf.spans[ai]
             ch = Math.max(ch, `as`.y)
-            regs[1] = chf.spans[ai].reg or (chf.areas[ai] shl 16)
+            regs[1] = chf.spans[ai].regionId or (chf.areas[ai] shl 16)
             if (RecastCommon.getCon(`as`, dirp) != RecastConstants.RC_NOT_CONNECTED) {
                 val ax2 = ax + RecastCommon.getDirOffsetX(dirp)
                 val ay2 = ay + RecastCommon.getDirOffsetY(dirp)
                 val ai2 = chf.cells[ax2 + ay2 * chf.width].index + RecastCommon.getCon(`as`, dirp)
                 val as2 = chf.spans[ai2]
                 ch = Math.max(ch, as2.y)
-                regs[2] = chf.spans[ai2].reg or (chf.areas[ai2] shl 16)
+                regs[2] = chf.spans[ai2].regionId or (chf.areas[ai2] shl 16)
             }
         }
         if (RecastCommon.getCon(s, dirp) != RecastConstants.RC_NOT_CONNECTED) {
@@ -60,14 +60,14 @@ object RecastContour {
             val ai = chf.cells[ax + ay * chf.width].index + RecastCommon.getCon(s, dirp)
             val `as` = chf.spans[ai]
             ch = Math.max(ch, `as`.y)
-            regs[3] = chf.spans[ai].reg or (chf.areas[ai] shl 16)
+            regs[3] = chf.spans[ai].regionId or (chf.areas[ai] shl 16)
             if (RecastCommon.getCon(`as`, dir) != RecastConstants.RC_NOT_CONNECTED) {
                 val ax2 = ax + RecastCommon.getDirOffsetX(dir)
                 val ay2 = ay + RecastCommon.getDirOffsetY(dir)
                 val ai2 = chf.cells[ax2 + ay2 * chf.width].index + RecastCommon.getCon(`as`, dir)
                 val as2 = chf.spans[ai2]
                 ch = Math.max(ch, as2.y)
-                regs[2] = chf.spans[ai2].reg or (chf.areas[ai2] shl 16)
+                regs[2] = chf.spans[ai2].regionId or (chf.areas[ai2] shl 16)
             }
         }
 
@@ -92,9 +92,7 @@ object RecastContour {
     }
 
     private fun walkContour(
-        x: Int,
-        y: Int,
-        i: Int,
+        x: Int, y: Int, i: Int,
         chf: CompactHeightfield,
         flags: IntArray,
         points: IntArrayList
@@ -131,7 +129,7 @@ object RecastContour {
                     val ax = x + RecastCommon.getDirOffsetX(dir)
                     val ay = y + RecastCommon.getDirOffsetY(dir)
                     val ai = chf.cells[ax + ay * chf.width].index + RecastCommon.getCon(s, dir)
-                    r = chf.spans[ai].reg
+                    r = chf.spans[ai].regionId
                     if (area != chf.areas[ai]) isAreaBorder = true
                 }
                 if (isBorderVertex[0]) r = r or RecastConstants.RC_BORDER_VERTEX
@@ -658,48 +656,40 @@ object RecastContour {
         for (y in 0 until h) {
             for (x in 0 until w) {
                 val c = chf.cells[x + y * w]
-                var i = c.index
-                val ni = c.index + c.count
-                while (i < ni) {
+                for (i in c.index until c.index + c.count) {
                     var res = 0
                     val s = chf.spans[i]
-                    if (chf.spans[i].reg == 0 || chf.spans[i].reg and RecastConstants.RC_BORDER_REG != 0) {
+                    if (chf.spans[i].regionId == 0 || chf.spans[i].regionId and RecastConstants.RC_BORDER_REG != 0) {
                         flags[i] = 0
-                        ++i
                         continue
                     }
                     for (dir in 0..3) {
-                        var r = 0
+                        var regionId = 0
                         if (RecastCommon.getCon(s, dir) != RecastConstants.RC_NOT_CONNECTED) {
                             val ax = x + RecastCommon.getDirOffsetX(dir)
                             val ay = y + RecastCommon.getDirOffsetY(dir)
                             val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, dir)
-                            r = chf.spans[ai].reg
+                            regionId = chf.spans[ai].regionId
                         }
-                        if (r == chf.spans[i].reg) res = res or (1 shl dir)
+                        if (regionId == chf.spans[i].regionId) res = res or (1 shl dir)
                     }
-                    flags[i] = res xor 0xf // Inverse, mark non connected edges.
-                    ++i
+                    flags[i] = res xor 0xf // Inverse, mark non-connected edges.
                 }
             }
         }
         ctx?.stopTimer("CONTOURS_TRACE")
-        val vertices= IntArrayList(256)
-        val simplified= IntArrayList(64)
+        val vertices = IntArrayList(256)
+        val simplified = IntArrayList(64)
         for (y in 0 until h) {
             for (x in 0 until w) {
                 val c = chf.cells[x + y * w]
-                var i = c.index
-                val ni = c.index + c.count
-                while (i < ni) {
+                for (i in c.index until c.index + c.count) {
                     if (flags[i] == 0 || flags[i] == 0xf) {
                         flags[i] = 0
-                        ++i
                         continue
                     }
-                    val reg = chf.spans[i].reg
+                    val reg = chf.spans[i].regionId
                     if (reg == 0 || reg and RecastConstants.RC_BORDER_REG != 0) {
-                        ++i
                         continue
                     }
                     val area = chf.areas[i]
@@ -715,6 +705,7 @@ object RecastContour {
 
                     // Store region->contour remap info.
                     // Create contour.
+                    println("simplified: ${simplified.size} from ${vertices.size} vertices")
                     if (simplified.size / 4 >= 3) {
                         val cont = Contour()
                         cset.contours.add(cont)
@@ -746,7 +737,6 @@ object RecastContour {
                         cont.reg = reg
                         cont.area = area
                     }
-                    ++i
                 }
             }
         }

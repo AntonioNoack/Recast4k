@@ -21,15 +21,7 @@ package org.recast4j.recast
 import org.joml.Vector3f
 
 /** A compact, static heightfield representing unobstructed space.  */
-class CompactHeightfield {
-    /** The width of the heightfield. (Along the x-axis in cell units.)  */
-    var width = 0
-
-    /** The height of the heightfield. (Along the z-axis in cell units.)  */
-    var height = 0
-
-    /** The number of spans in the heightfield.  */
-    var spanCount = 0
+class CompactHeightfield(val width: Int, val height: Int, val spanCount: Int) {
 
     /** The walkable height used during the build of the field. (See: RecastConfig::walkableHeight)  */
     var walkableHeight = 0
@@ -59,14 +51,14 @@ class CompactHeightfield {
     var cellHeight = 0f
 
     /** Array of cells. [Size: #width*#height]  */
-    lateinit var cells: Array<CompactCell>
+    val cells = Array(width * height) { CompactCell() }
 
     /** Array of spans. [Size: #spanCount]  */
-    lateinit var spans: Array<CompactSpan>
+    val spans = Array(spanCount) { CompactSpan() }
 
     /** Array containing border distance data. [Size: #spanCount]  */
-    lateinit var dist: IntArray
+    val dist = IntArray(spanCount)
 
     /** Array containing area id data. [Size: #spanCount]  */
-    lateinit var areas: IntArray
+    val areas = IntArray(spanCount)
 }

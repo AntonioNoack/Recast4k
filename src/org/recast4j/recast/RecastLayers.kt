@@ -65,12 +65,9 @@ object RecastLayers {
             var sweepId = 0
             for (x in borderSize until w - borderSize) {
                 val c = chf.cells[x + y * w]
-                var i = c.index
-                val ni = c.index + c.count
-                while (i < ni) {
+                for (i in c.index until c.index + c.count) {
                     val s = chf.spans[i]
                     if (chf.areas[i] == RC_NULL_AREA) {
-                        ++i
                         continue
                     }
                     var sid = 0xFF
@@ -110,7 +107,6 @@ object RecastLayers {
                         }
                     }
                     srcReg[i] = sid
-                    ++i
                 }
             }
 
@@ -133,11 +129,9 @@ object RecastLayers {
             // Remap local sweep ids to region ids.
             for (x in borderSize until w - borderSize) {
                 val c = chf.cells[x + y * w]
-                var i = c.index
-                val ni = c.index + c.count
-                while (i < ni) {
-                    if (srcReg[i] != 0xff) srcReg[i] = sweeps[srcReg[i]]!!.regionId
-                    ++i
+                for (i in c.index until c.index + c.count) {
+                    if (srcReg[i] != 0xff)
+                        srcReg[i] = sweeps[srcReg[i]]!!.regionId
                 }
             }
         }
@@ -151,33 +145,28 @@ object RecastLayers {
             for (x in 0 until w) {
                 val c = chf.cells[x + y * w]
                 lregs.clear()
-                run {
-                    var i = c.index
-                    val ni = c.index + c.count
-                    while (i < ni) {
-                        val s = chf.spans[i]
-                        val ri = srcReg[i]
-                        if (ri == 0xff) {
-                            ++i
-                            continue
-                        }
-                        regions[ri].yMin = min(regions[ri].yMin, s.y)
-                        regions[ri].yMax = max(regions[ri].yMax, s.y)
 
-                        // Collect all region layers.
-                        lregs.add(ri)
+                for (i in c.index until c.index + c.count) {
+                    val s = chf.spans[i]
+                    val ri = srcReg[i]
+                    if (ri == 0xff) {
+                        continue
+                    }
+                    regions[ri].yMin = min(regions[ri].yMin, s.y)
+                    regions[ri].yMax = max(regions[ri].yMax, s.y)
 
-                        // Update neighbours
-                        for (dir in 0..3) {
-                            if (getCon(s, dir) != RC_NOT_CONNECTED) {
-                                val ax: Int = x + getDirOffsetX(dir)
-                                val ay: Int = y + getDirOffsetY(dir)
-                                val ai: Int = chf.cells[ax + ay * w].index + getCon(s, dir)
-                                val rai = srcReg[ai]
-                                if (rai != 0xff && rai != ri) addUnique(regions[ri].neis, rai)
-                            }
+                    // Collect all region layers.
+                    lregs.add(ri)
+
+                    // Update neighbours
+                    for (dir in 0..3) {
+                        if (getCon(s, dir) != RC_NOT_CONNECTED) {
+                            val ax: Int = x + getDirOffsetX(dir)
+                            val ay: Int = y + getDirOffsetY(dir)
+                            val ai: Int = chf.cells[ax + ay * w].index + getCon(s, dir)
+                            val rai = srcReg[ai]
+                            if (rai != 0xff && rai != ri) addUnique(regions[ri].neis, rai)
                         }
-                        ++i
                     }
                 }
 
@@ -197,7 +186,7 @@ object RecastLayers {
 
         // Create 2D layers from regions.
         var layerId = 0
-        val stack= IntArrayList()
+        val stack = IntArrayList()
         for (i in 0 until nregs) {
             val root = regions[i]
             // Skip already visited.

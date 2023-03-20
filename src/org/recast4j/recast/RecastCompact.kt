@@ -41,16 +41,13 @@ object RecastCompact {
         hf: Heightfield
     ): CompactHeightfield {
         ctx?.startTimer("BUILD_COMPACTHEIGHTFIELD")
-        val chf = CompactHeightfield()
         val w = hf.width
         val h = hf.height
         val spanCount = getHeightFieldSpanCount(hf)
+        val chf = CompactHeightfield(w, h, spanCount)
 
         // Fill in header.
-        chf.width = w
-        chf.height = h
         chf.borderSize = hf.borderSize
-        chf.spanCount = spanCount
         chf.walkableHeight = walkableHeight
         chf.walkableClimb = walkableClimb
         chf.maxRegions = 0
@@ -59,9 +56,6 @@ object RecastCompact {
         chf.bmax.y = chf.bmax.y + walkableHeight * hf.cellHeight
         chf.cellSize = hf.cellSize
         chf.cellHeight = hf.cellHeight
-        chf.cells = Array(w * h) { CompactCell() }
-        chf.spans = Array(spanCount) { CompactSpan() }
-        chf.areas = IntArray(spanCount)
         // Fill in cells and spans.
         var idx = 0
         for (y in 0 until h) {
@@ -76,7 +70,7 @@ object RecastCompact {
                         val bot = s.max
                         val top = s.next?.min ?: MAX_HEIGHT
                         chf.spans[idx].y = Vectors.clamp(bot, 0, MAX_HEIGHT)
-                        chf.spans[idx].h = Vectors.clamp(top - bot, 0, MAX_HEIGHT)
+                        chf.spans[idx].height = Vectors.clamp(top - bot, 0, MAX_HEIGHT)
                         chf.areas[idx] = s.area
                         idx++
                         c.count++
@@ -91,15 +85,13 @@ object RecastCompact {
         for (y in 0 until h) {
             for (x in 0 until w) {
                 val c = chf.cells[x + y * w]
-                var i = c.index
-                val ni = c.index + c.count
-                while (i < ni) {
+                for (i in c.index until c.index + c.count) {
                     val s = chf.spans[i]
                     for (dir in 0..3) {
                         setCon(s, dir, RC_NOT_CONNECTED)
                         val nx = x + getDirOffsetX(dir)
                         val ny = y + getDirOffsetY(dir)
-                        // First check that the neighbour cell is in bounds.
+                        // First check, that the neighbour cell is in bounds.
                         if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue
 
                         // Iterate over all neighbour spans and check if any of the is
@@ -110,7 +102,7 @@ object RecastCompact {
                         while (k < nk) {
                             val ns = chf.spans[k]
                             val bot = max(s.y, ns.y)
-                            val top = min(s.y + s.h, ns.y + ns.h)
+                            val top = min(s.y + s.height, ns.y + ns.height)
 
                             // Check that the gap between the spans is walkable,
                             // and that the climb height between the gaps is not too high.
@@ -128,7 +120,6 @@ object RecastCompact {
                             ++k
                         }
                     }
-                    ++i
                 }
             }
         }
