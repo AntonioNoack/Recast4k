@@ -38,8 +38,8 @@ object RecastRegion {
         // Mark boundary cells.
         for (y in 0 until h) {
             for (x in 0 until w) {
-                val c = chf.cells[x + y * w]
-                for (i in c.index until c.index + c.count) {
+                val c = x + y * w
+                for (i in chf.index[c] until chf.endIndex[c]) {
                     val s = chf.spans[i]
                     val area = chf.areas[i]
                     var nc = 0
@@ -47,7 +47,7 @@ object RecastRegion {
                         if (RecastCommon.getCon(s, dir) != RecastConstants.RC_NOT_CONNECTED) {
                             val ax = x + RecastCommon.getDirOffsetX(dir)
                             val ay = y + RecastCommon.getDirOffsetY(dir)
-                            val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, dir)
+                            val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, dir)
                             if (area == chf.areas[ai]) {
                                 nc++
                             }
@@ -63,24 +63,24 @@ object RecastRegion {
         // Pass 1
         for (y in 0 until h) {
             for (x in 0 until w) {
-                val c = chf.cells[x + y * w]
-                for (i in c.index until c.index + c.count) {
+                val c = x + y * w
+                for (i in chf.index[c] until chf.endIndex[c]) {
                     val s = chf.spans[i]
                     if (RecastCommon.getCon(s, 0) != RecastConstants.RC_NOT_CONNECTED) {
                         // (-1,0)
                         val ax = x + RecastCommon.getDirOffsetX(0)
                         val ay = y + RecastCommon.getDirOffsetY(0)
-                        val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, 0)
-                        val `as` = chf.spans[ai]
+                        val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 0)
+                        val asp = chf.spans[ai]
                         if (src[ai] + 2 < src[i]) {
                             src[i] = src[ai] + 2
                         }
 
                         // (-1,-1)
-                        if (RecastCommon.getCon(`as`, 3) != RecastConstants.RC_NOT_CONNECTED) {
+                        if (RecastCommon.getCon(asp, 3) != RecastConstants.RC_NOT_CONNECTED) {
                             val aax = ax + RecastCommon.getDirOffsetX(3)
                             val aay = ay + RecastCommon.getDirOffsetY(3)
-                            val aai = chf.cells[aax + aay * w].index + RecastCommon.getCon(`as`, 3)
+                            val aai = chf.index[aax + aay * w] + RecastCommon.getCon(asp, 3)
                             if (src[aai] + 3 < src[i]) {
                                 src[i] = src[aai] + 3
                             }
@@ -90,17 +90,17 @@ object RecastRegion {
                         // (0,-1)
                         val ax = x + RecastCommon.getDirOffsetX(3)
                         val ay = y + RecastCommon.getDirOffsetY(3)
-                        val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, 3)
-                        val `as` = chf.spans[ai]
+                        val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 3)
+                        val asp = chf.spans[ai]
                         if (src[ai] + 2 < src[i]) {
                             src[i] = src[ai] + 2
                         }
 
                         // (1,-1)
-                        if (RecastCommon.getCon(`as`, 2) != RecastConstants.RC_NOT_CONNECTED) {
+                        if (RecastCommon.getCon(asp, 2) != RecastConstants.RC_NOT_CONNECTED) {
                             val aax = ax + RecastCommon.getDirOffsetX(2)
                             val aay = ay + RecastCommon.getDirOffsetY(2)
-                            val aai = chf.cells[aax + aay * w].index + RecastCommon.getCon(`as`, 2)
+                            val aai = chf.index[aax + aay * w] + RecastCommon.getCon(asp, 2)
                             if (src[aai] + 3 < src[i]) {
                                 src[i] = src[aai] + 3
                             }
@@ -113,24 +113,24 @@ object RecastRegion {
         // Pass 2
         for (y in h - 1 downTo 0) {
             for (x in w - 1 downTo 0) {
-                val c = chf.cells[x + y * w]
-                for (i in c.index until c.index + c.count) {
+                val c = x + y * w
+                for (i in chf.index[c] until chf.endIndex[c]) {
                     val s = chf.spans[i]
                     if (RecastCommon.getCon(s, 2) != RecastConstants.RC_NOT_CONNECTED) {
                         // (1,0)
                         val ax = x + RecastCommon.getDirOffsetX(2)
                         val ay = y + RecastCommon.getDirOffsetY(2)
-                        val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, 2)
-                        val `as` = chf.spans[ai]
+                        val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 2)
+                        val asp = chf.spans[ai]
                         if (src[ai] + 2 < src[i]) {
                             src[i] = src[ai] + 2
                         }
 
                         // (1,1)
-                        if (RecastCommon.getCon(`as`, 1) != RecastConstants.RC_NOT_CONNECTED) {
+                        if (RecastCommon.getCon(asp, 1) != RecastConstants.RC_NOT_CONNECTED) {
                             val aax = ax + RecastCommon.getDirOffsetX(1)
                             val aay = ay + RecastCommon.getDirOffsetY(1)
-                            val aai = chf.cells[aax + aay * w].index + RecastCommon.getCon(`as`, 1)
+                            val aai = chf.index[aax + aay * w] + RecastCommon.getCon(asp, 1)
                             if (src[aai] + 3 < src[i]) {
                                 src[i] = src[aai] + 3
                             }
@@ -140,17 +140,17 @@ object RecastRegion {
                         // (0,1)
                         val ax = x + RecastCommon.getDirOffsetX(1)
                         val ay = y + RecastCommon.getDirOffsetY(1)
-                        val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, 1)
-                        val `as` = chf.spans[ai]
+                        val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 1)
+                        val asp = chf.spans[ai]
                         if (src[ai] + 2 < src[i]) {
                             src[i] = src[ai] + 2
                         }
 
                         // (-1,1)
-                        if (RecastCommon.getCon(`as`, 0) != RecastConstants.RC_NOT_CONNECTED) {
+                        if (RecastCommon.getCon(asp, 0) != RecastConstants.RC_NOT_CONNECTED) {
                             val aax = ax + RecastCommon.getDirOffsetX(0)
                             val aay = ay + RecastCommon.getDirOffsetY(0)
-                            val aai = chf.cells[aax + aay * w].index + RecastCommon.getCon(`as`, 0)
+                            val aai = chf.index[aax + aay * w] + RecastCommon.getCon(asp, 0)
                             if (src[aai] + 3 < src[i]) {
                                 src[i] = src[aai] + 3
                             }
@@ -173,8 +173,8 @@ object RecastRegion {
         val thr = 2
         for (y in 0 until h) {
             for (x in 0 until w) {
-                val c = chf.cells[x + y * w]
-                for (i in c.index until c.index + c.count) {
+                val c = x + y * w
+                for (i in chf.index[c] until chf.endIndex[c]) {
                     val s = chf.spans[i]
                     val cd = src[i]
                     if (cd <= thr) {
@@ -186,14 +186,14 @@ object RecastRegion {
                         if (RecastCommon.getCon(s, dir) != RecastConstants.RC_NOT_CONNECTED) {
                             val ax = x + RecastCommon.getDirOffsetX(dir)
                             val ay = y + RecastCommon.getDirOffsetY(dir)
-                            val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, dir)
+                            val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, dir)
                             d += src[ai]
-                            val `as` = chf.spans[ai]
+                            val asp = chf.spans[ai]
                             val dir2 = dir + 1 and 0x3
-                            d += if (RecastCommon.getCon(`as`, dir2) != RecastConstants.RC_NOT_CONNECTED) {
+                            d += if (RecastCommon.getCon(asp, dir2) != RecastConstants.RC_NOT_CONNECTED) {
                                 val ax2 = ax + RecastCommon.getDirOffsetX(dir2)
                                 val ay2 = ay + RecastCommon.getDirOffsetY(dir2)
-                                val ai2 = chf.cells[ax2 + ay2 * w].index + RecastCommon.getCon(`as`, dir2)
+                                val ai2 = chf.index[ax2 + ay2 * w] + RecastCommon.getCon(asp, dir2)
                                 src[ai2]
                             } else {
                                 cd
@@ -238,7 +238,7 @@ object RecastRegion {
                 if (RecastCommon.getCon(cs, dir) != RecastConstants.RC_NOT_CONNECTED) {
                     val ax = cx + RecastCommon.getDirOffsetX(dir)
                     val ay = cy + RecastCommon.getDirOffsetY(dir)
-                    val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(cs, dir)
+                    val ai = chf.index[ax + ay * w] + RecastCommon.getCon(cs, dir)
                     if (chf.areas[ai] != area) {
                         continue
                     }
@@ -250,12 +250,12 @@ object RecastRegion {
                         ar = nr
                         break
                     }
-                    val `as` = chf.spans[ai]
+                    val asp = chf.spans[ai]
                     val dir2 = dir + 1 and 0x3
-                    if (RecastCommon.getCon(`as`, dir2) != RecastConstants.RC_NOT_CONNECTED) {
+                    if (RecastCommon.getCon(asp, dir2) != RecastConstants.RC_NOT_CONNECTED) {
                         val ax2 = ax + RecastCommon.getDirOffsetX(dir2)
                         val ay2 = ay + RecastCommon.getDirOffsetY(dir2)
-                        val ai2 = chf.cells[ax2 + ay2 * w].index + RecastCommon.getCon(`as`, dir2)
+                        val ai2 = chf.index[ax2 + ay2 * w] + RecastCommon.getCon(asp, dir2)
                         if (chf.areas[ai2] != area) {
                             continue
                         }
@@ -278,7 +278,7 @@ object RecastRegion {
                 if (RecastCommon.getCon(cs, dir) != RecastConstants.RC_NOT_CONNECTED) {
                     val ax = cx + RecastCommon.getDirOffsetX(dir)
                     val ay = cy + RecastCommon.getDirOffsetY(dir)
-                    val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(cs, dir)
+                    val ai = chf.index[ax + ay * w] + RecastCommon.getCon(cs, dir)
                     if (chf.areas[ai] != area) {
                         continue
                     }
@@ -306,8 +306,8 @@ object RecastRegion {
             stack.clear()
             for (y in 0 until h) {
                 for (x in 0 until w) {
-                    val c = chf.cells[x + y * w]
-                    for (i in c.index until c.index + c.count) {
+                    val c = x + y * w
+                    for (i in chf.index[c] until chf.endIndex[c]) {
                         if (chf.dist[i] >= level && srcReg[i] == 0 && chf.areas[i] != RecastConstants.RC_NULL_AREA) {
                             stack.add(x)
                             stack.add(y)
@@ -353,7 +353,7 @@ object RecastRegion {
                     }
                     val ax = x + RecastCommon.getDirOffsetX(dir)
                     val ay = y + RecastCommon.getDirOffsetY(dir)
-                    val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, dir)
+                    val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, dir)
                     if (chf.areas[ai] != area) {
                         continue
                     }
@@ -410,8 +410,8 @@ object RecastRegion {
         // put all cells in the level range into the appropriate stacks
         for (y in 0 until h) {
             for (x in 0 until w) {
-                val c = chf.cells[x + y * w]
-                for (i in c.index until c.index + c.count) {
+                val c = x + y * w
+                for (i in chf.index[c] until chf.endIndex[c]) {
                     if (chf.areas[i] == RecastConstants.RC_NULL_AREA || srcReg[i] != 0) {
                         continue
                     }
@@ -579,7 +579,7 @@ object RecastRegion {
         if (RecastCommon.getCon(s, dir) != RecastConstants.RC_NOT_CONNECTED) {
             val ax = x + RecastCommon.getDirOffsetX(dir)
             val ay = y + RecastCommon.getDirOffsetY(dir)
-            val ai = chf.cells[ax + ay * chf.width].index + RecastCommon.getCon(s, dir)
+            val ai = chf.index[ax + ay * chf.width] + RecastCommon.getCon(s, dir)
             r = srcReg[ai]
         }
         return r != srcReg[i]
@@ -600,7 +600,7 @@ object RecastRegion {
         if (RecastCommon.getCon(ss, dir) != RecastConstants.RC_NOT_CONNECTED) {
             val ax = x + RecastCommon.getDirOffsetX(dir)
             val ay = y + RecastCommon.getDirOffsetY(dir)
-            val ai = chf.cells[ax + ay * chf.width].index + RecastCommon.getCon(ss, dir)
+            val ai = chf.index[ax + ay * chf.width] + RecastCommon.getCon(ss, dir)
             curReg = srcReg[ai]
         }
         cont.add(curReg)
@@ -613,7 +613,7 @@ object RecastRegion {
                 if (RecastCommon.getCon(s, dir) != RecastConstants.RC_NOT_CONNECTED) {
                     val ax = x + RecastCommon.getDirOffsetX(dir)
                     val ay = y + RecastCommon.getDirOffsetY(dir)
-                    val ai = chf.cells[ax + ay * chf.width].index + RecastCommon.getCon(s, dir)
+                    val ai = chf.index[ax + ay * chf.width] + RecastCommon.getCon(s, dir)
                     r = srcReg[ai]
                 }
                 if (r != curReg) {
@@ -626,8 +626,7 @@ object RecastRegion {
                 val nx = x + RecastCommon.getDirOffsetX(dir)
                 val ny = y + RecastCommon.getDirOffsetY(dir)
                 if (RecastCommon.getCon(s, dir) != RecastConstants.RC_NOT_CONNECTED) {
-                    val nc = chf.cells[nx + ny * chf.width]
-                    ni = nc.index + RecastCommon.getCon(s, dir)
+                    ni = chf.index[nx + ny * chf.width] + RecastCommon.getCon(s, dir)
                 }
                 if (ni == -1) {
                     // Should not happen.
@@ -675,8 +674,8 @@ object RecastRegion {
         // Find edge of a region and find connections around the contour.
         for (y in 0 until h) {
             for (x in 0 until w) {
-                val c = chf.cells[x + y * w]
-                for (i in c.index until c.index + c.count) {
+                val c = x + y * w
+                for (i in chf.index[c] until chf.endIndex[c]) {
                     val r = srcReg[i]
                     if (r == 0 || r >= nreg) {
                         continue
@@ -685,7 +684,7 @@ object RecastRegion {
                     reg!!.spanCount++
 
                     // Update floors.
-                    for (j in c.index until c.index + c.count) {
+                    for (j in chf.index[c] until chf.endIndex[c]) {
                         if (i == j) continue
                         val floorId = srcReg[j]
                         if (floorId == 0 || floorId >= nreg) continue
@@ -912,10 +911,10 @@ object RecastRegion {
         val lregs = IntArrayList(32)
         for (y in 0 until h) {
             for (x in 0 until w) {
-                val c = chf.cells[x + y * w]
+                val c = x + y * w
                 lregs.clear()
 
-                for (i in c.index until c.index + c.count) {
+                for (i in chf.index[c] until chf.endIndex[c]) {
                     val s = chf.spans[i]
                     val ri = srcReg[i]
                     if (ri == 0 || ri >= nreg) {
@@ -934,7 +933,7 @@ object RecastRegion {
                         if (RecastCommon.getCon(s, dir) != RecastConstants.RC_NOT_CONNECTED) {
                             val ax = x + RecastCommon.getDirOffsetX(dir)
                             val ay = y + RecastCommon.getDirOffsetY(dir)
-                            val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, dir)
+                            val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, dir)
                             val rai = srcReg[ai]
                             if (rai in 1 until nreg && rai != ri) {
                                 addUniqueConnection(reg, rai)
@@ -1097,7 +1096,7 @@ object RecastRegion {
         src = boxBlur(chf, src)
 
         // Store distance.
-        chf.dist = src
+        System.arraycopy(src, 0, chf.dist, 0, src.size)
         ctx?.stopTimer("DISTANCEFIELD_BLUR")
         ctx?.stopTimer("DISTANCEFIELD")
     }
@@ -1109,8 +1108,8 @@ object RecastRegion {
         val w = chf.width
         for (y in miny until maxy) {
             for (x in minx until maxx) {
-                val c = chf.cells[x + y * w]
-                for (i in c.index until c.index + c.count) {
+                val c = x + y * w
+                for (i in chf.index[c] until chf.endIndex[c]) {
                     if (chf.areas[i] != RecastConstants.RC_NULL_AREA) {
                         srcReg[i] = regId
                     }
@@ -1181,8 +1180,8 @@ object RecastRegion {
             }
             var rid = 1
             for (x in borderSize until w - borderSize) {
-                val c = chf.cells[x + y * w]
-                for (i in c.index until c.index + c.count) {
+                val c = x + y * w
+                for (i in chf.index[c] until chf.endIndex[c]) {
                     val s = chf.spans[i]
                     if (chf.areas[i] == RecastConstants.RC_NULL_AREA) {
                         continue
@@ -1193,7 +1192,7 @@ object RecastRegion {
                     if (RecastCommon.getCon(s, 0) != RecastConstants.RC_NOT_CONNECTED) {
                         val ax = x + RecastCommon.getDirOffsetX(0)
                         val ay = y + RecastCommon.getDirOffsetY(0)
-                        val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, 0)
+                        val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 0)
                         if (srcReg[ai] and RecastConstants.RC_BORDER_REG == 0 && chf.areas[i] == chf.areas[ai]) {
                             previd = srcReg[ai]
                         }
@@ -1209,7 +1208,7 @@ object RecastRegion {
                     if (RecastCommon.getCon(s, 3) != RecastConstants.RC_NOT_CONNECTED) {
                         val ax = x + RecastCommon.getDirOffsetX(3)
                         val ay = y + RecastCommon.getDirOffsetY(3)
-                        val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, 3)
+                        val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 3)
                         if (srcReg[ai] != 0 && srcReg[ai] and RecastConstants.RC_BORDER_REG == 0 && chf.areas[i] == chf.areas[ai]) {
                             val nr = srcReg[ai]
                             if (sweeps[previd]!!.neighborId == 0 || sweeps[previd]!!.neighborId == nr) {
@@ -1239,8 +1238,8 @@ object RecastRegion {
 
             // Remap IDs
             for (x in borderSize until w - borderSize) {
-                val c = chf.cells[x + y * w]
-                for (i in c.index until c.index + c.count) {
+                val c = x + y * w
+                for (i in chf.index[c] until chf.endIndex[c]) {
                     if (srcReg[i] in 1 until rid) {
                         srcReg[i] = sweeps[srcReg[i]]!!.regionId
                     }
@@ -1421,8 +1420,8 @@ object RecastRegion {
             }
             var rid = 1
             for (x in borderSize until w - borderSize) {
-                val c = chf.cells[x + y * w]
-                for (i in c.index until c.index + c.count) {
+                val c = x + y * w
+                for (i in chf.index[c] until chf.endIndex[c]) {
                     val s = chf.spans[i]
                     if (chf.areas[i] == RecastConstants.RC_NULL_AREA) {
                         continue
@@ -1433,7 +1432,7 @@ object RecastRegion {
                     if (RecastCommon.getCon(s, 0) != RecastConstants.RC_NOT_CONNECTED) {
                         val ax = x + RecastCommon.getDirOffsetX(0)
                         val ay = y + RecastCommon.getDirOffsetY(0)
-                        val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, 0)
+                        val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 0)
                         if (srcReg[ai] and RecastConstants.RC_BORDER_REG == 0 && chf.areas[i] == chf.areas[ai]) {
                             previd = srcReg[ai]
                         }
@@ -1449,7 +1448,7 @@ object RecastRegion {
                     if (RecastCommon.getCon(s, 3) != RecastConstants.RC_NOT_CONNECTED) {
                         val ax = x + RecastCommon.getDirOffsetX(3)
                         val ay = y + RecastCommon.getDirOffsetY(3)
-                        val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, 3)
+                        val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 3)
                         if (srcReg[ai] != 0 && srcReg[ai] and RecastConstants.RC_BORDER_REG == 0 && chf.areas[i] == chf.areas[ai]) {
                             val nr = srcReg[ai]
                             if (sweeps[previd]!!.neighborId == 0 || sweeps[previd]!!.neighborId == nr) {
@@ -1479,8 +1478,8 @@ object RecastRegion {
 
             // Remap IDs
             for (x in borderSize until w - borderSize) {
-                val c = chf.cells[x + y * w]
-                for (i in c.index until c.index + c.count) {
+                val c = x + y * w
+                for (i in chf.index[c] until chf.endIndex[c]) {
                     if (srcReg[i] in 1 until rid) {
                         srcReg[i] = sweeps[srcReg[i]]!!.regionId
                     }

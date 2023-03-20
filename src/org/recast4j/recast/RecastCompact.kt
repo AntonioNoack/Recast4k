@@ -62,9 +62,9 @@ object RecastCompact {
             for (x in 0 until w) {
                 var s: Span? = hf.spans[x + y * w] ?: continue
                 // If there are no spans at this cell, just leave the data to index=0, count=0.
-                val c = chf.cells[x + y * w]
-                c.index = idx
-                c.count = 0
+                val c = x + y * w
+                chf.index[c] = idx
+                chf.endIndex[c] = idx
                 while (s != null) {
                     if (s.area != RC_NULL_AREA) {
                         val bot = s.max
@@ -73,7 +73,7 @@ object RecastCompact {
                         chf.spans[idx].height = Vectors.clamp(top - bot, 0, MAX_HEIGHT)
                         chf.areas[idx] = s.area
                         idx++
-                        c.count++
+                        chf.endIndex[c]++
                     }
                     s = s.next
                 }
@@ -84,8 +84,8 @@ object RecastCompact {
         var tooHighNeighbour = 0
         for (y in 0 until h) {
             for (x in 0 until w) {
-                val c = chf.cells[x + y * w]
-                for (i in c.index until c.index + c.count) {
+                val c = x + y * w
+                for (i in chf.index[c] until chf.endIndex[c]) {
                     val s = chf.spans[i]
                     for (dir in 0..3) {
                         setCon(s, dir, RC_NOT_CONNECTED)
@@ -96,28 +96,25 @@ object RecastCompact {
 
                         // Iterate over all neighbour spans and check if any of the is
                         // accessible from current cell.
-                        val nc = chf.cells[nx + ny * w]
-                        var k = nc.index
-                        val nk = nc.index + nc.count
-                        while (k < nk) {
+                        val nc = nx + ny * w
+                        val ncIndex = chf.index[nc]
+                        for (k in ncIndex until chf.endIndex[nc]) {
                             val ns = chf.spans[k]
                             val bot = max(s.y, ns.y)
                             val top = min(s.y + s.height, ns.y + ns.height)
 
-                            // Check that the gap between the spans is walkable,
+                            // Check, that the gap between the spans is walkable,
                             // and that the climb height between the gaps is not too high.
                             if (top - bot >= walkableHeight && abs(ns.y - s.y) <= walkableClimb) {
                                 // Mark direction as walkable.
-                                val lidx = k - nc.index
+                                val lidx = k - ncIndex
                                 if (lidx < 0 || lidx > MAX_LAYERS) {
                                     tooHighNeighbour = max(tooHighNeighbour, lidx)
-                                    ++k
                                     continue
                                 }
                                 setCon(s, dir, lidx)
                                 break
                             }
-                            ++k
                         }
                     }
                 }

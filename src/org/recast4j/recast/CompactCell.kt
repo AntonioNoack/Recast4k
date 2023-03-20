@@ -23,6 +23,6 @@ package org.recast4j.recast
 class CompactCell {
     /** Index to the first span in the column.  */
     var index = 0
-    /** Number of spans in the column.  */
-    var count = 0
+    /** End Index, exclusive */
+    var endIndex = 0
 }

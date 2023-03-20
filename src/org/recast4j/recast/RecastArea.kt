@@ -38,8 +38,8 @@ class RecastArea {
         val areas = IntArray(chf.spanCount)
         for (y in 0 until h) {
             for (x in 0 until w) {
-                val c = chf.cells[x + y * w]
-                for (i in c.index until c.index + c.count) {
+                val c = x + y * w
+                for (i in chf.index[c] until chf.endIndex[c]) {
                     val s = chf.spans[i]
                     if (chf.areas[i] == RecastConstants.RC_NULL_AREA) {
                         areas[i] = chf.areas[i]
@@ -51,14 +51,14 @@ class RecastArea {
                         if (RecastCommon.getCon(s, dir) != RecastConstants.RC_NOT_CONNECTED) {
                             val ax = x + RecastCommon.getDirOffsetX(dir)
                             val ay = y + RecastCommon.getDirOffsetY(dir)
-                            val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, dir)
+                            val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, dir)
                             if (chf.areas[ai] != RecastConstants.RC_NULL_AREA) nei[dir * 2] = chf.areas[ai]
                             val asp = chf.spans[ai]
                             val dir2 = dir + 1 and 0x3
                             if (RecastCommon.getCon(asp, dir2) != RecastConstants.RC_NOT_CONNECTED) {
                                 val ax2 = ax + RecastCommon.getDirOffsetX(dir2)
                                 val ay2 = ay + RecastCommon.getDirOffsetY(dir2)
-                                val ai2 = chf.cells[ax2 + ay2 * w].index + RecastCommon.getCon(asp, dir2)
+                                val ai2 = chf.index[ax2 + ay2 * w] + RecastCommon.getCon(asp, dir2)
                                 if (chf.areas[ai2] != RecastConstants.RC_NULL_AREA) nei[dir * 2 + 1] = chf.areas[ai2]
                             }
                         }
@@ -94,8 +94,8 @@ class RecastArea {
         maxz = min(maxz, chf.height - 1)
         for (z in minz..maxz) {
             for (x in minx..maxx) {
-                val c = chf.cells[x + z * chf.width]
-                for (i in c.index until c.index + c.count) {
+                val c = x + z * chf.width
+                for (i in chf.index[c] until chf.endIndex[c]) {
                     val s = chf.spans[i]
                     if (s.y in miny..maxy) {
                         if (chf.areas[i] != RecastConstants.RC_NULL_AREA) chf.areas[i] = areaMod.apply(chf.areas[i])
@@ -137,8 +137,8 @@ class RecastArea {
         maxy = min(maxy, chf.height - 1)
         for (z in minz..maxz) {
             for (x in minx..maxx) {
-                val c = chf.cells[x + z * chf.width]
-                for (i in c.index until c.index + c.count) {
+                val c = x + z * chf.width
+                for (i in chf.index[c] until chf.endIndex[c]) {
                     if (chf.areas[i] == RecastConstants.RC_NULL_AREA) {
                         continue
                     }
@@ -172,8 +172,8 @@ class RecastArea {
             // Mark boundary cells.
             for (y in 0 until h) {
                 for (x in 0 until w) {
-                    val c = chf.cells[x + y * w]
-                    for (i in c.index until c.index + c.count) {
+                    val c = x + y * w
+                    for (i in chf.index[c] until chf.endIndex[c]) {
                         if (chf.areas[i] == RecastConstants.RC_NULL_AREA) {
                             dist[i] = 0
                         } else {
@@ -183,7 +183,7 @@ class RecastArea {
                                 if (RecastCommon.getCon(s, dir) != RecastConstants.RC_NOT_CONNECTED) {
                                     val nx = x + RecastCommon.getDirOffsetX(dir)
                                     val ny = y + RecastCommon.getDirOffsetY(dir)
-                                    val nidx = chf.cells[nx + ny * w].index + RecastCommon.getCon(s, dir)
+                                    val nidx = chf.index[nx + ny * w] + RecastCommon.getCon(s, dir)
                                     if (chf.areas[nidx] != RecastConstants.RC_NULL_AREA) {
                                         nc++
                                     }
@@ -200,23 +200,23 @@ class RecastArea {
             // Pass 1
             for (y in 0 until h) {
                 for (x in 0 until w) {
-                    val c = chf.cells[x + y * w]
-                    for(i in c.index until c.index + c.count) {
+                    val c = x + y * w
+                    for (i in chf.index[c] until chf.endIndex[c]) {
                         val s = chf.spans[i]
                         if (RecastCommon.getCon(s, 0) != RecastConstants.RC_NOT_CONNECTED) {
                             // (-1,0)
                             val ax = x + RecastCommon.getDirOffsetX(0)
                             val ay = y + RecastCommon.getDirOffsetY(0)
-                            val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, 0)
-                            val `as` = chf.spans[ai]
+                            val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 0)
+                            val asp = chf.spans[ai]
                             nd = min(dist[ai] + 2, 255)
                             if (nd < dist[i]) dist[i] = nd
 
                             // (-1,-1)
-                            if (RecastCommon.getCon(`as`, 3) != RecastConstants.RC_NOT_CONNECTED) {
+                            if (RecastCommon.getCon(asp, 3) != RecastConstants.RC_NOT_CONNECTED) {
                                 val aax = ax + RecastCommon.getDirOffsetX(3)
                                 val aay = ay + RecastCommon.getDirOffsetY(3)
-                                val aai = chf.cells[aax + aay * w].index + RecastCommon.getCon(`as`, 3)
+                                val aai = chf.index[aax + aay * w] + RecastCommon.getCon(asp, 3)
                                 nd = min(dist[aai] + 3, 255)
                                 if (nd < dist[i]) dist[i] = nd
                             }
@@ -225,16 +225,16 @@ class RecastArea {
                             // (0,-1)
                             val ax = x + RecastCommon.getDirOffsetX(3)
                             val ay = y + RecastCommon.getDirOffsetY(3)
-                            val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, 3)
-                            val `as` = chf.spans[ai]
+                            val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 3)
+                            val asp = chf.spans[ai]
                             nd = min(dist[ai] + 2, 255)
                             if (nd < dist[i]) dist[i] = nd
 
                             // (1,-1)
-                            if (RecastCommon.getCon(`as`, 2) != RecastConstants.RC_NOT_CONNECTED) {
+                            if (RecastCommon.getCon(asp, 2) != RecastConstants.RC_NOT_CONNECTED) {
                                 val aax = ax + RecastCommon.getDirOffsetX(2)
                                 val aay = ay + RecastCommon.getDirOffsetY(2)
-                                val aai = chf.cells[aax + aay * w].index + RecastCommon.getCon(`as`, 2)
+                                val aai = chf.index[aax + aay * w] + RecastCommon.getCon(asp, 2)
                                 nd = min(dist[aai] + 3, 255)
                                 if (nd < dist[i]) dist[i] = nd
                             }
@@ -246,23 +246,23 @@ class RecastArea {
             // Pass 2
             for (y in h - 1 downTo 0) {
                 for (x in w - 1 downTo 0) {
-                    val c = chf.cells[x + y * w]
-                    for(i in c.index until c.index + c.count) {
+                    val c = x + y * w
+                    for (i in chf.index[c] until chf.endIndex[c]) {
                         val s = chf.spans[i]
                         if (RecastCommon.getCon(s, 2) != RecastConstants.RC_NOT_CONNECTED) {
                             // (1,0)
                             val ax = x + RecastCommon.getDirOffsetX(2)
                             val ay = y + RecastCommon.getDirOffsetY(2)
-                            val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, 2)
-                            val `as` = chf.spans[ai]
+                            val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 2)
+                            val asp = chf.spans[ai]
                             nd = min(dist[ai] + 2, 255)
                             if (nd < dist[i]) dist[i] = nd
 
                             // (1,1)
-                            if (RecastCommon.getCon(`as`, 1) != RecastConstants.RC_NOT_CONNECTED) {
+                            if (RecastCommon.getCon(asp, 1) != RecastConstants.RC_NOT_CONNECTED) {
                                 val aax = ax + RecastCommon.getDirOffsetX(1)
                                 val aay = ay + RecastCommon.getDirOffsetY(1)
-                                val aai = chf.cells[aax + aay * w].index + RecastCommon.getCon(`as`, 1)
+                                val aai = chf.index[aax + aay * w] + RecastCommon.getCon(asp, 1)
                                 nd = min(dist[aai] + 3, 255)
                                 if (nd < dist[i]) dist[i] = nd
                             }
@@ -271,16 +271,16 @@ class RecastArea {
                             // (0,1)
                             val ax = x + RecastCommon.getDirOffsetX(1)
                             val ay = y + RecastCommon.getDirOffsetY(1)
-                            val ai = chf.cells[ax + ay * w].index + RecastCommon.getCon(s, 1)
-                            val `as` = chf.spans[ai]
+                            val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 1)
+                            val asp = chf.spans[ai]
                             nd = min(dist[ai] + 2, 255)
                             if (nd < dist[i]) dist[i] = nd
 
                             // (-1,1)
-                            if (RecastCommon.getCon(`as`, 0) != RecastConstants.RC_NOT_CONNECTED) {
+                            if (RecastCommon.getCon(asp, 0) != RecastConstants.RC_NOT_CONNECTED) {
                                 val aax = ax + RecastCommon.getDirOffsetX(0)
                                 val aay = ay + RecastCommon.getDirOffsetY(0)
-                                val aai = chf.cells[aax + aay * w].index + RecastCommon.getCon(`as`, 0)
+                                val aai = chf.index[aax + aay * w] + RecastCommon.getCon(asp, 0)
                                 nd = min(dist[aai] + 3, 255)
                                 if (nd < dist[i]) dist[i] = nd
                             }
@@ -349,10 +349,10 @@ class RecastArea {
             maxz = min(maxz, chf.height - 1)
             for (z in minz..maxz) {
                 for (x in minx..maxx) {
-                    val c = chf.cells[x + z * chf.width]
-                    for (i in c.index until c.index + c.count) {
-                        val s = chf.spans[i]
-                        if (chf.areas[i] == RecastConstants.RC_NULL_AREA) {
+                    val c = x + z * chf.width
+                    for (j in chf.index[c] until chf.endIndex[c]) {
+                        val s = chf.spans[j]
+                        if (chf.areas[j] == RecastConstants.RC_NULL_AREA) {
                             continue
                         }
                         if (s.y in miny..maxy) {
@@ -361,7 +361,7 @@ class RecastArea {
                             p.y = 0f
                             p.z = chf.bmin.z + (z + 0.5f) * chf.cellSize
                             if (pointInPoly(vertices, p)) {
-                                chf.areas[i] = areaMod.apply(chf.areas[i])
+                                chf.areas[j] = areaMod.apply(chf.areas[j])
                             }
                         }
                     }

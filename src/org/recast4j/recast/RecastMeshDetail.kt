@@ -723,8 +723,8 @@ object RecastMeshDetail {
                 val y = hp.ymin + hy + bs
                 for (hx in 0 until hp.width) {
                     val x = hp.xmin + hx + bs
-                    val c = chf.cells[x + y * chf.width]
-                    for (i in c.index until c.index + c.count) {
+                    val c = x + y * chf.width
+                    for (i in chf.index[c] until chf.endIndex[c]) {
                         val s = chf.spans[i]
                         if (s.regionId == region) {
                             // Store height
@@ -737,7 +737,7 @@ object RecastMeshDetail {
                                 if (getCon(s, dir) != RC_NOT_CONNECTED) {
                                     val ax = x + getDirOffsetX(dir)
                                     val ay = y + getDirOffsetY(dir)
-                                    val ai = chf.cells[ax + ay * chf.width].index + getCon(s, dir)
+                                    val ai = chf.index[ax + ay * chf.width] + getCon(s, dir)
                                     val span = chf.spans[ai]
                                     if (span.regionId != region) {
                                         border = true
@@ -792,7 +792,7 @@ object RecastMeshDetail {
                 if (hp.data[hx + hy * hp.width] != RC_UNSET_HEIGHT) {
                     continue
                 }
-                val ai = chf.cells[ax + ay * chf.width].index + getCon(cs, dir)
+                val ai = chf.index[ax + ay * chf.width] + getCon(cs, dir)
                 val span = chf.spans[ai]
                 hp.data[hx + hy * hp.width] = span.y
                 queue.add(ax)
@@ -971,8 +971,8 @@ object RecastMeshDetail {
                 if (ax < hp.xmin || ax >= hp.xmin + hp.width || az < hp.ymin || az >= hp.ymin + hp.height) {
                     continue
                 }
-                val c = chf.cells[ax + bs + (az + bs) * chf.width]
-                for (i in c.index until c.index + c.count) {
+                val c = ax + bs + (az + bs) * chf.width
+                for (i in chf.index[c] until chf.endIndex[c]) {
                     val s = chf.spans[i]
                     val d = abs(ay - s.y)
                     if (d < dmin) {
@@ -1055,7 +1055,7 @@ object RecastMeshDetail {
                 hp.data[hpx + hpy * hp.width] = 1
                 array.add(newX)
                 array.add(newY)
-                array.add(chf.cells[newX + bs + (newY + bs) * chf.width].index + getCon(cs, dir))
+                array.add(chf.index[newX + bs + (newY + bs) * chf.width] + getCon(cs, dir))
             }
             tmp = dirs[3]
             dirs[3] = dirs[directDir]

@@ -64,8 +64,8 @@ object RecastLayers {
             Arrays.fill(prevCount, 0, regId, 0)
             var sweepId = 0
             for (x in borderSize until w - borderSize) {
-                val c = chf.cells[x + y * w]
-                for (i in c.index until c.index + c.count) {
+                val c = x + y * w
+                for (i in chf.index[c] until chf.endIndex[c]) {
                     val s = chf.spans[i]
                     if (chf.areas[i] == RC_NULL_AREA) {
                         continue
@@ -75,7 +75,7 @@ object RecastLayers {
                     if (getCon(s, 0) != RC_NOT_CONNECTED) {
                         val ax: Int = x + getDirOffsetX(0)
                         val ay: Int = y + getDirOffsetY(0)
-                        val ai: Int = chf.cells[ax + ay * w].index + getCon(s, 0)
+                        val ai: Int = chf.index[ax + ay * w] + getCon(s, 0)
                         if (chf.areas[ai] != RC_NULL_AREA && srcReg[ai] != 0xff) sid = srcReg[ai]
                     }
                     if (sid == 0xff) {
@@ -88,7 +88,7 @@ object RecastLayers {
                     if (getCon(s, 3) != RC_NOT_CONNECTED) {
                         val ax: Int = x + getDirOffsetX(3)
                         val ay: Int = y + getDirOffsetY(3)
-                        val ai: Int = chf.cells[ax + ay * w].index + getCon(s, 3)
+                        val ai: Int = chf.index[ax + ay * w] + getCon(s, 3)
                         val nr = srcReg[ai]
                         if (nr != 0xff) {
                             // Set neighbour when first valid neighbour is
@@ -128,8 +128,8 @@ object RecastLayers {
 
             // Remap local sweep ids to region ids.
             for (x in borderSize until w - borderSize) {
-                val c = chf.cells[x + y * w]
-                for (i in c.index until c.index + c.count) {
+                val c = x + y * w
+                for (i in chf.index[c] until chf.endIndex[c]) {
                     if (srcReg[i] != 0xff)
                         srcReg[i] = sweeps[srcReg[i]]!!.regionId
                 }
@@ -143,10 +143,10 @@ object RecastLayers {
         val lregs = IntArrayList()
         for (y in 0 until h) {
             for (x in 0 until w) {
-                val c = chf.cells[x + y * w]
+                val c = x + y * w
                 lregs.clear()
 
-                for (i in c.index until c.index + c.count) {
+                for (i in chf.index[c] until chf.endIndex[c]) {
                     val s = chf.spans[i]
                     val ri = srcReg[i]
                     if (ri == 0xff) {
@@ -163,7 +163,7 @@ object RecastLayers {
                         if (getCon(s, dir) != RC_NOT_CONNECTED) {
                             val ax: Int = x + getDirOffsetX(dir)
                             val ay: Int = y + getDirOffsetY(dir)
-                            val ai: Int = chf.cells[ax + ay * w].index + getCon(s, dir)
+                            val ai: Int = chf.index[ax + ay * w] + getCon(s, dir)
                             val rai = srcReg[ai]
                             if (rai != 0xff && rai != ri) addUnique(regions[ri].neis, rai)
                         }
@@ -364,20 +364,16 @@ object RecastLayers {
                 for (x in 0 until lw) {
                     val cx = borderSize + x
                     val cy = borderSize + y
-                    val c = chf.cells[cx + cy * w]
-                    var j = c.index
-                    val nj = c.index + c.count
-                    while (j < nj) {
+                    val c = cx + cy * w
+                    for (j in chf.index[c] until chf.endIndex[c]) {
                         val s = chf.spans[j]
                         // Skip unassigned regions.
                         if (srcReg[j] == 0xff) {
-                            ++j
                             continue
                         }
                         // Skip of does nto belong to current layer.
                         val lid = regions[srcReg[j]].layerId
                         if (lid != curId) {
-                            ++j
                             continue
                         }
 
@@ -399,7 +395,7 @@ object RecastLayers {
                             if (getCon(s, dir) != RC_NOT_CONNECTED) {
                                 val ax: Int = cx + getDirOffsetX(dir)
                                 val ay: Int = cy + getDirOffsetY(dir)
-                                val ai: Int = chf.cells[ax + ay * w].index + getCon(s, dir)
+                                val ai: Int = chf.index[ax + ay * w] + getCon(s, dir)
                                 val alid = if (srcReg[ai] != 0xff) regions[srcReg[ai]].layerId else 0xff
                                 // Portal mask
                                 if (chf.areas[ai] != RC_NULL_AREA && lid != alid) {
@@ -420,7 +416,6 @@ object RecastLayers {
                             }
                         }
                         layer.cons[idx] = portal.code shl 4 or con.code
-                        ++j
                     }
                 }
             }

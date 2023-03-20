@@ -51,7 +51,8 @@ class CompactHeightfield(val width: Int, val height: Int, val spanCount: Int) {
     var cellHeight = 0f
 
     /** Array of cells. [Size: #width*#height]  */
-    val cells = Array(width * height) { CompactCell() }
+    val index = IntArray(Math.multiplyExact(width, height))
+    val endIndex = IntArray(Math.multiplyExact(width, height))
 
     /** Array of spans. [Size: #spanCount]  */
     val spans = Array(spanCount) { CompactSpan() }
