@@ -100,7 +100,7 @@ class LocalBoundary {
                         val s = segs[k]
                         // Skip too distant segments.
                         val (first) = Vectors.distancePtSegSqr2D(pos, s, 0, 3)
-                        if (first > Vectors.sqr(collisionQueryRange)) {
+                        if (first > Vectors.sq(collisionQueryRange)) {
                             ++k
                             continue
                         }

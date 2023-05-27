@@ -140,7 +140,7 @@ class Crowd @JvmOverloads constructor(
     var m_velocitySampleCount = 0
 
     init {
-        Vectors.set(queryExtends, config.maxAgentRadius * 2f, config.maxAgentRadius * 1.5f, config.maxAgentRadius * 2f)
+        queryExtends.set(config.maxAgentRadius * 2f, config.maxAgentRadius * 1.5f, config.maxAgentRadius * 2f)
         obstacleAvoidanceQuery =
             ObstacleAvoidanceQuery(config.maxObstacleAvoidanceCircles, config.maxObstacleAvoidanceSegments)
         for (i in 0 until CROWD_MAX_QUERY_FILTER_TYPE) {
@@ -210,10 +210,10 @@ class Crowd @JvmOverloads constructor(
         ag.partial = false
         ag.topologyOptTime = 0f
         ag.targetReplanTime = 0f
-        Vectors.set(ag.desiredVelocity, 0f, 0f, 0f)
-        Vectors.set(ag.desiredVelAdjusted, 0f, 0f, 0f)
-        Vectors.set(ag.actualVelocity, 0f, 0f, 0f)
-        Vectors.copy(ag.currentPosition, nearest)
+        ag.desiredVelocity.set(0f)
+        ag.desiredVelAdjusted.set(0f)
+        ag.actualVelocity.set(0f)
+        ag.currentPosition.set(nearest)
         ag.desiredSpeed = 0f
         if (ref != 0L) {
             ag.state = CrowdAgentState.WALKING
@@ -278,8 +278,8 @@ class Crowd @JvmOverloads constructor(
     fun resetMoveTarget(agent: CrowdAgent): Boolean {
         // Initialize request.
         agent.targetRef = 0
-        Vectors.set(agent.targetPos, 0f, 0f, 0f)
-        Vectors.set(agent.desiredVelocity, 0f, 0f, 0f)
+        agent.targetPos.set(0f)
+        agent.desiredVelocity.set(0f)
         agent.targetPathQueryResult = null
         agent.targetReplan = false
         agent.targetState = MoveRequestState.NONE
@@ -355,7 +355,7 @@ class Crowd @JvmOverloads constructor(
             // First check, that the current location is valid.
             val agentPos = Vector3f()
             var agentRef = ag.corridor.firstPoly
-            Vectors.copy(agentPos, ag.currentPosition)
+            agentPos.set(ag.currentPosition)
             if (!navQuery.isValidPolyRef(agentRef, m_filters[ag.params.queryFilterType]!!)) {
                 // Current location is not valid, try to reposition.
                 // TODO: this can snap agents, how to handle that?
@@ -383,7 +383,7 @@ class Crowd @JvmOverloads constructor(
                 // ag.corridor.trimInvalidPath(agentRef, agentPos, m_navquery,
                 // &m_filter);
                 ag.boundary.reset()
-                Vectors.copy(ag.currentPosition, agentPos)
+                ag.currentPosition.set(agentPos)
                 replan = true
             }
 
@@ -405,7 +405,7 @@ class Crowd @JvmOverloads constructor(
                     )
                     ag.targetRef = if (fnp.succeeded()) fnp.result!!.nearestRef else 0L
                     if (fnp.succeeded()) {
-                        Vectors.copy(ag.targetPos, fnp.result!!.nearestPos!!)
+                        ag.targetPos.set(fnp.result!!.nearestPos!!)
                     }
                     replan = true
                 }
@@ -494,12 +494,12 @@ class Crowd @JvmOverloads constructor(
                             reqPath = LongArrayList()
                         }
                     } else {
-                        Vectors.copy(reqPos, ag.targetPos)
+                        reqPos.set(ag.targetPos)
                     }
                 } else {
                     // Could not find path, start the request from current
                     // location.
-                    Vectors.copy(reqPos, ag.currentPosition)
+                    reqPos.set(ag.currentPosition)
                     reqPath = LongArrayList()
                     reqPath.add(path[0])
                 }
@@ -693,7 +693,7 @@ class Crowd @JvmOverloads constructor(
             // Update the collision boundary after certain distance has been passed or
             // if it has become invalid.
             val updateThr = ag.params.collisionQueryRange * 0.25f
-            if (Vectors.dist2DSqr(ag.currentPosition, ag.boundary.center) > Vectors.sqr(updateThr)
+            if (Vectors.dist2DSqr(ag.currentPosition, ag.boundary.center) > Vectors.sq(updateThr)
                 || !ag.boundary.isValid(navQuery, m_filters[ag.params.queryFilterType]!!)
             ) {
                 ag.boundary.update(
@@ -729,7 +729,7 @@ class Crowd @JvmOverloads constructor(
             }
             diff.y = 0f
             val distSqr = diff.lengthSquared()
-            if (distSqr > Vectors.sqr(range)) continue
+            if (distSqr > Vectors.sq(range)) continue
             result.add(CrowdNeighbour(ag, distSqr))
         }
         result.sortWith { o1: CrowdNeighbour, o2: CrowdNeighbour ->
@@ -808,7 +808,7 @@ class Crowd @JvmOverloads constructor(
                         navQuery
                     )
                 ) {
-                    Vectors.copy(anim.initPos, ag.currentPosition)
+                    anim.initPos.set(ag.currentPosition)
                     anim.polyRef = refs[1]
                     anim.active = true
                     anim.t = 0f
@@ -834,7 +834,7 @@ class Crowd @JvmOverloads constructor(
             }
             val dvel = Vector3f()
             if (ag.targetState == MoveRequestState.VELOCITY) {
-                Vectors.copy(dvel, ag.targetPos)
+                dvel.set(ag.targetPos)
                 ag.desiredSpeed = ag.targetPos.length()
             } else {
                 // Calculate steering direction.
@@ -862,11 +862,11 @@ class Crowd @JvmOverloads constructor(
                     val diff = Vectors.sub(ag.currentPosition, nei.currentPosition)
                     diff.y = 0f
                     val distSqr = diff.lengthSquared()
-                    if (distSqr < 0.00001f || distSqr > Vectors.sqr(separationDist)) {
+                    if (distSqr < 0.00001f || distSqr > Vectors.sq(separationDist)) {
                         continue
                     }
                     val dist = sqrt(distSqr).toFloat()
-                    val weight = separationWeight * (1f - Vectors.sqr(dist * invSeparationDist))
+                    val weight = separationWeight * (1f - Vectors.sq(dist * invSeparationDist))
                     Vectors.mad2(disp, diff, weight / dist)
                     w += 1f
                 }
@@ -875,7 +875,7 @@ class Crowd @JvmOverloads constructor(
                     Vectors.mad2(dvel, disp, 1f / w)
                     // Clamp desired velocity to desired speed.
                     val speedSqr = dvel.lengthSquared()
-                    val desiredSqr = Vectors.sqr(ag.desiredSpeed)
+                    val desiredSqr = Vectors.sq(ag.desiredSpeed)
                     if (speedSqr > desiredSqr) {
                         dvel.mul(desiredSqr / speedSqr)
                     }
@@ -883,7 +883,7 @@ class Crowd @JvmOverloads constructor(
             }
 
             // Set the desired velocity.
-            Vectors.copy(ag.desiredVelocity, dvel)
+            ag.desiredVelocity.set(dvel)
         }
         telemetry.stop("calculateSteering")
     }
@@ -935,7 +935,7 @@ class Crowd @JvmOverloads constructor(
                 m_velocitySampleCount += first
             } else {
                 // If not using velocity planning, new velocity is directly the desired velocity.
-                Vectors.copy(ag.desiredVelAdjusted, ag.desiredVelocity)
+                ag.desiredVelAdjusted.set(ag.desiredVelocity)
             }
         }
         telemetry.stop("planVelocity")
@@ -960,7 +960,7 @@ class Crowd @JvmOverloads constructor(
                 if (ag.state != CrowdAgentState.WALKING) {
                     continue
                 }
-                Vectors.set(ag.disp, 0f, 0f, 0f)
+                ag.disp.set(0f)
                 var w = 0f
                 for (j in ag.neis.indices) {
                     val nei = ag.neis[j].agent
@@ -968,7 +968,7 @@ class Crowd @JvmOverloads constructor(
                     val diff = Vectors.sub(ag.currentPosition, nei.currentPosition)
                     diff.y = 0f
                     var dist = diff.lengthSquared()
-                    if (dist > Vectors.sqr(ag.params.radius + nei.params.radius)) {
+                    if (dist > Vectors.sq(ag.params.radius + nei.params.radius)) {
                         continue
                     }
                     dist = sqrt(dist).toFloat()
@@ -976,9 +976,9 @@ class Crowd @JvmOverloads constructor(
                     pen = if (dist < 0.0001f) {
                         // Agents on top of each other, try to choose diverging separation directions.
                         if (idx0 > idx1) {
-                            Vectors.set(diff, -ag.desiredVelocity.z, 0f, ag.desiredVelocity.x)
+                            diff.set(-ag.desiredVelocity.z, 0f, ag.desiredVelocity.x)
                         } else {
-                            Vectors.set(diff, ag.desiredVelocity.z, 0f, -ag.desiredVelocity.x)
+                            diff.set(ag.desiredVelocity.z, 0f, -ag.desiredVelocity.x)
                         }
                         0.01f
                     } else {
@@ -1012,7 +1012,7 @@ class Crowd @JvmOverloads constructor(
             // Move along navmesh.
             ag.corridor.movePosition(ag.currentPosition, navQuery, m_filters[ag.params.queryFilterType]!!)
             // Get valid constrained position back.
-            Vectors.copy(ag.currentPosition, ag.corridor.pos)
+            ag.currentPosition.set(ag.corridor.pos)
 
             // If not using path, truncate the corridor to just one poly.
             if (ag.targetState == MoveRequestState.NONE
@@ -1053,8 +1053,8 @@ class Crowd @JvmOverloads constructor(
             }
 
             // Update velocity.
-            Vectors.set(ag.actualVelocity, 0f, 0f, 0f)
-            Vectors.set(ag.desiredVelocity, 0f, 0f, 0f)
+            ag.actualVelocity.set(0f)
+            ag.desiredVelocity.set(0f)
         }
         telemetry.stop("updateOffMeshConnections")
     }

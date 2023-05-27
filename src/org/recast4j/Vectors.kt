@@ -25,6 +25,7 @@ import org.recast4j.detour.VectorPtr
 import kotlin.math.abs
 import kotlin.math.sqrt
 
+@Suppress("DeprecatedCallableAddReplaceWith")
 object Vectors {
 
     fun clamp(x: Float, min: Float, max: Float): Float {
@@ -97,8 +98,8 @@ object Vectors {
     /**
      * a + b * s
      */
-    fun mad(a: Vector3f, b: Vector3f, f: Float): Vector3f {
-        return Vector3f(b).mul(f).add(a)
+    fun mad(a: Vector3f, b: Vector3f, f: Float, dst: Vector3f) {
+        dst.set(b).mul(f).add(a)
     }
 
     /**
@@ -108,57 +109,54 @@ object Vectors {
         a.add(b.x * f, b.y * f, b.z * f)
     }
 
-    fun lerp(vertices: FloatArray, v1: Int, v2: Int, t: Float): Vector3f {
-        val dst = Vector3f()
+    fun lerp(vertices: FloatArray, v1: Int, v2: Int, t: Float, dst: Vector3f) {
         dst.x = vertices[v1] + (vertices[v2] - vertices[v1]) * t
         dst.y = vertices[v1 + 1] + (vertices[v2 + 1] - vertices[v1 + 1]) * t
         dst.z = vertices[v1 + 2] + (vertices[v2 + 2] - vertices[v1 + 2]) * t
-        return dst
     }
 
+    fun lerp(vertices: FloatArray, v1: Int, v2: Int, t: Float, dst: FloatArray, dstI: Int) {
+        dst[dstI] = vertices[v1] + (vertices[v2] - vertices[v1]) * t
+        dst[dstI + 1] = vertices[v1 + 1] + (vertices[v2 + 1] - vertices[v1 + 1]) * t
+        dst[dstI + 2] = vertices[v1 + 2] + (vertices[v2 + 2] - vertices[v1 + 2]) * t
+    }
+
+    @Deprecated("Don't allocate!")
     fun lerp(v1: Vector3f, v2: Vector3f, t: Float): Vector3f {
         return Vector3f(v1).lerp(v2, t)
     }
 
+    @Deprecated("Don't allocate!")
     fun sub(v1: VectorPtr, v2: VectorPtr): Vector3f {
         return Vector3f(v1[0] - v2[0], v1[1] - v2[1], v1[2] - v2[2])
     }
 
+    @Deprecated("Don't allocate!")
     fun sub(v1: Vector3f, v2: VectorPtr): Vector3f {
         return Vector3f(v1[0] - v2[0], v1[1] - v2[1], v1[2] - v2[2])
     }
 
+    @Deprecated("Don't allocate!")
     fun sub(v1: Vector3f, v2: Vector3f): Vector3f {
         return Vector3f(v1).sub(v2)
     }
 
-    fun add(v1: Vector3f, v2: Vector3f): Vector3f {
-        return Vector3f(v1).add(v2)
-    }
-
+    @Deprecated("Don't allocate!")
     fun copy(v: Vector3f): Vector3f {
         return Vector3f(v)
     }
 
-    fun set(out: Vector3f, a: Float, b: Float, c: Float) {
-        out.set(a, b, c)
-    }
-
-    fun copy(out: Vector3f, input: Vector3f) {
-        out.set(input)
-    }
-
-    fun copy(out: FloatArray, o: Int, v: Vector3f) {
-        out[o] = v.x
-        out[o + 1] = v.y
-        out[o + 2] = v.z
+    fun copy(dst: FloatArray, dstI: Int, v: Vector3f) {
+        dst[dstI] = v.x
+        dst[dstI + 1] = v.y
+        dst[dstI + 2] = v.z
     }
 
     fun copy(out: Vector3f, input: IntArray, i: Int) {
         out.set(input[i].toFloat(), input[i + 1].toFloat(), input[i + 2].toFloat())
     }
 
-    fun sqr(a: Float): Float {
+    fun sq(a: Float): Float {
         return a * a
     }
 
@@ -183,7 +181,7 @@ object Vectors {
         return dx * dx + dz * dz
     }
 
-    private val EQUAL_THRESHOLD = sqr(1f / 16384f)
+    private val EQUAL_THRESHOLD = sq(1f / 16384f)
 
     /**
      * Performs a 'sloppy' co-location check of the specified points.
@@ -298,11 +296,9 @@ object Vectors {
     ///
     /// All points are projected onto the xz-plane, so the y-values are ignored.
     fun pointInPolygon(pt: Vector3f, vertices: FloatArray, numVertices: Int): Boolean {
-        var i: Int
-        var j: Int
         var c = false
-        i = 0
-        j = numVertices - 1
+        var i = 0
+        var j = numVertices - 1
         while (i < numVertices) {
             val vi = i * 3
             val vj = j * 3
@@ -323,11 +319,9 @@ object Vectors {
         ed: FloatArray,
         et: FloatArray
     ): Boolean {
-        var i: Int
-        var j: Int
         var c = false
-        i = 0
-        j = numVertices - 1
+        var i = 0
+        var j = numVertices - 1
         while (i < numVertices) {
             val vi = i * 3
             val vj = j * 3
@@ -345,10 +339,8 @@ object Vectors {
     }
 
     fun projectPoly(axis: Vector3f, polygons: FloatArray, numPolygons: Int): FloatArray {
-        var rmin: Float
-        var rmax: Float
-        rmax = dot2D(axis, polygons, 0)
-        rmin = rmax
+        var rmax = dot2D(axis, polygons, 0)
+        var rmin = rmax
         for (i in 1 until numPolygons) {
             val d = dot2D(axis, polygons, i * 3)
             rmin = kotlin.math.min(rmin, d)
@@ -481,22 +473,27 @@ object Vectors {
         var i = 0
         var j = nvertices - 1
         while (i < nvertices) {
-            val vpj = VectorPtr(vertices, j * 3)
-            val edge = sub(VectorPtr(vertices, i * 3), vpj)
-            val diff = sub(p0, vpj)
-            val n = -crossXZ(edge, diff)
-            val d = -crossXZ(dir, edge)
-            if (abs(d) < EPS) {
+            val v = j * 3
+            val w = i * 3
+            // edge
+            val ex = vertices[w] - vertices[v]
+            val ez = vertices[w + 2] - vertices[v + 2]
+            // dir
+            val dx = p0.x - vertices[v]
+            val dz = p0.z - vertices[v + 2]
+            val normal = ez * dx - ex * dz
+            val dist = dir.z * ex - dir.x * ez
+            if (abs(dist) < EPS) {
                 // S is nearly parallel to this edge
-                return if (n < 0) {
-                    result
+                if (normal < 0) {
+                    return result
                 } else {
                     j = i++
                     continue
                 }
             }
-            val t = n / d
-            if (d < 0) {
+            val t = normal / dist
+            if (dist < 0) {
                 // segment S is entering across this edge
                 if (t > result.tmin) {
                     result.tmin = t
@@ -547,6 +544,7 @@ object Vectors {
         return side + 4 and 0x7
     }
 
+    @Deprecated("Can be replaced", replaceWith = ReplaceWith("a.x*b.z-a.z*b.x"))
     fun crossXZ(a: Vector3f, b: Vector3f): Float {
         return a.x * b.z - a.z * b.x
     }
@@ -562,24 +560,6 @@ object Vectors {
         val s = crossXZ(v, w) / d
         val t = crossXZ(u, w) / d
         return Pair(s, t)
-    }
-
-    /**
-     * Checks that the specified vector's components are all finite.
-     */
-    fun isFinite(v: Vector3f): Boolean {
-        return v.isFinite
-    }
-
-    /**
-     * Checks that the specified vector's xz components are finite.
-     */
-    fun isFinite2D(v: Vector3f): Boolean {
-        return java.lang.Float.isFinite(v.x) && java.lang.Float.isFinite(v.z)
-    }
-
-    fun add(dst: Vector3f, v1: Vector3f, v2: Vector3f) {
-        v1.add(v2, dst)
     }
 
     class IntersectResult {

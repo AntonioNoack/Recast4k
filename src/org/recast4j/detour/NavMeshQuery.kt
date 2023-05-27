@@ -47,9 +47,6 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
     fun findRandomPoint(filter: QueryFilter, random: Random): Result<FindRandomPointResult?> {
 
         // Randomly pick one tile. Assume that all tiles cover roughly the same area.
-        if (Objects.isNull(filter) || Objects.isNull(random)) {
-            return Result.invalidParam()
-        }
 
         var tile: MeshTile? = null
         var tsum = 0f
@@ -190,7 +187,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         nodePool.clear()
         openList.clear()
         val startNode = nodePool.getNode(startRef)
-        Vectors.copy(startNode.pos, centerPos)
+        startNode.pos.set(centerPos)
         startNode.parentIndex = 0
         startNode.cost = 0f
         startNode.totalCost = 0f
@@ -386,7 +383,9 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
             }
             val va = imin * 3
             val vb = (imin + 1) % nv * 3
-            return Vectors.lerp(vertices, va, vb, edget[imin])
+            val dst = Vector3f()
+            Vectors.lerp(vertices, va, vb, edget[imin], dst)
+            return dst
         }
     }
 
@@ -535,8 +534,8 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
     fun queryPolygons(center: Vector3f, halfExtents: Vector3f, filter: QueryFilter, query: PolyQuery): Status {
         if (!center.isFinite || !halfExtents.isFinite) return Status.FAILURE_INVALID_PARAM
         // Find tiles the query touches.
-        val bmin = Vectors.sub(center, halfExtents)
-        val bmax = Vectors.add(center, halfExtents)
+        val bmin = Vector3f(center).sub(halfExtents)
+        val bmax = Vector3f(center).add(halfExtents)
         for (t in queryTiles(center, halfExtents)) {
             queryPolygonsInTile(t, bmin, bmax, filter, query)
         }
@@ -547,10 +546,9 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
      * Finds tiles that overlap the search box.
      */
     fun queryTiles(center: Vector3f, halfExtents: Vector3f): List<MeshTile> {
-        if (!Vectors.isFinite(center) || !Vectors.isFinite(halfExtents)
-        ) return emptyList()
-        val bmin = Vectors.sub(center, halfExtents)
-        val bmax = Vectors.add(center, halfExtents)
+        if (!center.isFinite || !halfExtents.isFinite) return emptyList()
+        val bmin = Vector3f(center).sub(halfExtents)
+        val bmax = Vector3f(center).add(halfExtents)
         val minx = nav1.calcTileLocX(bmin)
         val miny = nav1.calcTileLocY(bmin)
         val maxx = nav1.calcTileLocX(bmax)
@@ -596,16 +594,11 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         heuristic: QueryHeuristic, options: Int, raycastLimit: Float
     ): Result<LongArrayList?> {
         // Validate input
-        if (!nav1.isValidPolyRef(startRef) || !nav1.isValidPolyRef(endRef) || Objects.isNull(
-                startPos
-            )
-            || !Vectors.isFinite(startPos) || Objects.isNull(endPos) || !Vectors.isFinite(endPos) || Objects.isNull(
-                filter
-            )
-        ) {
+        if (!nav1.isValidPolyRef(startRef) || !nav1.isValidPolyRef(endRef) || !startPos.isFinite || !endPos.isFinite) {
             return Result.invalidParam()
         }
-        var raycastLimitSqr: Float = Vectors.sqr(raycastLimit)
+
+        var raycastLimitSqr: Float = Vectors.sq(raycastLimit)
 
         // trade quality with performance?
         if (options and DT_FINDPATH_ANY_ANGLE != 0 && raycastLimit < 0f) {
@@ -613,7 +606,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
             // so it is enough to compute it from the first tile.
             val tile = nav1.getTileByRef(startRef)
             val agentRadius = tile!!.data!!.header!!.walkableRadius
-            raycastLimitSqr = Vectors.sqr(agentRadius * NavMesh.DT_RAY_CAST_LIMIT_PROPORTIONS)
+            raycastLimitSqr = Vectors.sq(agentRadius * NavMesh.DT_RAY_CAST_LIMIT_PROPORTIONS)
         }
         if (startRef == endRef) {
             val path = LongArrayList(1)
@@ -864,11 +857,11 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         queryData.filter = filter
         queryData.options = options
         queryData.heuristic = heuristic
-        queryData.raycastLimitSqr = Vectors.sqr(raycastLimit)
+        queryData.raycastLimitSqr = Vectors.sq(raycastLimit)
 
         // Validate input
         if (!nav1.isValidPolyRef(startRef) || !nav1.isValidPolyRef(endRef)
-            || !Vectors.isFinite(startPos) || !Vectors.isFinite(endPos)
+            || !startPos.isFinite || !endPos.isFinite
         ) return Status.FAILURE_INVALID_PARAM
 
         // trade quality with performance?
@@ -877,7 +870,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
             // so it is enough to compute it from the first tile.
             val tile = nav1.getTileByRef(startRef)
             val agentRadius = tile!!.data!!.header!!.walkableRadius
-            queryData.raycastLimitSqr = Vectors.sqr(agentRadius * NavMesh.DT_RAY_CAST_LIMIT_PROPORTIONS)
+            queryData.raycastLimitSqr = Vectors.sq(agentRadius * NavMesh.DT_RAY_CAST_LIMIT_PROPORTIONS)
         }
         if (startRef == endRef) {
             queryData.status = Status.SUCCESS
@@ -886,7 +879,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         nodePool.clear()
         openList.clear()
         val startNode = nodePool.getNode(startRef)
-        Vectors.copy(startNode.pos, startPos)
+        startNode.pos.set(startPos)
         startNode.parentIndex = 0
         startNode.cost = 0f
         startNode.totalCost = heuristic.getCost(startPos, endPos)
@@ -1146,7 +1139,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
     /// @returns The status flags for the query.
     open fun finalizeSlicedFindPathPartial(existing: LongArrayList): Result<LongArrayList> {
         var path = LongArrayList(64)
-        if (Objects.isNull(existing) || existing.isEmpty()) {
+        if (existing.isEmpty()) {
             return Result.failure(path)
         }
         if (queryData.status.isFailed) {
@@ -1272,7 +1265,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         maxStraightPath: Int, options: Int
     ): List<StraightPathItem>? {
         val straightPath: MutableList<StraightPathItem> = ArrayList()
-        if ((!Vectors.isFinite(startPos) || !Vectors.isFinite(endPos)
+        if ((!startPos.isFinite || !endPos.isFinite
                     || path.isEmpty()) || path[0] == 0L || maxStraightPath <= 0
         ) return null
 
@@ -1323,7 +1316,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                     // If starting really close the portal, advance.
                     if (i == 0) {
                         val (first) = Vectors.distancePtSegSqr2D(portalApex, left, right)
-                        if (first < Vectors.sqr(0.001f)) {
+                        if (first < Vectors.sq(0.001f)) {
                             ++i
                             continue
                         }
@@ -1478,11 +1471,10 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
     ): Result<MoveAlongSurfaceResult> {
 
         // Validate input
-        if (!nav1.isValidPolyRef(startRef) || Objects.isNull(startPos) || !Vectors.isFinite(startPos)
-            || Objects.isNull(endPos) || !Vectors.isFinite(endPos) || Objects.isNull(filter)
-        ) {
+        if (!nav1.isValidPolyRef(startRef) || !startPos.isFinite || !endPos.isFinite) {
             return Result.invalidParam()
         }
+
         val tinyNodePool = NodePool()
         val startNode = tinyNodePool.getNode(startRef)
         startNode.parentIndex = 0
@@ -1492,14 +1484,13 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         startNode.flags = Node.CLOSED
         val stack: LinkedList<Node> = LinkedList<Node>()
         stack.add(startNode)
-        var bestPos = Vector3f()
+        val bestPos = Vector3f(startPos)
         var bestDist = Float.MAX_VALUE
         var bestNode: Node? = null
-        Vectors.copy(bestPos, startPos)
 
         // Search constraints
         val searchPos = Vectors.lerp(startPos, endPos, 0.5f)
-        val searchRadSqr: Float = Vectors.sqr(startPos.distance(endPos) * 0.5f + 0.001f)
+        val searchRadSqr: Float = Vectors.sq(startPos.distance(endPos) * 0.5f + 0.001f)
         val vertices = FloatArray(nav1.maxVerticesPerPoly * 3)
         while (!stack.isEmpty()) {
             // Pop front.
@@ -1520,7 +1511,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
             // If target is inside the poly, stop search.
             if (Vectors.pointInPolygon(endPos, vertices, nvertices)) {
                 bestNode = curNode
-                Vectors.copy(bestPos, endPos)
+                bestPos.set(endPos)
                 break
             }
 
@@ -1565,7 +1556,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                     val (distSqr, tseg) = Vectors.distancePtSegSqr2D(endPos, vertices, vj, vi)
                     if (distSqr < bestDist) {
                         // Update nearest distance.
-                        bestPos = Vectors.lerp(vertices, vj, vi, tseg)
+                        Vectors.lerp(vertices, vj, vi, tseg, bestPos)
                         bestDist = distSqr
                         bestNode = curNode
                     }
@@ -1703,8 +1694,8 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                 val s = 1f / 255f
                 val tmin = link.bmin * s
                 val tmax = link.bmax * s
-                left = Vectors.lerp(fromTile.data!!.vertices, v0 * 3, v1 * 3, tmin)
-                right = Vectors.lerp(fromTile.data!!.vertices, v0 * 3, v1 * 3, tmax)
+                Vectors.lerp(fromTile.data!!.vertices, v0 * 3, v1 * 3, tmin, left)
+                Vectors.lerp(fromTile.data!!.vertices, v0 * 3, v1 * 3, tmax, right)
             }
         }
         return PortalResult(left, right, fromType, toType)
@@ -1797,18 +1788,14 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
     ): Result<RaycastHit> {
         // Validate input
         var prevRef = prevRef
-        if ((!nav1.isValidPolyRef(startRef) || Objects.isNull(startPos) || !Vectors.isFinite(startPos)
-                    || Objects.isNull(endPos) || !Vectors.isFinite(endPos) || Objects.isNull(filter)) || prevRef != 0L && !nav1.isValidPolyRef(
-                prevRef
-            )
-        ) {
-            return Result.invalidParam()
-        }
+        if ((!nav1.isValidPolyRef(startRef) || !startPos.isFinite || !endPos.isFinite) || prevRef != 0L &&
+            !nav1.isValidPolyRef(prevRef)
+        ) return Result.invalidParam()
+
         val hit = RaycastHit()
         val vertices = FloatArray(nav1.maxVerticesPerPoly * 3 + 3)
-        var curPos = Vector3f()
+        val curPos = Vector3f(startPos)
         val lastPos = Vector3f()
-        Vectors.copy(curPos, startPos)
         val dir = Vectors.sub(endPos, startPos)
         var prevTile: MeshTile?
         var tile: MeshTile?
@@ -1958,14 +1945,17 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
             if (options and DT_RAYCAST_USE_COSTS != 0) {
                 // compute the intersection point at the furthest end of the polygon
                 // and correct the height (since the raycast moves in 2d)
-                Vectors.copy(lastPos, curPos)
-                curPos = Vectors.mad(startPos, dir, hit.t)
-                val e1 = VectorPtr(vertices, iresult.segMax * 3)
-                val e2 = VectorPtr(vertices, (iresult.segMax + 1) % nv * 3)
-                val eDir = Vectors.sub(e2, e1)
-                val diff = Vectors.sub(curPos, e1)
-                val s: Float = if (Vectors.sqr(eDir.x) > Vectors.sqr(eDir.z)) diff.x / eDir.x else diff.z / eDir.z
-                curPos.y = e1[1] + eDir.y * s
+                lastPos.set(curPos)
+                Vectors.mad(startPos, dir, hit.t, curPos)
+                val v1 = iresult.segMax * 3
+                val v2 = (iresult.segMax + 1) % nv * 3
+                val ex = vertices[v2] - vertices[v1]
+                val ey = vertices[v2 + 1] - vertices[v1 + 1]
+                val ez = vertices[v2 + 2] - vertices[v1 + 2]
+                val dx = curPos.x - vertices[v1]
+                val dz = curPos.z - vertices[v1 + 2]
+                val s = if (ex * ex > ez * ez) dx / ex else dz / ez
+                curPos.y = vertices[v1 + 1] + ey * s
                 hit.pathCost += filter.getCost(
                     lastPos, curPos, prevRef, prevTile, prevPoly, curRef, tile, poly,
                     nextRef, nextTile, nextPoly
@@ -2057,14 +2047,14 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         nodePool.clear()
         openList.clear()
         val startNode = nodePool.getNode(startRef)
-        Vectors.copy(startNode.pos, centerPos)
+        startNode.pos.set(centerPos)
         startNode.parentIndex = 0
         startNode.cost = 0f
         startNode.totalCost = 0f
         startNode.polygonRef = startRef
         startNode.flags = Node.OPEN
         openList.offer(startNode)
-        val radiusSqr: Float = Vectors.sqr(radius)
+        val radiusSqr: Float = Vectors.sq(radius)
         while (!openList.isEmpty()) {
             val bestNode: Node = openList.poll()
             bestNode.flags = bestNode.flags and Node.OPEN.inv()
@@ -2202,9 +2192,10 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
     fun findPolysAroundShape(startRef: Long, vertices: FloatArray, filter: QueryFilter): Result<FindPolysAroundResult> {
         // Validate input
         val nvertices = vertices.size / 3
-        if (!nav1.isValidPolyRef(startRef) || nvertices < 3 || Objects.isNull(filter)) {
+        if (!nav1.isValidPolyRef(startRef) || nvertices < 3) {
             return Result.invalidParam()
         }
+
         val resultRef = LongArrayList()
         val resultParent = LongArrayList()
         val resultCost = FloatArrayList()
@@ -2218,7 +2209,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         }
         centerPos.div(nvertices.toFloat())
         val startNode = nodePool.getNode(startRef)
-        Vectors.copy(startNode.pos, centerPos)
+        startNode.pos.set(centerPos)
         startNode.parentIndex = 0
         startNode.cost = 0f
         startNode.totalCost = 0f
@@ -2368,12 +2359,10 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
     ): Result<FindLocalNeighbourhoodResult> {
 
         // Validate input
-        if (!nav1.isValidPolyRef(startRef) || !Vectors.isFinite(centerPos) || radius < 0 || !java.lang.Float.isFinite(
-                radius
-            )
-        ) {
+        if (!nav1.isValidPolyRef(startRef) || !centerPos.isFinite || radius < 0 || !radius.isFinite()) {
             return Result.invalidParam()
         }
+
         val resultRef = LongArrayList()
         val resultParent = LongArrayList()
         val tinyNodePool = NodePool()
@@ -2385,7 +2374,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         stack.add(startNode)
         resultRef.add(startNode.polygonRef)
         resultParent.add(0L)
-        val radiusSqr: Float = Vectors.sqr(radius)
+        val radiusSqr: Float = Vectors.sq(radius)
         val pa = FloatArray(nav1.maxVerticesPerPoly * 3)
         val pb = FloatArray(nav1.maxVerticesPerPoly * 3)
         while (!stack.isEmpty()) {
@@ -2611,14 +2600,15 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
             // Store segments.
             val vj = poly.vertices[j] * 3
             val vi = poly.vertices[i] * 3
+            val inv = 1f / 255f
             for (k in 1 until ints.size) {
                 // Portal segment.
                 if (storePortals && ints[k].ref != 0L) {
-                    val tmin = ints[k].tmin / 255f
-                    val tmax = ints[k].tmax / 255f
+                    val tmin = ints[k].tmin * inv
+                    val tmax = ints[k].tmax * inv
                     val seg = FloatArray(6)
-                    Vectors.copy(seg, 0, Vectors.lerp(tile.data!!.vertices, vj, vi, tmin))
-                    Vectors.copy(seg, 3, Vectors.lerp(tile.data!!.vertices, vj, vi, tmax))
+                    Vectors.lerp(tile.data!!.vertices, vj, vi, tmin, seg, 0)
+                    Vectors.lerp(tile.data!!.vertices, vj, vi, tmax, seg, 3)
                     segmentVertices.add(seg)
                     segmentRefs.add(ints[k].ref)
                 }
@@ -2627,11 +2617,11 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                 val imin = ints[k - 1].tmax
                 val imax = ints[k].tmin
                 if (imin != imax) {
-                    val tmin = imin / 255f
-                    val tmax = imax / 255f
+                    val tmin = imin * inv
+                    val tmax = imax * inv
                     val seg = FloatArray(6)
-                    Vectors.copy(seg, 0, Vectors.lerp(tile.data!!.vertices, vj, vi, tmin))
-                    Vectors.copy(seg, 3, Vectors.lerp(tile.data!!.vertices, vj, vi, tmax))
+                    Vectors.lerp(tile.data!!.vertices, vj, vi, tmin, seg, 0)
+                    Vectors.lerp(tile.data!!.vertices, vj, vi, tmax, seg, 3)
                     segmentVertices.add(seg)
                     segmentRefs.add(0L)
                 }
@@ -2668,26 +2658,24 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
     ): Result<FindDistanceToWallResult> {
 
         // Validate input
-        if (!nav1.isValidPolyRef(startRef) || Objects.isNull(centerPos) || !Vectors.isFinite(centerPos) || maxRadius < 0 || !java.lang.Float.isFinite(
-                maxRadius
-            ) || Objects.isNull(filter)
-        ) {
+        if (!nav1.isValidPolyRef(startRef) || !centerPos.isFinite || maxRadius < 0 || !maxRadius.isFinite()) {
             return Result.invalidParam()
         }
         nodePool.clear()
         openList.clear()
         val startNode = nodePool.getNode(startRef)
-        Vectors.copy(startNode.pos, centerPos)
+        startNode.pos.set(centerPos)
         startNode.parentIndex = 0
         startNode.cost = 0f
         startNode.totalCost = 0f
         startNode.polygonRef = startRef
         startNode.flags = Node.OPEN
         openList.offer(startNode)
-        var radiusSqr: Float = Vectors.sqr(maxRadius)
+        var radiusSqr: Float = Vectors.sq(maxRadius)
         val hitPos = Vector3f()
-        var bestvj: VectorPtr? = null
-        var bestvi: VectorPtr? = null
+        var bestvi = -1
+        var bestvj = -1
+        var bestData: FloatArray? = null
         while (!openList.isEmpty()) {
             val bestNode: Node = openList.poll()
             bestNode.flags = bestNode.flags and Node.OPEN.inv()
@@ -2706,75 +2694,75 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
             }
 
             // Hit test walls.
-            run {
-                var i = 0
-                var j = bestPoly.vertCount - 1
-                while (i < bestPoly.vertCount) {
+            var i = 0
+            var j = bestPoly.vertCount - 1
+            while (i < bestPoly.vertCount) {
 
-                    // Skip non-solid edges.
-                    if (bestPoly.neighborData[j] and NavMesh.DT_EXT_LINK != 0) {
-                        // Tile border.
-                        var solid = true
-                        var k = bestTile.polyLinks[bestPoly.index]
-                        while (k != NavMesh.DT_NULL_LINK) {
-                            val link = bestTile.links[k]
-                            if (link.indexOfPolyEdge == j) {
-                                if (link.neighborRef != 0L) {
-                                    val ref = link.neighborRef
-                                    val neiTile = nav1.getTileByRefUnsafe(ref)
-                                    val neiPoly = nav1.getPolyByRefUnsafe(ref, neiTile)
-                                    if (filter.passFilter(ref, neiTile, neiPoly)) {
-                                        solid = false
-                                    }
+                // Skip non-solid edges.
+                if (bestPoly.neighborData[j] and NavMesh.DT_EXT_LINK != 0) {
+                    // Tile border.
+                    var solid = true
+                    var k = bestTile.polyLinks[bestPoly.index]
+                    while (k != NavMesh.DT_NULL_LINK) {
+                        val link = bestTile.links[k]
+                        if (link.indexOfPolyEdge == j) {
+                            if (link.neighborRef != 0L) {
+                                val ref = link.neighborRef
+                                val neiTile = nav1.getTileByRefUnsafe(ref)
+                                val neiPoly = nav1.getPolyByRefUnsafe(ref, neiTile)
+                                if (filter.passFilter(ref, neiTile, neiPoly)) {
+                                    solid = false
                                 }
-                                break
                             }
-                            k = bestTile.links[k].indexOfNextLink
+                            break
                         }
-                        if (!solid) {
-                            j = i++
-                            continue
-                        }
-                    } else if (bestPoly.neighborData[j] != 0) {
-                        // Internal edge
-                        val idx = bestPoly.neighborData[j] - 1
-                        val ref = nav1.getPolyRefBase(bestTile) or idx.toLong()
-                        if (filter.passFilter(ref, bestTile, bestTile.data!!.polygons[idx])) {
-                            j = i++
-                            continue
-                        }
+                        k = bestTile.links[k].indexOfNextLink
                     }
-
-                    // Calc distance to the edge.
-                    val vj = bestPoly.vertices[j] * 3
-                    val vi = bestPoly.vertices[i] * 3
-                    val (distSqr, tseg) = Vectors.distancePtSegSqr2D(centerPos, bestTile.data!!.vertices, vj, vi)
-
-                    // Edge is too far, skip.
-                    if (distSqr > radiusSqr) {
+                    if (!solid) {
                         j = i++
                         continue
                     }
-
-                    // Hit wall, update radius.
-                    radiusSqr = distSqr
-                    val data = bestTile.data!!
-                    // Calculate hit pos.
-                    hitPos.x = data.vertices[vj] + (data.vertices[vi] - data.vertices[vj]) * tseg
-                    hitPos.y = data.vertices[vj + 1] + (data.vertices[vi + 1] - data.vertices[vj + 1]) * tseg
-                    hitPos.z = data.vertices[vj + 2] + (data.vertices[vi + 2] - data.vertices[vj + 2]) * tseg
-                    bestvj = VectorPtr(data.vertices, vj)
-                    bestvi = VectorPtr(data.vertices, vi)
-                    j = i++
+                } else if (bestPoly.neighborData[j] != 0) {
+                    // Internal edge
+                    val idx = bestPoly.neighborData[j] - 1
+                    val ref = nav1.getPolyRefBase(bestTile) or idx.toLong()
+                    if (filter.passFilter(ref, bestTile, bestTile.data!!.polygons[idx])) {
+                        j = i++
+                        continue
+                    }
                 }
+
+                // Calc distance to the edge.
+                val vj = bestPoly.vertices[j] * 3
+                val vi = bestPoly.vertices[i] * 3
+                val (distSqr, tseg) = Vectors.distancePtSegSqr2D(centerPos, bestTile.data!!.vertices, vj, vi)
+
+                // Edge is too far, skip.
+                if (distSqr > radiusSqr) {
+                    j = i++
+                    continue
+                }
+
+                // Hit wall, update radius.
+                radiusSqr = distSqr
+                val data = bestTile.data!!
+                // Calculate hit pos.
+                hitPos.x = data.vertices[vj] + (data.vertices[vi] - data.vertices[vj]) * tseg
+                hitPos.y = data.vertices[vj + 1] + (data.vertices[vi + 1] - data.vertices[vj + 1]) * tseg
+                hitPos.z = data.vertices[vj + 2] + (data.vertices[vi + 2] - data.vertices[vj + 2]) * tseg
+                bestvj = vj
+                bestvi = vi
+                bestData = data.vertices
+                j = i++
             }
-            var i = bestTile.polyLinks[bestPoly.index]
-            while (i != NavMesh.DT_NULL_LINK) {
-                val link = bestTile.links[i]
+
+            var k = bestTile.polyLinks[bestPoly.index]
+            while (k != NavMesh.DT_NULL_LINK) {
+                val link = bestTile.links[k]
                 val neighbourRef = link.neighborRef
                 // Skip invalid neighbours and do not follow back to parent.
                 if (neighbourRef == 0L || neighbourRef == parentRef) {
-                    i = bestTile.links[i].indexOfNextLink
+                    k = bestTile.links[k].indexOfNextLink
                     continue
                 }
 
@@ -2784,7 +2772,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
 
                 // Skip off-mesh connections.
                 if (neighbourPoly.type == Poly.DT_POLYTYPE_OFFMESH_CONNECTION) {
-                    i = bestTile.links[i].indexOfNextLink
+                    k = bestTile.links[k].indexOfNextLink
                     continue
                 }
 
@@ -2794,16 +2782,16 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                 val (distSqr) = Vectors.distancePtSegSqr2D(centerPos, bestTile.data!!.vertices, va, vb)
                 // If the circle is not touching the next polygon, skip it.
                 if (distSqr > radiusSqr) {
-                    i = bestTile.links[i].indexOfNextLink
+                    k = bestTile.links[k].indexOfNextLink
                     continue
                 }
                 if (!filter.passFilter(neighbourRef, neighbourTile, neighbourPoly)) {
-                    i = bestTile.links[i].indexOfNextLink
+                    k = bestTile.links[k].indexOfNextLink
                     continue
                 }
                 val neighbourNode = nodePool.getNode(neighbourRef)
                 if (neighbourNode.flags and Node.CLOSED != 0) {
-                    i = bestTile.links[i].indexOfNextLink
+                    k = bestTile.links[k].indexOfNextLink
                     continue
                 }
 
@@ -2819,7 +2807,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
 
                 // The node is already in open list and the new result is worse, skip.
                 if (neighbourNode.flags and Node.OPEN != 0 && total >= neighbourNode.totalCost) {
-                    i = bestTile.links[i].indexOfNextLink
+                    k = bestTile.links[k].indexOfNextLink
                     continue
                 }
                 neighbourNode.polygonRef = neighbourRef
@@ -2833,17 +2821,16 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                     neighbourNode.flags = neighbourNode.flags or Node.OPEN
                     openList.offer(neighbourNode)
                 }
-                i = bestTile.links[i].indexOfNextLink
+                k = bestTile.links[k].indexOfNextLink
             }
         }
 
         // Calc hit normal.
         val hitNormal = Vector3f()
-        if (bestvi != null) {
-            val tangent = Vectors.sub(bestvi!!, bestvj!!)
-            hitNormal.x = tangent.z
+        if (bestData != null) {
+            hitNormal.x = bestData[bestvi + 2] - bestData[bestvj + 2]
             hitNormal.y = 0f
-            hitNormal.z = -tangent.x
+            hitNormal.z = bestData[bestvj] - bestData[bestvi]
             hitNormal.normalize()
         }
         return Result.success(FindDistanceToWallResult(sqrt(radiusSqr), hitPos, hitNormal))

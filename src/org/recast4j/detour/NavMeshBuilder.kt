@@ -214,10 +214,8 @@ object NavMeshBuilder {
             }
             hmin -= params.walkableClimb
             hmax += params.walkableClimb
-            val bmin = Vector3f()
-            val bmax = Vector3f()
-            Vectors.copy(bmin, params.bmin)
-            Vectors.copy(bmax, params.bmax)
+            val bmin = Vector3f(params.bmin)
+            val bmax = Vector3f(params.bmax)
             bmin.y = hmin
             bmax.y = hmax
             for (i in 0 until params.offMeshConCount) {

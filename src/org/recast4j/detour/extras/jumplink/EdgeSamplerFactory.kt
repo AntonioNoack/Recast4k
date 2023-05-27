@@ -19,8 +19,8 @@ internal class EdgeSamplerFactory {
         es.start.height = cfg.agentClimb * 2
         val offset = Vector3f()
         trans2d(offset, es.az, es.ay, cfg.startDistance, -cfg.agentClimb)
-        Vectors.add(es.start.p, edge.a, offset)
-        Vectors.add(es.start.q, edge.b, offset)
+        edge.a.add(offset, es.start.p)
+        edge.b.add(offset, es.start.q)
         val dx = cfg.endDistance - 2 * cfg.agentRadius
         val cs = cfg.cellSize
         val numSamples = max(2, ceil((dx / cs)).toInt())
@@ -30,8 +30,8 @@ internal class EdgeSamplerFactory {
             trans2d(offset, es.az, es.ay, ox, cfg.minHeight)
             val end = GroundSegment()
             end.height = cfg.heightRange
-            Vectors.add(end.p, edge.a, offset)
-            Vectors.add(end.q, edge.b, offset)
+            edge.a.add(offset, end.p)
+            edge.b.add(offset, end.q)
             es.end.add(end)
         }
         return es
@@ -42,13 +42,13 @@ internal class EdgeSamplerFactory {
         es.start.height = cfg.agentClimb * 2
         val offset = Vector3f()
         trans2d(offset, es.az, es.ay, cfg.startDistance, -cfg.agentClimb)
-        Vectors.add(es.start.p, edge.a, offset)
-        Vectors.add(es.start.q, edge.b, offset)
+        edge.a.add(offset, es.start.p)
+        edge.b.add(offset, es.start.q)
         trans2d(offset, es.az, es.ay, cfg.endDistance, cfg.minHeight)
         val end = GroundSegment()
         end.height = cfg.heightRange
-        Vectors.add(end.p, edge.a, offset)
-        Vectors.add(end.q, edge.b, offset)
+        edge.a.add(offset, end.p)
+        edge.b.add(offset, end.q)
         es.end.add(end)
         return es
     }

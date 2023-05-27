@@ -35,13 +35,13 @@ class NavMesh(
     /**
      * Origin of the tile (0,0)
      */
-    private val origin: Vector3f
+    private val origin = params.origin
 
     /**
      * Dimensions of each tile.
      */
-    var m_tileWidth: Float
-    var m_tileHeight: Float
+    var m_tileWidth = params.tileWidth
+    var m_tileHeight = params.tileHeight
     /**
      * The maximum number of tiles supported by the navigation mesh.
      *
@@ -50,7 +50,7 @@ class NavMesh(
     /**
      * Max number of tiles.
      */
-    var maxTiles: Int
+    var maxTiles = params.maxTiles
 
     /**
      * Tile hash lookup mask.
@@ -168,11 +168,7 @@ class NavMesh(
     }
 
     init {
-        origin = params.origin
-        m_tileWidth = params.tileWidth
-        m_tileHeight = params.tileHeight
         // Init tiles
-        maxTiles = params.maxTiles
         this.maxVerticesPerPoly = maxVerticesPerPoly
         tileLutMask = max(1, Vectors.nextPow2(params.maxTiles)) - 1
         m_tiles = arrayOfNulls(maxTiles)
@@ -195,12 +191,12 @@ class NavMesh(
             val bmin = Vector3i()
             val bmax = Vector3i()
             // dtClamp query box to world box.
-            val minx: Float = Vectors.clamp(qmin.x, tbmin.x, tbmax.x) - tbmin.x
-            val miny: Float = Vectors.clamp(qmin.y, tbmin.y, tbmax.y) - tbmin.y
-            val minz: Float = Vectors.clamp(qmin.z, tbmin.z, tbmax.z) - tbmin.z
-            val maxx: Float = Vectors.clamp(qmax.x, tbmin.x, tbmax.x) - tbmin.x
-            val maxy: Float = Vectors.clamp(qmax.y, tbmin.y, tbmax.y) - tbmin.y
-            val maxz: Float = Vectors.clamp(qmax.z, tbmin.z, tbmax.z) - tbmin.z
+            val minx = Vectors.clamp(qmin.x, tbmin.x, tbmax.x) - tbmin.x
+            val miny = Vectors.clamp(qmin.y, tbmin.y, tbmax.y) - tbmin.y
+            val minz = Vectors.clamp(qmin.z, tbmin.z, tbmax.z) - tbmin.z
+            val maxx = Vectors.clamp(qmax.x, tbmin.x, tbmax.x) - tbmin.x
+            val maxy = Vectors.clamp(qmax.y, tbmin.y, tbmax.y) - tbmin.y
+            val maxz = Vectors.clamp(qmax.z, tbmin.z, tbmax.z) - tbmin.z
             // Quantize
             bmin.x = (qfac * minx).toInt() and 0x7ffffffe
             bmin.y = (qfac * miny).toInt() and 0x7ffffffe
@@ -587,7 +583,7 @@ class NavMesh(
             val nearestPt = nearest.nearestPos ?: continue
             // findNearestPoly may return too optimistic results, further check
             // to make sure.
-            if (Vectors.sqr(nearestPt.x - p.x) + Vectors.sqr(nearestPt.z - p.z) > Vectors.sqr(targetCon.rad)) {
+            if (Vectors.sq(nearestPt.x - p.x) + Vectors.sq(nearestPt.z - p.z) > Vectors.sq(targetCon.rad)) {
                 continue
             }
             // Make sure the location is on current mesh.
@@ -747,7 +743,7 @@ class NavMesh(
             val nearestPt = nearestPoly.nearestPos ?: continue
             // findNearestPoly may return too optimistic results, further check
             // to make sure.
-            if (Vectors.sqr(nearestPt.x - p.x) + Vectors.sqr(nearestPt.z - p.z) > Vectors.sqr(con.rad)) {
+            if (Vectors.sq(nearestPt.x - p.x) + Vectors.sq(nearestPt.z - p.z) > Vectors.sq(con.rad)) {
                 continue
             }
             // Make sure the location is on current mesh.
@@ -885,7 +881,7 @@ class NavMesh(
                         Vectors.copy(v[k], tile.data!!.detailVertices, index)
                     }
                 }
-                val h: Float = Vectors.closestHeightPointTriangle(pos, v[0], v[1], v[2])
+                val h = Vectors.closestHeightPointTriangle(pos, v[0], v[1], v[2])
                 if (java.lang.Float.isFinite(h)) {
                     return h
                 }
@@ -898,7 +894,7 @@ class NavMesh(
             for (j in 1 until poly.vertCount - 1) {
                 Vectors.copy(v1, tile.data!!.vertices, poly.vertices[j + 1] * 3)
                 Vectors.copy(v2, tile.data!!.vertices, poly.vertices[j + 2] * 3)
-                val h: Float = Vectors.closestHeightPointTriangle(pos, v0, v1, v2)
+                val h = Vectors.closestHeightPointTriangle(pos, v0, v1, v2)
                 if (java.lang.Float.isFinite(h)) return h
             }
         }
@@ -937,8 +933,8 @@ class NavMesh(
     fun findNearestPolyInTile(tile: MeshTile, center: Vector3f, extents: Vector3f): FindNearestPolyResult {
         var nearestPt: Vector3f? = null
         var overPoly = false
-        val bmin = Vectors.sub(center, extents)
-        val bmax = Vectors.add(center, extents)
+        val bmin = Vector3f(center).sub(extents)
+        val bmax = Vector3f(center).add(extents)
 
         // Get nearby polygons from proximity grid.
         val polys: LongArrayList = queryPolygonsInTile(tile, bmin, bmax)
@@ -1258,7 +1254,7 @@ class NavMesh(
         private fun getNavMeshParams(data: MeshData): NavMeshParams {
             val params = NavMeshParams()
             val header = data.header!!
-            Vectors.copy(params.origin, header.bmin)
+            params.origin.set(header.bmin)
             params.tileWidth = header.bmax.x - header.bmin.x
             params.tileHeight = header.bmax.z - header.bmin.z
             params.maxTiles = 1

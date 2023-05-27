@@ -21,7 +21,7 @@ package org.recast4j.detour.tilecache
 import org.joml.Vector3f
 import org.recast4j.Edge
 import org.recast4j.IntArrayList
-import org.recast4j.Vectors.sqr
+import org.recast4j.Vectors.sq
 import org.recast4j.detour.tilecache.io.TileCacheLayerHeaderReader
 import org.recast4j.detour.tilecache.io.TileCacheLayerHeaderWriter
 import java.io.ByteArrayOutputStream
@@ -1440,7 +1440,7 @@ class TileCacheBuilder {
         bmax.x += radius
         bmax.y += height
         bmax.z += radius
-        val r2: Float = sqr(radius / cs + 0.5f)
+        val r2: Float = sq(radius / cs + 0.5f)
         val w = layer.header.width
         val h = layer.header.height
         val ics = 1f / cs

@@ -287,11 +287,12 @@ class PathCorridor {
 
         // Overshoot a little. This helps to optimize open fields in tiled
         // meshes.
-        dist = Math.min(dist + 0.01f, pathOptimizationRange)
+        dist = min(dist + 0.01f, pathOptimizationRange)
 
         // Adjust ray length.
         val delta = sub(next, pos)
-        val goal = mad(pos, delta, pathOptimizationRange / dist)
+        val goal = Vector3f()
+        mad(pos, delta, pathOptimizationRange / dist, goal)
         val rc = navquery.raycast(path[0], pos, goal, filter!!, 0, 0)
         if (rc.succeeded()) {
             if (rc.result!!.path.size > 1 && rc.result.t > 0.99f) {
@@ -354,9 +355,9 @@ class PathCorridor {
         refs[1] = polyRef
         val nav = navquery.nav1
         val (start1, end1) = nav.getOffMeshConnectionPolyEndPoints(refs[0], refs[1]) ?: return false
-        copy(pos, end1)
-        copy(start, start1)
-        copy(end, end1)
+        pos.set(end1)
+        start.set(start1)
+        end.set(end1)
         return true
     }
 
@@ -391,7 +392,7 @@ class PathCorridor {
             val result = masResult.result!!
             path = mergeCorridorStartMoved(path, result.visited)
             // Adjust the position to stay on top of the navmesh.
-            copy(pos, result.resultPos)
+            pos.set(result.resultPos)
             val hr = navquery.getPolyHeight(path[0], result.resultPos)
             if (java.lang.Float.isFinite(hr)) pos.y = hr
             true

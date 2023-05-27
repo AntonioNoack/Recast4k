@@ -149,10 +149,9 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
             // Side
             val pb = cir!!.p
             val orig = Vector3f()
-            var dv: Vector3f
-            Vectors.copy(cir.dp, Vectors.sub(pb, pos))
+            cir.dp.set(pb).sub(pos)
             cir.dp.normalize()
-            dv = Vectors.sub(cir.dvel, dvel)
+            val dv: Vector3f = Vectors.sub(cir.dvel, dvel)
             val a: Float = Vectors.triArea2D(orig, cir.dp, dv)
             if (a < 0.01f) {
                 cir.np.x = -cir.dp.z
@@ -168,7 +167,7 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
             // Precalc if the agent is really close to the segment.
             val r = 0.01f
             val (first) = Vectors.distancePtSegSqr2D(pos, seg!!.p, seg.q)
-            seg.touch = first < Vectors.sqr(r)
+            seg.touch = first < Vectors.sq(r)
         }
     }
 
@@ -301,8 +300,7 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
         m_invHorizTime = 1f / m_params!!.horizTime
         m_invVmax = if (vmax > 0) 1f / vmax else Float.MAX_VALUE
         val nvel = Vector3f()
-        Vectors.set(nvel, 0f, 0f, 0f)
-        if (debug != null) debug.reset()
+        debug?.reset()
         val cvx: Float = dvel.x * m_params!!.velBias
         val cvz: Float = dvel.z * m_params!!.velBias
         val cs = vmax * 2 * (1 - m_params!!.velBias) / (m_params!!.gridSize - 1)
@@ -312,16 +310,16 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
         for (y in 0 until m_params!!.gridSize) {
             for (x in 0 until m_params!!.gridSize) {
                 val vcand = Vector3f(cvx + x * cs - half, 0f, cvz + y * cs - half)
-                if (Vectors.sqr(vcand.x) + Vectors.sqr(vcand.z) > Vectors.sqr(vmax + cs / 2)) continue
+                if (Vectors.sq(vcand.x) + Vectors.sq(vcand.z) > Vectors.sq(vmax + cs / 2)) continue
                 val penalty = processSample(vcand, cs, pos, rad, vel, dvel, minPenalty, debug)
                 ns++
                 if (penalty < minPenalty) {
                     minPenalty = penalty
-                    Vectors.copy(nvel, vcand)
+                    nvel.set(vcand)
                 }
             }
         }
-        return Pair<Int, Vector3f>(ns, nvel)
+        return Pair(ns, nvel)
     }
 
     // vector normalization that ignores the y-component.
@@ -412,7 +410,7 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
             val bVel = Vector3f()
             for (i in 0 until npat) {
                 val vcand = Vector3f(res.x + pat[i * 2] * cr, 0f, res.z + pat[i * 2 + 1] * cr)
-                if (Vectors.sqr(vcand.x) + Vectors.sqr(vcand.z) > Vectors.sqr(vmax + 0.001f)) continue
+                if (Vectors.sq(vcand.x) + Vectors.sq(vcand.z) > Vectors.sq(vmax + 0.001f)) continue
                 val penalty = processSample(vcand, cr / 10, pos, rad, vel, dvel, minPenalty, debug)
                 ns++
                 if (penalty < minPenalty) {
