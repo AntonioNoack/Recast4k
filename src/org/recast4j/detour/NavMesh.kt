@@ -583,7 +583,7 @@ class NavMesh(
             val nearestPt = nearest.nearestPos ?: continue
             // findNearestPoly may return too optimistic results, further check
             // to make sure.
-            if (Vectors.sq(nearestPt.x - p.x) + Vectors.sq(nearestPt.z - p.z) > Vectors.sq(targetCon.rad)) {
+            if (Vectors.sq(nearestPt.x - p.x) + Vectors.sq(nearestPt.z - p.z) > targetCon.rad * targetCon.rad) {
                 continue
             }
             // Make sure the location is on current mesh.
@@ -747,7 +747,7 @@ class NavMesh(
                 continue
             }
             // Make sure the location is on current mesh.
-            Vectors.copy(data.vertices, poly.vertices[0] * 3, nearestPt)
+            nearestPt.get(data.vertices, poly.vertices[0] * 3)
 
             // Link off-mesh connection to target poly.
             val idx = allocLink(tile)
@@ -895,7 +895,7 @@ class NavMesh(
                 v1.set(tile.data!!.vertices, poly.vertices[j + 1] * 3)
                 v2.set(tile.data!!.vertices, poly.vertices[j + 2] * 3)
                 val h = Vectors.closestHeightPointTriangle(pos, v0, v1, v2)
-                if (java.lang.Float.isFinite(h)) return h
+                if (h.isFinite()) return h
             }
         }
 

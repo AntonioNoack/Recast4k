@@ -816,7 +816,7 @@ class Crowd @JvmOverloads constructor(
                     anim.t = 0f
                     anim.tMax = Vectors.dist2D(anim.startPos, anim.endPos) / ag.params.maxSpeed * 0.5f
                     ag.state = CrowdAgentState.OFFMESH
-                    ag.corners.clear()
+                    StraightPathItem.clear(ag.corners)
                     ag.neis.clear()
                 }
                 // else Path validity check will ensure that bad/blocked connections will be replanned.

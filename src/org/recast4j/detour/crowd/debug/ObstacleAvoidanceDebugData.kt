@@ -20,7 +20,6 @@ package org.recast4j.detour.crowd.debug
 
 import org.joml.Vector3f
 import org.recast4j.Vectors.clamp
-import org.recast4j.Vectors.copy
 import kotlin.math.max
 import kotlin.math.min
 
@@ -63,7 +62,7 @@ class ObstacleAvoidanceDebugData(var maxSamples: Int) {
 
     fun addSample(vel: Vector3f, ssize: Float, pen: Float, vpen: Float, vcpen: Float, spen: Float, tpen: Float) {
         if (sampleCount >= maxSamples) return
-        copy(this.vel, sampleCount * 3, vel)
+        vel.get(this.vel, sampleCount * 3)
         this.ssize[sampleCount] = ssize
         this.pen[sampleCount] = pen
         this.vpen[sampleCount] = vpen

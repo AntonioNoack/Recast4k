@@ -173,29 +173,32 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
 
     fun sweepCircleCircle(c0: Vector3f, r0: Float, v: Vector3f, c1: Vector3f, r1: Float): SweepCircleCircleResult? {
         val EPS = 0.0001f
-        val s = Vectors.sub(c1, c0)
+        val sx = c1.x - c0.x
+        val sz = c1.z - c0.z
         val r = r0 + r1
-        val c = Vectors.dot2D(s, s) - r * r
+        val c = (sx * sx + sz * sz) - r * r
         var a = Vectors.dot2D(v, v)
         if (a < EPS) return null // not moving
         // Overlap, calc time to exit.
-        val b = Vectors.dot2D(v, s)
+        val b = v.x * sx + v.z * sz
         val d = b * b - a * c
         if (d < 0f) return null // no intersection.
         a = 1f / a
-        val rd = sqrt(d).toFloat()
+        val rd = sqrt(d)
         return SweepCircleCircleResult((b - rd) * a, (b + rd) * a)
     }
 
-    fun isectRaySeg(ap: Vector3f, u: Vector3f, bp: Vector3f, bq: Vector3f): Float {
-        val v = Vectors.sub(bq, bp)
-        val w = Vectors.sub(ap, bp)
-        var d = -Vectors.crossXZ(u, v)
+    fun intersectRaySeg(ap: Vector3f, u: Vector3f, bp: Vector3f, bq: Vector3f): Float {
+        val vx = bq.x - bp.x
+        val vz = bq.z - bp.z
+        val wx = ap.x - bp.x
+        val wz = ap.z - bp.z
+        var d = (u.z * vx - u.x * vz)
         if (abs(d) < 1e-6f) return -1f
         d = 1f / d
-        val t = -Vectors.crossXZ(v, w) * d
+        val t = (vz * wx - vx * wz) * d
         if (t < 0 || t > 1) return -1f
-        val s = -Vectors.crossXZ(u, w) * d
+        val s = (u.z * wx - u.x * wz) * d
         return if (s < 0 || s > 1) -1f else t
     }
 
@@ -266,7 +269,7 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
                 // Else immediate collision.
                 htmin = 0f
             } else {
-                val ires = isectRaySeg(pos, vcand, seg.p, seg.q)
+                val ires = intersectRaySeg(pos, vcand, seg.p, seg.q)
                 if (ires < 0f) continue
                 htmin = ires
             }
@@ -310,7 +313,8 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
         for (y in 0 until m_params!!.gridSize) {
             for (x in 0 until m_params!!.gridSize) {
                 val vcand = Vector3f(cvx + x * cs - half, 0f, cvz + y * cs - half)
-                if (Vectors.sq(vcand.x) + Vectors.sq(vcand.z) > Vectors.sq(vmax + cs / 2)) continue
+                val vmax2 = vmax + cs / 2
+                if (vcand.x * vcand.x + vcand.z * vcand.z > vmax2 * vmax2) continue
                 val penalty = processSample(vcand, cs, pos, rad, vel, dvel, minPenalty, debug)
                 ns++
                 if (penalty < minPenalty) {

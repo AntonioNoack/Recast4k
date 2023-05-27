@@ -62,8 +62,8 @@ class JumpLinkBuilder(private val results: List<RecastBuilderResult>) {
                 link.trajectory = es.trajectory
                 for (j in 0 until link.numSpines) {
                     val u = j.toFloat() / (link.numSpines - 1)
-                    Vectors.copy(link.spine0, j * 3, es.trajectory.apply(sp, ep, u))
-                    Vectors.copy(link.spine1, j * 3, es.trajectory.apply(sq, eq, u))
+                    es.trajectory.apply(sp, ep, u).get(link.spine0, j * 3)
+                    es.trajectory.apply(sq, eq, u).get(link.spine1, j * 3)
                 }
             }
         }

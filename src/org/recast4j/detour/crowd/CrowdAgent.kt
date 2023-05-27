@@ -23,6 +23,7 @@ import org.recast4j.Vectors
 import org.recast4j.detour.NavMeshQuery
 import org.recast4j.detour.StraightPathItem
 import org.recast4j.detour.crowd.Crowd.CrowdNeighbour
+import kotlin.math.hypot
 import kotlin.math.min
 
 /**
@@ -115,10 +116,16 @@ class CrowdAgent(idx: Int) {
     fun integrate(dt: Float) {
         // Fake dynamic constraint.
         val maxDelta = params.maxAcceleration * dt
-        val dv = Vectors.sub(desiredVelAdjusted, actualVelocity)
-        val ds = dv.length()
-        if (ds > maxDelta) dv.mul(maxDelta / ds)
-        actualVelocity.add(dv)
+        val ds = desiredVelAdjusted.distance(actualVelocity)
+        if (ds > maxDelta) {
+            val scale = maxDelta / ds
+            val dvx = desiredVelAdjusted.x - actualVelocity.x
+            val dvy = desiredVelAdjusted.y - actualVelocity.y
+            val dvz = desiredVelAdjusted.z - actualVelocity.z
+            actualVelocity.add(dvx * scale, dvy * scale, dvz * scale)
+        } else {
+            actualVelocity.add(desiredVelAdjusted).sub(actualVelocity)
+        }
 
         // Integrate
         if (actualVelocity.length() > 0.0001f) Vectors.mad2(
@@ -150,17 +157,18 @@ class CrowdAgent(idx: Int) {
             val ip1 = min(1, corners.size - 1)
             val p0 = corners[ip0].pos
             val p1 = corners[ip1].pos
-            val dir0 = Vectors.sub(p0, currentPosition)
-            val dir1 = Vectors.sub(p1, currentPosition)
-            dir0.y = 0f
-            dir1.y = 0f
-            val len0 = dir0.length()
-            val len1 = dir1.length()
-            if (len1 > 0.001f) dir1.mul(1f / len1)
-            dst.x = dir0.x - dir1.x * len0 * 0.5f
-            dst.y = 0f
-            dst.z = dir0.z - dir1.z * len0 * 0.5f
-            dst.normalize()
+            val dir0x = p0.x - currentPosition.x
+            val dir0z = p0.z - currentPosition.z
+            var dir1x = p1.x - currentPosition.x
+            var dir1z = p1.z - currentPosition.z
+            val len0 = hypot(dir0x, dir0z)
+            val len1 = hypot(dir1x, dir1z)
+            if (len1 > 0.001f) {
+                val sca = 1f / len1
+                dir1x *= sca
+                dir1z *= sca
+            }
+            dst.set(dir0x - dir1x * len0 * 0.5f, 0f, dir0z - dir1z * len0 * 0.5f).normalize()
         }
         return dst
     }

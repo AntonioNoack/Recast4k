@@ -1188,7 +1188,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         } else {
             if (straightPath.size < maxStraightPath) {
                 // Append new vertex.
-                straightPath.add(StraightPathItem(pos, flags, ref))
+                straightPath.add(StraightPathItem.create(pos, flags, ref))
             }
             // If reached end of path or there is no space to append more vertices, return.
             if (flags == DT_STRAIGHTPATH_END || straightPath.size >= maxStraightPath) {
@@ -1229,8 +1229,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
             val intersect = Vectors.intersectSegSeg2D(startPos, endPos, left, right)
             if (intersect != null) {
                 val t = intersect.second
-                val pt = Vectors.lerp(left, right, t)
-                stat = appendVertex(pt, 0, path[i + 1], straightPath, maxStraightPath)
+                stat = appendVertex(left.lerp(right, t), 0, path[i + 1], straightPath, maxStraightPath)
                 if (!stat.isInProgress) {
                     return stat
                 }
@@ -1284,9 +1283,9 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         }
         if (path.size > 1) {
             val tmp = PortalResult()
-            var portalApex = Vectors.copy(closestStartPosRes)
-            var portalLeft = Vectors.copy(portalApex)
-            var portalRight = Vectors.copy(portalApex)
+            var portalApex = closestStartPosRes
+            var portalLeft = portalApex
+            var portalRight = portalApex
             var apexIndex = 0
             var leftIndex = 0
             var rightIndex = 0
@@ -1328,20 +1327,17 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                     }
                 } else {
                     // End of the path.
-                    left = Vectors.copy(closestEndPos)
-                    right = Vectors.copy(closestEndPos)
+                    left = closestEndPos
+                    right = closestEndPos
                     toType = Poly.DT_POLYTYPE_GROUND
                 }
 
                 // Right vertex.
                 if (Vectors.triArea2D(portalApex, portalRight, right) <= 0f) {
-                    if (Vectors.vEqual(portalApex, portalRight) || Vectors.triArea2D(
-                            portalApex,
-                            portalLeft,
-                            right
-                        ) > 0f
+                    if (Vectors.vEqual(portalApex, portalRight) ||
+                        Vectors.triArea2D(portalApex, portalLeft, right) > 0f
                     ) {
-                        portalRight = Vectors.copy(right)
+                        portalRight = (right)
                         rightPolyRef = if (i + 1 < path.size) path[i + 1] else 0
                         rightPolyType = toType
                         rightIndex = i
@@ -1356,7 +1352,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                                 return straightPath
                             }
                         }
-                        portalApex = Vectors.copy(portalLeft)
+                        portalApex = (portalLeft)
                         apexIndex = leftIndex
                         var flags = 0
                         if (leftPolyRef == 0L) {
@@ -1370,8 +1366,8 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                         if (!stat.isInProgress) {
                             return straightPath
                         }
-                        portalLeft = Vectors.copy(portalApex)
-                        portalRight = Vectors.copy(portalApex)
+                        portalLeft = (portalApex)
+                        portalRight = (portalApex)
                         rightIndex = apexIndex
 
                         // Restart
@@ -1383,13 +1379,10 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
 
                 // Left vertex.
                 if (Vectors.triArea2D(portalApex, portalLeft, left) >= 0f) {
-                    if (Vectors.vEqual(portalApex, portalLeft) || Vectors.triArea2D(
-                            portalApex,
-                            portalRight,
-                            left
-                        ) < 0f
+                    if (Vectors.vEqual(portalApex, portalLeft) ||
+                        Vectors.triArea2D(portalApex, portalRight, left) < 0f
                     ) {
-                        portalLeft = Vectors.copy(left)
+                        portalLeft = (left)
                         leftPolyRef = if (i + 1 < path.size) path[i + 1] else 0
                         leftPolyType = toType
                         leftIndex = i
@@ -1404,7 +1397,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                                 return straightPath
                             }
                         }
-                        portalApex = Vectors.copy(portalRight)
+                        portalApex = (portalRight)
                         apexIndex = rightIndex
                         var flags = 0
                         if (rightPolyRef == 0L) {
@@ -1418,8 +1411,8 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                         if (!stat.isInProgress) {
                             return straightPath
                         }
-                        portalLeft = Vectors.copy(portalApex)
-                        portalRight = Vectors.copy(portalApex)
+                        portalLeft = portalApex
+                        portalRight = portalApex
                         leftIndex = apexIndex
 
                         // Restart
@@ -1473,11 +1466,11 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
     fun moveAlongSurface(
         startRef: Long, startPos: Vector3f, endPos: Vector3f,
         filter: QueryFilter
-    ): Result<MoveAlongSurfaceResult> {
+    ): MoveAlongSurfaceResult? {
 
         // Validate input
         if (!nav1.isValidPolyRef(startRef) || !startPos.isFinite || !endPos.isFinite) {
-            return Result.invalidParam()
+            return null
         }
 
         val tinyNodePool = NodePool()
@@ -1494,7 +1487,8 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         var bestNode: Node? = null
 
         // Search constraints
-        val searchPos = Vectors.lerp(startPos, endPos, 0.5f)
+        val searchPosX = (startPos.x + endPos.x) * 0.5f
+        val searchPosZ = (startPos.z + endPos.z) * 0.5f
         val searchRad = startPos.distance(endPos) * 0.5f + 0.001f
         val searchRadSqr = searchRad * searchRad
         val vertices = FloatArray(nav1.maxVerticesPerPoly * 3)
@@ -1576,9 +1570,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
 
                         // Skip the link if it is too far from search constraint.
                         // TODO: Maybe should use getPortalPoints(), but this one is way faster.
-                        val vj = j * 3
-                        val vi = i * 3
-                        val (distSqr) = Vectors.distancePtSegSqr2D(searchPos, vertices, vj, vi)
+                        val (distSqr) = Vectors.distancePtSegSqr2D(searchPosX, searchPosZ, vertices, j * 3, i * 3)
                         if (distSqr > searchRadSqr) {
                             continue
                         }
@@ -1611,7 +1603,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                 node = tinyNodePool.getNodeAtIdx(node.parentIndex)
             } while (node != null)
         }
-        return Result.success(MoveAlongSurfaceResult(bestPos, visited))
+        return MoveAlongSurfaceResult(bestPos, visited)
     }
 
     class PortalResult(val left: Vector3f, val right: Vector3f, var fromType: Int, var toType: Int) {

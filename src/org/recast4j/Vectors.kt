@@ -138,22 +138,13 @@ object Vectors {
         return Vector3f(v1).sub(v2)
     }
 
+    fun copy(dst: Vector3f, src: IntArray, srcI: Int) {
+        dst.set(src[srcI].toFloat(), src[srcI + 1].toFloat(), src[srcI + 2].toFloat())
+    }
+
     @Deprecated("Don't allocate!")
-    fun copy(v: Vector3f): Vector3f {
-        return Vector3f(v)
-    }
+    fun copy(s: Vector3f) = Vector3f(s)
 
-    fun copy(dst: FloatArray, dstI: Int, v: Vector3f) {
-        dst[dstI] = v.x
-        dst[dstI + 1] = v.y
-        dst[dstI + 2] = v.z
-    }
-
-    fun copy(out: Vector3f, input: IntArray, i: Int) {
-        out.set(input[i].toFloat(), input[i + 1].toFloat(), input[i + 2].toFloat())
-    }
-
-    @Deprecated("Replace it maybe", replaceWith = ReplaceWith("a*a"))
     fun sq(a: Float): Float {
         return a * a
     }
@@ -267,17 +258,26 @@ object Vectors {
     }
 
     fun closestHeightPointTriangle(p: Vector3f, a: Vector3f, b: Vector3f, c: Vector3f): Float {
-        val v0 = sub(c, a)
-        val v1 = sub(b, a)
-        val v2 = sub(p, a)
+        val ax = a.x
+        val az = a.z
+
+        val v0x = c.x - ax
+        val v0z = c.z - az
+
+        val v1x = b.x-ax
+        val v1z = b.z-az
+
+        val v2x = p.x-ax
+        val v2z = p.z-az
 
         // Compute scaled barycentric coordinates
-        var denom = v0.x * v1.z - v0.z * v1.x
+        var denom = v0x * v1z - v0z * v1x
         if (abs(denom) < EPS) {
             return Float.NaN
         }
-        var u = v1.z * v2.x - v1.x * v2.z
-        var v = v0.x * v2.z - v0.z * v2.x
+
+        var u = v1z * v2x - v1x * v2z
+        var v = v0x * v2z - v0z * v2x
         if (denom < 0) {
             denom = -denom
             u = -u
@@ -286,7 +286,7 @@ object Vectors {
 
         // If point lies inside the triangle, return interpolated y-coord.
         return if (u >= 0f && v >= 0f && u + v <= denom) {
-            a.y + (v0.y * u + v1.y * v) / denom
+            a.y + ((c.y - a.y) * u + (b.y - a.y) * v) / denom
         } else Float.NaN
     }
 
@@ -336,7 +336,7 @@ object Vectors {
         return c
     }
 
-    fun projectPoly(axis: Vector3f, polygons: FloatArray, numPolygons: Int): FloatArray {
+    fun projectPoly(axis: Vector3f, polygons: FloatArray, numPolygons: Int): FloatPair {
         var rmax = dot2D(axis, polygons, 0)
         var rmin = rmax
         for (i in 1 until numPolygons) {
@@ -344,7 +344,7 @@ object Vectors {
             rmin = kotlin.math.min(rmin, d)
             rmax = kotlin.math.max(rmax, d)
         }
-        return floatArrayOf(rmin, rmax)
+        return FloatPair(rmin, rmax)
     }
 
     fun overlapRange(amin: Float, amax: Float, bmin: Float, bmax: Float, eps: Float): Boolean {
@@ -374,7 +374,7 @@ object Vectors {
                 val n = Vector3f(polya[vb + 2] - polya[va + 2], 0f, -(polya[vb] - polya[va]))
                 val aminmax = projectPoly(n, polya, npolya)
                 val bminmax = projectPoly(n, polyb, npolyb)
-                if (!overlapRange(aminmax[0], aminmax[1], bminmax[0], bminmax[1], eps)) {
+                if (!overlapRange(aminmax.first, aminmax.second, bminmax.first, bminmax.second, eps)) {
                     // Found separating axis
                     return false
                 }
@@ -389,7 +389,7 @@ object Vectors {
             val n = Vector3f(polyb[vb + 2] - polyb[va + 2], 0f, -(polyb[vb] - polyb[va]))
             val aminmax = projectPoly(n, polya, npolya)
             val bminmax = projectPoly(n, polyb, npolyb)
-            if (!overlapRange(aminmax[0], aminmax[1], bminmax[0], bminmax[1], eps)) {
+            if (!overlapRange(aminmax.first, aminmax.second, bminmax.first, bminmax.second, eps)) {
                 // Found separating axis
                 return false
             }
@@ -518,11 +518,11 @@ object Vectors {
         return result
     }
 
-    fun distancePtSegSqr2D(pt: Vector3f, vertices: FloatArray, p: Int, q: Int): FloatPair {
+    fun distancePtSegSqr2D(ptx: Float, ptz: Float, vertices: FloatArray, p: Int, q: Int): FloatPair {
         val pqx = vertices[q] - vertices[p]
         val pqz = vertices[q + 2] - vertices[p + 2]
-        var dx = pt.x - vertices[p]
-        var dz = pt.z - vertices[p + 2]
+        var dx = ptx - vertices[p]
+        var dz = ptz - vertices[p + 2]
         val d = pqx * pqx + pqz * pqz
         var t = pqx * dx + pqz * dz
         if (d > 0) {
@@ -533,9 +533,13 @@ object Vectors {
         } else if (t > 1) {
             t = 1f
         }
-        dx = vertices[p] + t * pqx - pt.x
-        dz = vertices[p + 2] + t * pqz - pt.z
+        dx = vertices[p] + t * pqx - ptx
+        dz = vertices[p + 2] + t * pqz - ptz
         return FloatPair(dx * dx + dz * dz, t)
+    }
+
+    fun distancePtSegSqr2D(pt: Vector3f, vertices: FloatArray, p: Int, q: Int): FloatPair {
+        return distancePtSegSqr2D(pt.x, pt.z, vertices, p, q)
     }
 
     fun oppositeTile(side: Int): Int {

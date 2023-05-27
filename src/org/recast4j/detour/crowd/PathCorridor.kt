@@ -22,7 +22,6 @@ import org.joml.Vector3f
 import org.recast4j.LongArrayList
 import org.recast4j.Vectors.dist2D
 import org.recast4j.Vectors.dist2DSqr
-import org.recast4j.Vectors.mad
 import org.recast4j.Vectors.sub
 import org.recast4j.detour.NavMeshQuery
 import org.recast4j.detour.QueryFilter
@@ -265,7 +264,7 @@ class PathCorridor {
      * the call to match the needs to the agent.
      *
      *
-     * This function is not suitable for long distance searches.
+     * This function is unsuitable for long distance searches.
      *
      * @param next                  The point to search toward. [(x, y, z])
      * @param pathOptimizationRange The maximum range to search. [Limit: > 0]
@@ -289,9 +288,7 @@ class PathCorridor {
         dist = min(dist + 0.01f, pathOptimizationRange)
 
         // Adjust ray length.
-        val delta = sub(next, pos)
-        val goal = Vector3f()
-        mad(pos, delta, pathOptimizationRange / dist, goal)
+        val goal = Vector3f(pos).lerp(next, pathOptimizationRange / dist)
         val rc = navquery.raycast(path[0], pos, goal, filter!!, 0, 0)
         if (rc.succeeded()) {
             if (rc.result!!.path.size > 1 && rc.result.t > 0.99f) {
@@ -387,12 +384,11 @@ class PathCorridor {
     fun movePosition(npos: Vector3f, navquery: NavMeshQuery, filter: QueryFilter): Boolean {
         // Move along navmesh and update new position.
         val masResult = navquery.moveAlongSurface(path[0], pos, npos, filter)
-        return if (masResult.succeeded()) {
-            val result = masResult.result!!
-            path = mergeCorridorStartMoved(path, result.visited)
+        return if (masResult != null) {
+            path = mergeCorridorStartMoved(path, masResult.visited)
             // Adjust the position to stay on top of the navmesh.
-            pos.set(result.resultPos)
-            val hr = navquery.getPolyHeight(path[0], result.resultPos)
+            pos.set(masResult.resultPos)
+            val hr = navquery.getPolyHeight(path[0], masResult.resultPos)
             if (java.lang.Float.isFinite(hr)) pos.y = hr
             true
         } else false
@@ -421,9 +417,9 @@ class PathCorridor {
     ): Boolean {
         // Move along navmesh and update new position.
         val masResult = navquery.moveAlongSurface(path[path.size - 1], target, npos, filter)
-        if (masResult.succeeded()) {
-            path = mergeCorridorEndMoved(path, masResult.result!!.visited)
-            val resultPos = masResult.result.resultPos
+        if (masResult != null) {
+            path = mergeCorridorEndMoved(path, masResult.visited)
+            val resultPos = masResult.resultPos
             if (adjustPositionToTopOfNavMesh) {
                 val h = target.y
                 navquery.getPolyHeight(path[path.size - 1], npos)
