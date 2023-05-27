@@ -98,7 +98,7 @@ class PathCorridor {
         for (i in path.size - 1 downTo 0) {
             var found = false
             for (j in visited.size - 1 downTo 0) {
-                if (path.get(i) == visited.get(j)) {
+                if (path[i] == visited[j]) {
                     furthestPath = i
                     furthestVisited = j
                     found = true
@@ -120,7 +120,7 @@ class PathCorridor {
         val result = LongArrayList()
         // Store visited
         for (i in visited.size - 1 downTo furthestVisited + 1) {
-            result.add(visited.get(i))
+            result.add(visited[i])
         }
         result.addAll(path, furthestPath, path.size)
         return result
@@ -134,7 +134,7 @@ class PathCorridor {
         for (i in 0 until path.size) {
             var found = false
             for (j in visited.size - 1 downTo 0) {
-                if (path.get(i) == visited.get(j)) {
+                if (path[i] == visited[j]) {
                     furthestPath = i
                     furthestVisited = j
                     found = true
@@ -164,7 +164,7 @@ class PathCorridor {
         for (i in path.size - 1 downTo 0) {
             var found = false
             for (j in visited.size - 1 downTo 0) {
-                if (path.get(i) == visited.get(j)) {
+                if (path[i] == visited[j]) {
                     furthestPath = i
                     furthestVisited = j
                     found = true
@@ -220,10 +220,8 @@ class PathCorridor {
      * @param[in] navquery The query object used to build the corridor.
      */
     fun findCorners(maxCorners: Int, navquery: NavMeshQuery): List<StraightPathItem> {
-        var path: List<StraightPathItem> = ArrayList()
-        val result = navquery.findStraightPath(pos, target, this.path, maxCorners, 0)
-        if (result.succeeded()) {
-            path = result.result!!
+        val path = navquery.findStraightPath(pos, target, this.path, maxCorners, 0)
+        if (path != null) {
             // Prune points in the beginning of the path which are too close.
             var start = 0
             for (spi in path) {
@@ -243,9 +241,8 @@ class PathCorridor {
                     break
                 }
             }
-            path = path.subList(start, end)
-        }
-        return path
+            return path.subList(start, end)
+        } else return emptyList()
     }
 
     /**
@@ -295,7 +292,7 @@ class PathCorridor {
         // Adjust ray length.
         val delta = sub(next, pos)
         val goal = mad(pos, delta, pathOptimizationRange / dist)
-        val rc = navquery.raycast(path.get(0), pos, goal, filter!!, 0, 0)
+        val rc = navquery.raycast(path[0], pos, goal, filter!!, 0, 0)
         if (rc.succeeded()) {
             if (rc.result!!.path.size > 1 && rc.result.t > 0.99f) {
                 path = mergeCorridorStartShortcut(path, rc.result.path)
@@ -322,7 +319,7 @@ class PathCorridor {
         if (path.size < 3) {
             return
         }
-        query.initSlicedFindPath(path.get(0), path.get(path.size - 1), pos, target, filter!!, 0)
+        query.initSlicedFindPath(path[0], path[path.size - 1], pos, target, filter!!, 0)
         query.updateSlicedFindPath(maxIterations)
         val fpr = query.finalizeSlicedFindPathPartial(path)
         if (fpr.succeeded() && fpr.result!!.size > 0) {
@@ -338,12 +335,12 @@ class PathCorridor {
         navquery: NavMeshQuery
     ): Boolean {
         // Advance the path up to and over the off-mesh connection.
-        var prevRef: Long = 0
-        var polyRef = path.get(0)
+        var prevRef = 0L
+        var polyRef = path[0]
         var npos = 0
         while (npos < path.size && polyRef != offMeshConRef) {
             prevRef = polyRef
-            polyRef = path.get(npos)
+            polyRef = path[npos]
             npos++
         }
         if (npos == path.size) {
@@ -355,15 +352,12 @@ class PathCorridor {
         path = path.subList(npos, path.size)
         refs[0] = prevRef
         refs[1] = polyRef
-        val nav = navquery.attachedNavMesh
-        val startEnd = nav.getOffMeshConnectionPolyEndPoints(refs[0], refs[1])
-        if (startEnd.succeeded()) {
-            copy(pos, startEnd.result!!.second)
-            copy(start, startEnd.result.first)
-            copy(end, startEnd.result.second)
-            return true
-        }
-        return false
+        val nav = navquery.nav1
+        val (start1, end1) = nav.getOffMeshConnectionPolyEndPoints(refs[0], refs[1]) ?: return false
+        copy(pos, end1)
+        copy(start, start1)
+        copy(end, end1)
+        return true
     }
 
     /**
@@ -392,13 +386,13 @@ class PathCorridor {
      */
     fun movePosition(npos: Vector3f, navquery: NavMeshQuery, filter: QueryFilter): Boolean {
         // Move along navmesh and update new position.
-        val masResult = navquery.moveAlongSurface(path.get(0), pos, npos, filter)
+        val masResult = navquery.moveAlongSurface(path[0], pos, npos, filter)
         return if (masResult.succeeded()) {
             val result = masResult.result!!
             path = mergeCorridorStartMoved(path, result.visited)
             // Adjust the position to stay on top of the navmesh.
             copy(pos, result.resultPos)
-            val hr = navquery.getPolyHeight(path.get(0), result.resultPos)
+            val hr = navquery.getPolyHeight(path[0], result.resultPos)
             if (java.lang.Float.isFinite(hr)) pos.y = hr
             true
         } else false
@@ -426,13 +420,13 @@ class PathCorridor {
         adjustPositionToTopOfNavMesh: Boolean
     ): Boolean {
         // Move along navmesh and update new position.
-        val masResult = navquery.moveAlongSurface(path.get(path.size - 1), target, npos, filter)
+        val masResult = navquery.moveAlongSurface(path[path.size - 1], target, npos, filter)
         if (masResult.succeeded()) {
             path = mergeCorridorEndMoved(path, masResult.result!!.visited)
             val resultPos = masResult.result.resultPos
             if (adjustPositionToTopOfNavMesh) {
                 val h = target.y
-                navquery.getPolyHeight(path.get(path.size - 1), npos)
+                navquery.getPolyHeight(path[path.size - 1], npos)
                 resultPos.y = h
             }
             target.set(resultPos)
@@ -457,7 +451,7 @@ class PathCorridor {
     fun fixPathStart(safeRef: Long, safePos: Vector3f) {
         pos.set(safePos)
         if (path.size < 3 && path.size > 0) {
-            val p = path.get(path.size - 1)
+            val p = path[path.size - 1]
             path.clear()
             path.add(safeRef)
             path.add(0L)
@@ -472,7 +466,7 @@ class PathCorridor {
     fun trimInvalidPath(safeRef: Long, safePos: Vector3f, navquery: NavMeshQuery, filter: QueryFilter) {
         // Keep valid path as far as possible.
         var n = 0
-        while (n < path.size && navquery.isValidPolyRef(path.get(n), filter)) {
+        while (n < path.size && navquery.isValidPolyRef(path[n], filter)) {
             n++
         }
         if (n == 0) {
@@ -485,9 +479,9 @@ class PathCorridor {
             // The path is partially usable.
         }
         // Clamp target pos to last poly
-        val result = navquery.closestPointOnPolyBoundary(path.get(path.size - 1), target)
-        if (result.succeeded()) {
-            target.set(result.result!!)
+        val result = navquery.closestPointOnPolyBoundary(path[path.size - 1], target)
+        if (result != null) {
+            target.set(result)
         }
     }
 
@@ -504,7 +498,7 @@ class PathCorridor {
         // Check that all polygons still pass query filter.
         val n = min(path.size, maxLookAhead)
         for (i in 0 until n) {
-            if (!navquery.isValidPolyRef(path.get(i), filter)) {
+            if (!navquery.isValidPolyRef(path[i], filter)) {
                 return false
             }
         }
@@ -517,7 +511,7 @@ class PathCorridor {
      * @return The polygon reference id of the first polygon in the corridor. (Or zero if there is no path.)
      */
     val firstPoly: Long
-        get() = if (path.isEmpty()) 0 else path.get(0)
+        get() = if (path.isEmpty()) 0 else path[0]
 
     /**
      * The polygon reference id of the last polygon in the corridor, the polygon containing the target.
@@ -525,7 +519,7 @@ class PathCorridor {
      * @return The polygon reference id of the last polygon in the corridor. (Or zero if there is no path.)
      */
     val lastPoly: Long
-        get() = if (path.isEmpty()) 0 else path.get(path.size - 1)
+        get() = if (path.isEmpty()) 0 else path[path.size - 1]
 
     companion object {
         private val MIN_TARGET_DIST: Float = 1e-4f

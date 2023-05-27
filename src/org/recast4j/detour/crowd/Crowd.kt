@@ -30,7 +30,6 @@ import org.recast4j.detour.crowd.debug.ObstacleAvoidanceDebugData
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.IntFunction
-import kotlin.collections.ArrayList
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -466,7 +465,7 @@ class Crowd @JvmOverloads constructor(
                 require(!path.isEmpty()) { "Empty path" }
                 // Quick search towards the goal.
                 navQuery.initSlicedFindPath(
-                    path.get(0), ag.targetRef, ag.currentPosition, ag.targetPos,
+                    path[0], ag.targetRef, ag.currentPosition, ag.targetPos,
                     m_filters[ag.params.queryFilterType]!!, 0
                 )
                 navQuery.updateSlicedFindPath(config.maxTargetFindPathIterations)
@@ -482,15 +481,15 @@ class Crowd @JvmOverloads constructor(
                 var reqPos = Vector3f()
                 if (pathFound.succeeded() && reqPath!!.size > 0) {
                     // In progress or succeed.
-                    if (reqPath.get(reqPath.size - 1) != ag.targetRef) {
+                    if (reqPath[reqPath.size - 1] != ag.targetRef) {
                         // Partial path, constrain target position inside the
                         // last polygon.
                         val cr = navQuery.closestPointOnPoly(
-                            reqPath.get(reqPath.size - 1),
+                            reqPath[reqPath.size - 1],
                             ag.targetPos
                         )
-                        if (cr.succeeded()) {
-                            reqPos = cr.result!!.pos
+                        if (cr != null) {
+                            reqPos = cr.pos
                         } else {
                             reqPath = LongArrayList()
                         }
@@ -502,12 +501,12 @@ class Crowd @JvmOverloads constructor(
                     // location.
                     Vectors.copy(reqPos, ag.currentPosition)
                     reqPath = LongArrayList()
-                    reqPath.add(path.get(0))
+                    reqPath.add(path[0])
                 }
                 ag.corridor.setCorridor(reqPos, reqPath)
                 ag.boundary.reset()
                 ag.partial = false
-                if (reqPath.get(reqPath.size - 1) == ag.targetRef) {
+                if (reqPath[reqPath.size - 1] == ag.targetRef) {
                     ag.targetState = MoveRequestState.VALID
                     ag.targetReplanTime = 0f
                 } else {
@@ -582,7 +581,7 @@ class Crowd @JvmOverloads constructor(
 
                     // The last ref in the old path should be the same as
                     // the location where the request was issued..
-                    if (valid && path.get(path.size - 1) != res.get(0)) {
+                    if (valid && path[path.size - 1] != res[0]) {
                         valid = false
                     }
                     if (valid) {
@@ -595,7 +594,7 @@ class Crowd @JvmOverloads constructor(
                             var j = 1
                             while (j < res.size - 1) {
                                 if (j - 1 >= 0 && j + 1 < res.size) {
-                                    if (res.get(j - 1) == res.get(j + 1)) {
+                                    if (res[j - 1] == res[j + 1]) {
                                         res.remove(j + 1)
                                         res.remove(j)
                                         j -= 2
@@ -606,12 +605,12 @@ class Crowd @JvmOverloads constructor(
                         }
 
                         // Check for partial path.
-                        if (res.get(res.size - 1) != ag.targetRef) {
+                        if (res[res.size - 1] != ag.targetRef) {
                             // Partial path, constrain target position inside
                             // the last polygon.
-                            val cr = navQuery.closestPointOnPoly(res.get(res.size - 1), targetPos)
-                            if (cr.succeeded()) {
-                                targetPos = cr.result!!.pos
+                            val cr = navQuery.closestPointOnPoly(res[res.size - 1], targetPos)
+                            if (cr != null) {
+                                targetPos = cr.pos
                             } else {
                                 valid = false
                             }
@@ -703,7 +702,8 @@ class Crowd @JvmOverloads constructor(
                 )
             }
             // Query neighbour agents
-            ag.neis = ArrayList(getNeighbours(ag.currentPosition, ag.params.height, ag.params.collisionQueryRange, ag, grid))
+            ag.neis.clear()
+            ag.neis.addAll(getNeighbours(ag.currentPosition, ag.params.height, ag.params.collisionQueryRange, ag, grid))
         }
         telemetry.stop("buildNeighbours")
     }
@@ -752,7 +752,8 @@ class Crowd @JvmOverloads constructor(
             }
 
             // Find corners for steering
-            ag.corners = ArrayList(ag.corridor.findCorners(CROWDAGENT_MAX_CORNERS, navQuery))
+            ag.corners.clear()
+            ag.corners.addAll(ag.corridor.findCorners(CROWDAGENT_MAX_CORNERS, navQuery))
 
             // Check to see if the corner after the next corner is directly visible,
             // and short cut to there.
@@ -930,7 +931,7 @@ class Crowd @JvmOverloads constructor(
                     params,
                     vod
                 )
-                ag.desiredVelAdjusted = second
+                ag.desiredVelAdjusted.set(second)
                 m_velocitySampleCount += first
             } else {
                 // If not using velocity planning, new velocity is directly the desired velocity.
@@ -995,7 +996,7 @@ class Crowd @JvmOverloads constructor(
                 if (ag.state != CrowdAgentState.WALKING) {
                     continue
                 }
-                ag.currentPosition = Vectors.add(ag.currentPosition, ag.disp)
+                ag.currentPosition.add(ag.disp)
             }
         }
         telemetry.stop("handleCollisions")
@@ -1045,10 +1046,10 @@ class Crowd @JvmOverloads constructor(
             val tb = anim.tMax
             if (anim.t < ta) {
                 val u = tween(anim.t, 0f, ta)
-                ag.currentPosition = Vectors.lerp(anim.initPos, anim.startPos, u)
+                anim.initPos.lerp(anim.startPos, u, ag.currentPosition)
             } else {
                 val u = tween(anim.t, ta, tb)
-                ag.currentPosition = Vectors.lerp(anim.startPos, anim.endPos, u)
+                anim.startPos.lerp(anim.endPos, u, ag.currentPosition)
             }
 
             // Update velocity.

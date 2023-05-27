@@ -90,14 +90,14 @@ class LocalBoundary {
             var i = 0
             val l0 = polygons.size
             while (i < l0) {
-                val poly = polygons.get(i)
-                val result = navquery.getPolyWallSegments(poly, false, filter)
-                if (result.succeeded()) {
-                    val res2 = result.result
+                val poly = polygons[i]
+                val res2 = navquery.getPolyWallSegments(poly, false, filter)
+                if (res2 != null) {
                     var k = 0
-                    val l = res2!!.segmentRefs.size
+                    val (segs, refs) = res2
+                    val l = refs.size
                     while (k < l) {
-                        val s = res2.segmentVertices[k]
+                        val s = segs[k]
                         // Skip too distant segments.
                         val (first) = Vectors.distancePtSegSqr2D(pos, s, 0, 3)
                         if (first > Vectors.sqr(collisionQueryRange)) {
@@ -119,7 +119,7 @@ class LocalBoundary {
         var i = 0
         val l0 = polygons.size
         while (i < l0) {
-            val ref = polygons.get(i)
+            val ref = polygons[i]
             if (!navMeshQuery.isValidPolyRef(ref, filter)) {
                 return false
             }

@@ -25,7 +25,7 @@ class Node(val index: Int) {
     /**
      * Position of the node.
      */
-    var pos = Vector3f()
+    val pos = Vector3f()
 
     /**
      * Cost of reaching the given node.
@@ -55,12 +55,13 @@ class Node(val index: Int) {
     /**
      * Polygon ref the node corresponds to.
      */
-    var polygonRef: Long = 0
+    var polygonRef = 0L
 
     /**
      * Shortcut found by raycast.
      */
     var shortcut: LongArrayList? = null
+
     override fun toString(): String {
         return "Node [id=$polygonRef]"
     }

@@ -71,25 +71,23 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
             }
 
             // Get current poly and tile.
-            // The API input has been cheked already, skip checking internal data.
+            // The API input has been checked already, skip checking internal data.
             val bestRef = bestNode.polygonRef
-            var tileAndPoly = nav.getTileAndPolyByRefUnsafe(bestRef)
-            val bestTile = tileAndPoly.first
-            val bestPoly = tileAndPoly.second
+            val bestTile = nav.getTileByRefUnsafe(bestRef)
+            val bestPoly = nav.getPolyByRefUnsafe(bestRef, bestTile)
 
             // Get parent poly and tile.
-            var parentRef: Long = 0
+            var parentRef = 0L
             var parentTile: MeshTile? = null
             var parentPoly: Poly? = null
             if (bestNode.parentIndex != 0) {
                 parentRef = nodePool.getNodeAtIdx(bestNode.parentIndex)!!.polygonRef
             }
             if (parentRef != 0L) {
-                tileAndPoly = nav.getTileAndPolyByRefUnsafe(parentRef)
-                parentTile = tileAndPoly.first
-                parentPoly = tileAndPoly.second
+                parentTile = nav.getTileByRefUnsafe(parentRef)
+                parentPoly = nav.getPolyByRefUnsafe(parentRef, parentTile)
             }
-            var i = bestTile!!.polyLinks[bestPoly.index]
+            var i = bestTile.polyLinks[bestPoly.index]
             while (i != NavMesh.DT_NULL_LINK) {
                 val neighbourRef = bestTile.links[i].neighborRef
 
@@ -100,10 +98,9 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
                 }
 
                 // Get neighbour poly and tile.
-                // The API input has been cheked already, skip checking internal data.
-                tileAndPoly = nav.getTileAndPolyByRefUnsafe(neighbourRef)
-                val neighbourTile = tileAndPoly.first
-                val neighbourPoly = tileAndPoly.second
+                // The API input has been checked already, skip checking internal data.
+                val neighbourTile = nav.getTileByRefUnsafe(neighbourRef)
+                val neighbourPoly = nav.getPolyByRefUnsafe(neighbourRef, neighbourTile)
                 if (!filter.passFilter(neighbourRef, neighbourTile, neighbourPoly)) {
                     i = bestTile.links[i].indexOfNextLink
                     continue
@@ -122,8 +119,8 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
                 if (neighbourNode.flags == 0) {
                     val midpod =
                         getEdgeMidPoint(bestRef, bestPoly, bestTile, neighbourRef, neighbourPoly, neighbourTile)
-                    if (!midpod.failed()) {
-                        neighbourNode.pos = midpod.result!!
+                    if (midpod != null) {
+                        neighbourNode.pos.set(midpod)
                     }
                 }
 
@@ -226,20 +223,19 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
             }
 
             // Get current poly and tile.
-            // The API input has been cheked already, skip checking internal
+            // The API input has been checked already, skip checking internal
             // data.
             val bestRef = bestNode.polygonRef
-            var tileAndPoly = nav.getTileAndPolyByRef(bestRef)
-            if (tileAndPoly.failed()) {
+            val bestTile = nav.getTileByRef(bestRef)
+            val bestPoly = nav.getPolyByRef(bestRef, bestTile)
+            if (bestTile == null || bestPoly == null) {
                 queryData.status = Status.FAILURE
                 // The polygon has disappeared during the sliced query, fail.
                 return Result.of(queryData.status, iter)
             }
-            val bestTile = tileAndPoly.result!!.first
-            val bestPoly = tileAndPoly.result!!.second
             // Get parent and grand parent poly and tile.
-            var parentRef: Long = 0
-            var grandpaRef: Long = 0
+            var parentRef = 0L
+            var grandpaRef = 0L
             var parentTile: MeshTile? = null
             var parentPoly: Poly? = null
             var parentNode: Node? = null
@@ -251,15 +247,14 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
                 }
             }
             if (parentRef != 0L) {
-                tileAndPoly = nav.getTileAndPolyByRef(parentRef)
-                if (tileAndPoly.failed() || grandpaRef != 0L && !nav.isValidPolyRef(grandpaRef)) {
+                parentTile = nav.getTileByRef(parentRef)
+                parentPoly = nav.getPolyByRef(parentRef, parentTile)
+                if (parentPoly == null || grandpaRef != 0L && !nav.isValidPolyRef(grandpaRef)) {
                     // The polygon has disappeared during the sliced query,
                     // fail.
                     queryData.status = Status.FAILURE
                     return Result.of(queryData.status, iter)
                 }
-                parentTile = tileAndPoly.result!!.first
-                parentPoly = tileAndPoly.result!!.second
             }
 
             // decide whether to test raycast to previous nodes
@@ -269,7 +264,7 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
                     tryLOS = true
                 }
             }
-            var i = bestTile!!.polyLinks[bestPoly.index]
+            var i = bestTile.polyLinks[bestPoly.index]
             while (i != NavMesh.DT_NULL_LINK) {
                 val neighbourRef = bestTile.links[i].neighborRef
 
@@ -281,9 +276,10 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
                 }
 
                 // Get neighbour poly and tile.
-                // The API input has been cheked already, skip checking internal
+                // The API input has been checked already, skip checking internal
                 // data.
-                val (neighbourTile, neighbourPoly) = nav.getTileAndPolyByRefUnsafe(neighbourRef)
+                val neighbourTile = nav.getTileByRefUnsafe(neighbourRef)
+                val neighbourPoly = nav.getPolyByRefUnsafe(neighbourRef, neighbourTile)
                 if (!queryData.filter!!.passFilter(neighbourRef, neighbourTile, neighbourPoly)) {
                     i = bestTile.links[i].indexOfNextLink
                     continue
@@ -304,8 +300,8 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
                 if (neighbourNode.flags == 0) {
                     val midpod =
                         getEdgeMidPoint(bestRef, bestPoly, bestTile, neighbourRef, neighbourPoly, neighbourTile)
-                    if (!midpod.failed()) {
-                        neighbourNode.pos = midpod.result!!
+                    if (midpod != null) {
+                        neighbourNode.pos.set(midpod)
                     }
                 }
 
@@ -445,7 +441,7 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
                         path.addAll(iresult.result!!.path)
                     }
                     // raycast ends on poly boundary and the path might include the next poly boundary.
-                    if (path.get(path.size - 1) == next.polygonRef) {
+                    if (path[path.size - 1] == next.polygonRef) {
                         path.remove(path.size - 1) // remove to avoid duplicates
                     }
                 } else {
@@ -484,7 +480,7 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
             var prev: Node? = null
             var node: Node? = null
             for (i in existing.size - 1 downTo 0) {
-                node = nodePool.findNode(existing.get(i))
+                node = nodePool.findNode(existing[i])
                 if (node != null) {
                     break
                 }
@@ -518,7 +514,7 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
                         path.addAll(iresult.result!!.path)
                     }
                     // raycast ends on poly boundary, and the path might include the next poly boundary.
-                    if (path.get(path.size - 1) == next.polygonRef) {
+                    if (path[path.size - 1] == next.polygonRef) {
                         path.remove(path.size - 1) // remove to avoid duplicates
                     }
                 } else {
@@ -564,12 +560,13 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
             bestNode.flags = bestNode.flags or Node.CLOSED
 
             // Get poly and tile.
-            // The API input has been cheked already, skip checking internal data.
+            // The API input has been checked already, skip checking internal data.
             val bestRef = bestNode.polygonRef
-            val (bestTile, bestPoly) = nav.getTileAndPolyByRefUnsafe(bestRef)
+            val bestTile = nav.getTileByRefUnsafe(bestRef)
+            val bestPoly = nav.getPolyByRefUnsafe(bestRef,bestTile)
 
             // Get parent poly and tile.
-            var parentRef: Long = 0
+            var parentRef = 0L
             if (bestNode.parentIndex != 0) {
                 parentRef = nodePool.getNodeAtIdx(bestNode.parentIndex)!!.polygonRef
             }
@@ -584,13 +581,15 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
                     if (bestPoly.neighborData[j] and NavMesh.DT_EXT_LINK != 0) {
                         // Tile border.
                         var solid = true
-                        var k = bestTile!!.polyLinks[bestPoly.index]
+                        var k = bestTile.polyLinks[bestPoly.index]
                         while (k != NavMesh.DT_NULL_LINK) {
                             val link = bestTile.links[k]
                             if (link.indexOfPolyEdge == j) {
                                 if (link.neighborRef != 0L) {
-                                    val (neiTile, neiPoly) = nav.getTileAndPolyByRefUnsafe(link.neighborRef)
-                                    if (filter.passFilter(link.neighborRef, neiTile, neiPoly)) {
+                                    val neighbourRef = link.neighborRef
+                                    val neighbourTile = nav.getTileByRefUnsafe(neighbourRef)
+                                    val neighbourPoly = nav.getPolyByRefUnsafe(neighbourRef, neighbourTile)
+                                    if (filter.passFilter(neighbourRef, neighbourTile, neighbourPoly)) {
                                         solid = false
                                     }
                                 }
@@ -606,7 +605,7 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
                         // Internal edge
                         val idx = bestPoly.neighborData[j] - 1
                         val ref = nav.getPolyRefBase(bestTile) or idx.toLong()
-                        if (filter.passFilter(ref, bestTile, bestTile!!.data!!.polygons[idx])) {
+                        if (filter.passFilter(ref, bestTile, bestTile.data!!.polygons[idx])) {
                             j = i++
                             continue
                         }
@@ -615,7 +614,7 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
                     // Calc distance to the edge.
                     val vj = bestPoly.vertices[j] * 3
                     val vi = bestPoly.vertices[i] * 3
-                    val (distSqr, tseg) = Vectors.distancePtSegSqr2D(centerPos, bestTile!!.data!!.vertices, vj, vi)
+                    val (distSqr, tseg) = Vectors.distancePtSegSqr2D(centerPos, bestTile.data!!.vertices, vj, vi)
 
                     // Edge is too far, skip.
                     if (distSqr > radiusSqr) {
@@ -635,7 +634,7 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
                     j = i++
                 }
             }
-            var i = bestTile!!.polyLinks[bestPoly.index]
+            var i = bestTile.polyLinks[bestPoly.index]
             while (i != NavMesh.DT_NULL_LINK) {
                 val link = bestTile.links[i]
                 val neighbourRef = link.neighborRef
@@ -646,7 +645,8 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
                 }
 
                 // Expand to neighbour.
-                val (neighbourTile, neighbourPoly) = nav.getTileAndPolyByRefUnsafe(neighbourRef)
+                val neighbourTile = nav.getTileByRefUnsafe(neighbourRef)
+                val neighbourPoly = nav.getPolyByRefUnsafe(neighbourRef, neighbourTile)
 
                 // Skip off-mesh connections.
                 if (neighbourPoly.type == Poly.DT_POLYTYPE_OFFMESH_CONNECTION) {
@@ -679,8 +679,8 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
                         bestRef, bestPoly, bestTile, neighbourRef, neighbourPoly,
                         neighbourTile
                     )
-                    if (midPoint.succeeded()) {
-                        neighbourNode.pos = midPoint.result!!
+                    if (midPoint != null) {
+                        neighbourNode.pos.set(midPoint)
                     }
                 }
                 val total = bestNode.totalCost + bestNode.pos.distance(neighbourNode.pos)

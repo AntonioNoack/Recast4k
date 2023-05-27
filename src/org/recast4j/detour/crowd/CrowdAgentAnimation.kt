@@ -22,10 +22,10 @@ import org.joml.Vector3f
 
 class CrowdAgentAnimation {
     var active = false
-    var initPos = Vector3f()
-    var startPos = Vector3f()
-    var endPos = Vector3f()
-    var polyRef: Long = 0
+    val initPos = Vector3f()
+    val startPos = Vector3f()
+    val endPos = Vector3f()
+    var polyRef = 0L
     var t = 0f
     var tMax = 0f
 }

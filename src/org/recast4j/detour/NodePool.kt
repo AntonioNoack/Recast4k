@@ -36,7 +36,7 @@ class NodePool {
 
     fun findNode(id: Long): Node? {
         val nodes: List<Node>? = nodeMap[id]
-        return if (nodes != null && !nodes.isEmpty()) {
+        return if (nodes != null && nodes.isNotEmpty()) {
             nodes[0]
         } else null
     }

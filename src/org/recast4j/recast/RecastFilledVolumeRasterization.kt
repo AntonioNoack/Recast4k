@@ -57,7 +57,7 @@ object RecastFilledVolumeRasterization {
             min(start.z, end.z) - radius, max(start.x, end.x) + radius, max(start.y, end.y) + radius,
             max(start.z, end.z) + radius
         )
-        val axis: Vector3f = Vector3f(end).sub(start)
+        val axis = Vector3f(end).sub(start)
         rasterizationFilledShape(
             hf, bounds, area, flagMergeThr
         ) { rectangle: FloatArray -> intersectCapsule(rectangle, start, end, axis, radius * radius) }
@@ -73,7 +73,7 @@ object RecastFilledVolumeRasterization {
             min(start.x, end.x) - radius, min(start.y, end.y) - radius, min(start.z, end.z) - radius,
             max(start.x, end.x) + radius, max(start.y, end.y) + radius, max(start.z, end.z) + radius
         )
-        val axis: Vector3f = Vector3f(end).sub(start)
+        val axis = Vector3f(end).sub(start)
         rasterizationFilledShape(
             hf, bounds, area, flagMergeThr
         ) { rectangle: FloatArray -> intersectCylinder(rectangle, start, end, axis, radius * radius) }

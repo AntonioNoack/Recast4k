@@ -33,7 +33,7 @@ class DynamicTile(val voxelTile: VoxelTile) {
     var meshData: MeshData? = null
     private val colliders: MutableMap<Long, Collider?> = ConcurrentHashMap()
     private var dirty = true
-    private var id: Long = 0
+    private var id = 0L
     fun build(builder: RecastBuilder, config: DynamicNavMeshConfig, telemetry: Telemetry, walkableAreaModification: AreaModification): Boolean {
         if (dirty) {
             val heightfield = buildHeightfield(config, telemetry)

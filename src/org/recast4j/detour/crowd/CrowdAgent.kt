@@ -35,8 +35,10 @@ class CrowdAgent(idx: Int) {
     enum class CrowdAgentState {
         /** The agent is not in a valid state.  */
         INVALID,
+
         /** The agent is traversing a normal navigation mesh polygon.  */
         WALKING,
+
         /** The agent is traversing an off-mesh connection.  */
         OFFMESH
     }
@@ -45,7 +47,7 @@ class CrowdAgent(idx: Int) {
         NONE, FAILED, VALID, REQUESTING, WAITING_FOR_QUEUE, WAITING_FOR_PATH, VELOCITY
     }
 
-    val idx: Long
+    val idx = idx.toLong()
 
     /** The type of mesh polygon the agent is traversing. (See: #CrowdAgentState)  */
     var state: CrowdAgentState? = null
@@ -57,44 +59,44 @@ class CrowdAgent(idx: Int) {
     var partial = false
 
     /** The path corridor the agent is using.  */
-    var corridor: PathCorridor
+    val corridor = PathCorridor()
 
     /** The local boundary data for the agent.  */
-    var boundary: LocalBoundary
+    val boundary = LocalBoundary()
 
     /** Time since the agent's path corridor was optimized.  */
     var topologyOptTime = 0f
 
     /** The known neighbors of the agent.  */
-    var neis = ArrayList<CrowdNeighbour>()
+    val neis = ArrayList<CrowdNeighbour>()
 
     /** The desired speed.  */
     var desiredSpeed = 0f
-    var currentPosition = Vector3f()
+    val currentPosition = Vector3f()
 
     /** A temporary value used to accumulate agent displacement during iterative collision resolution  */
-    var disp = Vector3f()
+    val disp = Vector3f()
 
     /** The desired velocity of the agent. Based on the current path, calculated from scratch each frame.  */
-    var desiredVelocity = Vector3f()
+    val desiredVelocity = Vector3f()
 
     /** The desired velocity adjusted by obstacle avoidance, calculated from scratch each frame  */
-    var desiredVelAdjusted = Vector3f()
+    val desiredVelAdjusted = Vector3f()
 
     /** The actual velocity of the agent. The change from nvel -> vel is constrained by max acceleration  */
-    var actualVelocity = Vector3f()
+    val actualVelocity = Vector3f()
 
     /** The agent's configuration parameters.  */
     lateinit var params: CrowdAgentParams
 
     /** The local path corridor corners for the agent.  */
-    var corners = ArrayList<StraightPathItem>()
+    val corners = ArrayList<StraightPathItem>()
 
     /** State of the movement request.  */
     var targetState: MoveRequestState? = null
 
     /** Target polyref of the movement request.  */
-    var targetRef: Long = 0
+    var targetRef = 0L
 
     /** Target position of the movement request (or velocity in case of CROWDAGENT_TARGET_VELOCITY).  */
     val targetPos = Vector3f()
@@ -108,14 +110,7 @@ class CrowdAgent(idx: Int) {
     /** Time since the agent's target was replanned.  */
     var targetReplanTime = 0f
     var targetReplanWaitTime = 0f
-    var animation: CrowdAgentAnimation
-
-    init {
-        this.idx = idx.toLong()
-        corridor = PathCorridor()
-        boundary = LocalBoundary()
-        animation = CrowdAgentAnimation()
-    }
+    val animation = CrowdAgentAnimation()
 
     fun integrate(dt: Float) {
         // Fake dynamic constraint.

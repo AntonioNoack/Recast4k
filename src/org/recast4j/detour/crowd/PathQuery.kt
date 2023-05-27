@@ -25,8 +25,8 @@ import org.recast4j.detour.QueryFilter
 class PathQuery {
     var startPos = Vector3f()
     var endPos = Vector3f()
-    var startRef: Long = 0
-    var endRef: Long = 0
+    var startRef = 0L
+    var endRef = 0L
     var filter: QueryFilter? = null
     val result = PathQueryResult()
     var navQuery: NavMeshQuery? = null

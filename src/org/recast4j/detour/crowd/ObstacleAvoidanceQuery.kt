@@ -28,17 +28,17 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
         /**
          * Position of the obstacle
          */
-        val p: Vector3f = Vector3f()
+        val p = Vector3f()
 
         /**
          * Velocity of the obstacle
          */
-        val vel: Vector3f = Vector3f()
+        val vel = Vector3f()
 
         /**
          * Velocity of the obstacle
          */
-        val dvel: Vector3f = Vector3f()
+        val dvel = Vector3f()
 
         /**
          * Radius of the obstacle
@@ -48,24 +48,24 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
         /**
          * Use for side selection during sampling.
          */
-        val dp: Vector3f = Vector3f()
+        val dp = Vector3f()
 
         /**
          * Use for side selection during sampling.
          */
-        val np: Vector3f = Vector3f()
+        val np = Vector3f()
     }
 
     class ObstacleSegment {
         /**
          * End points of the obstacle segment
          */
-        val p: Vector3f = Vector3f()
+        val p = Vector3f()
 
         /**
          * End points of the obstacle segment
          */
-        val q: Vector3f = Vector3f()
+        val q = Vector3f()
         var touch = false
     }
 
@@ -147,7 +147,7 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
             val cir = circles[i]
 
             // Side
-            val pb: Vector3f = cir!!.p
+            val pb = cir!!.p
             val orig = Vector3f()
             var dv: Vector3f
             Vectors.copy(cir.dp, Vectors.sub(pb, pos))
@@ -174,7 +174,7 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
 
     fun sweepCircleCircle(c0: Vector3f, r0: Float, v: Vector3f, c1: Vector3f, r1: Float): SweepCircleCircleResult? {
         val EPS = 0.0001f
-        val s: Vector3f = Vectors.sub(c1, c0)
+        val s = Vectors.sub(c1, c0)
         val r = r0 + r1
         val c: Float = Vectors.dot2D(s, s) - r * r
         var a: Float = Vectors.dot2D(v, v)
@@ -189,8 +189,8 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
     }
 
     fun isectRaySeg(ap: Vector3f, u: Vector3f, bp: Vector3f, bq: Vector3f): Float {
-        val v: Vector3f = Vectors.sub(bq, bp)
-        val w: Vector3f = Vectors.sub(ap, bp)
+        val v = Vectors.sub(bq, bp)
+        val w = Vectors.sub(ap, bp)
         var d: Float = -Vectors.crossXZ(u, v)
         if (abs(d) < 1e-6f) return -1f
         d = 1f / d
@@ -229,7 +229,7 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
             val cir = circles[i]
 
             // RVO
-            var vab: Vector3f = Vector3f(vcand).mul(2f)
+            var vab = Vector3f(vcand).mul(2f)
             vab = Vectors.sub(vab, vel)
             vab = Vectors.sub(vab, cir!!.vel)
 
@@ -258,7 +258,7 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
             var htmin: Float
             if (seg!!.touch) {
                 // Special case when the agent is very close to the segment.
-                val sdir: Vector3f = Vectors.sub(seg.q, seg.p)
+                val sdir = Vectors.sub(seg.q, seg.p)
                 val snorm = Vector3f()
                 snorm.x = -sdir.z
                 snorm.z = sdir.x
@@ -370,7 +370,7 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
         // desired direction
         val ddir = floatArrayOf(dvel.x, dvel.y, dvel.z, 0f, 0f, 0f)
         dtNormalize2D(ddir)
-        val rotated: Vector3f = Vector3f(ddir).rotateY(da * 0.5f) // rotated by da/2
+        val rotated = Vector3f(ddir).rotateY(da * 0.5f) // rotated by da/2
         ddir[3] = rotated.x
         ddir[4] = rotated.y
         ddir[5] = rotated.z

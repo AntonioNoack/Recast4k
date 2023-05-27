@@ -353,7 +353,7 @@ class TileCache(
                 var i = 0
                 val l = tiles.size
                 while (i < l) {
-                    val t = tiles.get(i)
+                    val t = tiles[i]
                     val tile = this.tiles[decodeTileIdTile(t)]
                     calcTightTileBounds(tile!!.header!!, tbmin, tbmax)
                     if (overlapBounds(bmin, bmax, tbmin, tbmax)) {
@@ -397,7 +397,7 @@ class TileCache(
                     var i = 0
                     val l = ob.touched.size
                     while (i < l) {
-                        val j = ob.touched.get(i)
+                        val j = ob.touched[i]
                         if (!contains(update, j)) {
                             update.add(j)
                         }
@@ -412,7 +412,7 @@ class TileCache(
                     var i = 0
                     val l = ob.touched.size
                     while (i < l) {
-                        val j = ob.touched.get(i)
+                        val j = ob.touched[i]
                         if (!contains(update, j)) {
                             update.add(j)
                         }

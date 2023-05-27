@@ -1,6 +1,6 @@
 package org.recast4j.detour.io
 
 class NavMeshTileHeader {
-    var tileRef: Long = 0
+    var tileRef = 0L
     var dataSize = 0
 }

@@ -5,7 +5,7 @@ import org.recast4j.Vectors
 import kotlin.math.abs
 
 class FindNearestPolyQuery(private val query: NavMeshQuery, private val center: Vector3f) : PolyQuery {
-    private var nearestRef: Long = 0
+    private var nearestRef = 0L
     private var nearestPt: Vector3f
     private var overPoly = false
     private var nearestDistanceSqr: Float
@@ -17,9 +17,9 @@ class FindNearestPolyQuery(private val query: NavMeshQuery, private val center: 
 
     override fun process(tile: MeshTile, poly: Poly, ref: Long) {
         // Find the nearest polygon amongst the nearby polygons.
-        val closest = query.closestPointOnPoly(ref, center)
-        val posOverPoly = closest.result!!.isPosOverPoly
-        val closestPtPoly = closest.result.pos
+        val closest = query.closestPointOnPoly(ref, center)!!
+        val posOverPoly = closest.isPosOverPoly
+        val closestPtPoly = closest.pos
 
         // If a point is directly over a polygon and closer than
         // climb height, favor that instead of straight line nearest point.

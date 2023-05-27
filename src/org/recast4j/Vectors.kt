@@ -51,22 +51,22 @@ object Vectors {
         a.z = kotlin.math.max(a.z, b[i + 2])
     }
 
-    fun copy(out: FloatArray, input: FloatArray, i: Int) {
-        copy(out, 0, input, i)
+    fun copy(dst: FloatArray, input: FloatArray, i: Int) {
+        copy(dst, 0, input, i)
     }
 
-    fun copy(out: Vector3f, input: FloatArray, i: Int) {
-        out.set(input[i], input[i + 1], input[i + 2])
+    fun copy(dst: Vector3f, src: FloatArray, srcI: Int) {
+        dst.set(src[srcI], src[srcI + 1], src[srcI + 2])
     }
 
-    fun copy(out: FloatArray, input: FloatArray) {
-        copy(out, 0, input, 0)
+    fun copy(dst: FloatArray, src: FloatArray) {
+        copy(dst, 0, src, 0)
     }
 
-    fun copy(out: FloatArray, n: Int, input: FloatArray, m: Int) {
-        out[n] = input[m]
-        out[n + 1] = input[m + 1]
-        out[n + 2] = input[m + 2]
+    fun copy(dst: FloatArray, dstI: Int, src: FloatArray, srcI: Int) {
+        dst[dstI] = src[srcI]
+        dst[dstI + 1] = src[srcI + 1]
+        dst[dstI + 2] = src[srcI + 2]
     }
 
     fun add(dst: FloatArray, a: FloatArray, vertices: FloatArray, i: Int) {

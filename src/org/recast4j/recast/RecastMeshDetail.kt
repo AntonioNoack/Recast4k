@@ -859,7 +859,7 @@ object RecastMeshDetail {
         var t = 0
         while (t < size) {
             if (trisData[t] == -1 || trisData[t + 1] == -1 || trisData[t + 2] == -1) {
-                System.err.println("Dangling! " + trisData[t] + " " + trisData[t + 1] + "  " + trisData[t + 2])
+                // System.err.println("Dangling! " + trisData[t] + " " + trisData[t + 1] + "  " + trisData[t + 2])
                 trisData[t] = trisData[size - 4]
                 trisData[t + 1] = trisData[size - 3]
                 trisData[t + 2] = trisData[size - 2]

@@ -20,5 +20,5 @@ package org.recast4j.detour.tilecache
 
 class ObstacleRequest {
     var action: ObstacleRequestAction? = null
-    var ref: Long = 0
+    var ref = 0L
 }
