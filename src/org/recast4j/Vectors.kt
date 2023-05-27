@@ -264,11 +264,11 @@ object Vectors {
         val v0x = c.x - ax
         val v0z = c.z - az
 
-        val v1x = b.x-ax
-        val v1z = b.z-az
+        val v1x = b.x - ax
+        val v1z = b.z - az
 
-        val v2x = p.x-ax
-        val v2z = p.z-az
+        val v2x = p.x - ax
+        val v2z = p.z - az
 
         // Compute scaled barycentric coordinates
         var denom = v0x * v1z - v0z * v1x
@@ -518,11 +518,13 @@ object Vectors {
         return result
     }
 
-    fun distancePtSegSqr2D(ptx: Float, ptz: Float, vertices: FloatArray, p: Int, q: Int): FloatPair {
-        val pqx = vertices[q] - vertices[p]
-        val pqz = vertices[q + 2] - vertices[p + 2]
-        var dx = ptx - vertices[p]
-        var dz = ptz - vertices[p + 2]
+    fun distancePtSegSqr2D(ptx: Float, ptz: Float, data: FloatArray, pi: Int, qi: Int): FloatPair {
+        val px = data[pi]
+        val pz = data[pi + 2]
+        val pqx = data[qi] - px
+        val pqz = data[qi + 2] - pz
+        var dx = ptx - px
+        var dz = ptz - pz
         val d = pqx * pqx + pqz * pqz
         var t = pqx * dx + pqz * dz
         if (d > 0) {
@@ -533,13 +535,32 @@ object Vectors {
         } else if (t > 1) {
             t = 1f
         }
-        dx = vertices[p] + t * pqx - ptx
-        dz = vertices[p + 2] + t * pqz - ptz
+        dx = px + t * pqx - ptx
+        dz = pz + t * pqz - ptz
         return FloatPair(dx * dx + dz * dz, t)
     }
 
     fun distancePtSegSqr2D(pt: Vector3f, vertices: FloatArray, p: Int, q: Int): FloatPair {
         return distancePtSegSqr2D(pt.x, pt.z, vertices, p, q)
+    }
+
+    fun distancePtSegSqr2DSecond(ptx: Float, ptz: Float, data: FloatArray, pi: Int, qi: Int): Float {
+        val px = data[pi]
+        val pz = data[pi + 2]
+        val pqx = data[qi] - px
+        val pqz = data[qi + 2] - pz
+        val dx = ptx - px
+        val dz = ptz - pz
+        val d = pqx * pqx + pqz * pqz
+        var t = pqx * dx + pqz * dz
+        if (d > 0) {
+            t /= d
+        }
+        return kotlin.math.min(kotlin.math.max(t, 0f), 1f)
+    }
+
+    fun distancePtSegSqr2DSecond(pt: Vector3f, vertices: FloatArray, p: Int, q: Int): Float {
+        return distancePtSegSqr2DSecond(pt.x, pt.z, vertices, p, q)
     }
 
     fun oppositeTile(side: Int): Int {

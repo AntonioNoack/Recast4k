@@ -683,6 +683,7 @@ class Crowd @JvmOverloads constructor(
         telemetry.stop("buildProximityGrid")
     }
 
+    private val tinyNodePool = NodePool()
     private fun buildNeighbours(agents: Collection<CrowdAgent>) {
         telemetry.start("buildNeighbours")
         for (ag in agents) {
@@ -698,7 +699,7 @@ class Crowd @JvmOverloads constructor(
             ) {
                 ag.boundary.update(
                     ag.corridor.firstPoly, ag.currentPosition, ag.params.collisionQueryRange, navQuery,
-                    m_filters[ag.params.queryFilterType]!!
+                    m_filters[ag.params.queryFilterType]!!, tinyNodePool
                 )
             }
             // Query neighbour agents
@@ -740,6 +741,7 @@ class Crowd @JvmOverloads constructor(
         return result
     }
 
+    private val tmp = NavMeshQuery.PortalResult()
     private fun findCorners(agents: Collection<CrowdAgent>, debug: CrowdAgentDebugInfo?) {
         telemetry.start("findCorners")
         val debugAgent = debug?.agent
@@ -755,7 +757,7 @@ class Crowd @JvmOverloads constructor(
 
             // Find corners for steering
             ag.corners.clear()
-            ag.corners.addAll(ag.corridor.findCorners(CROWDAGENT_MAX_CORNERS, navQuery))
+            ag.corners.addAll(ag.corridor.findCorners(CROWDAGENT_MAX_CORNERS, navQuery, tmp))
 
             // Check to see if the corner after the next corner is directly visible,
             // and short cut to there.
@@ -828,13 +830,12 @@ class Crowd @JvmOverloads constructor(
     private fun calculateSteering(agents: Collection<CrowdAgent>) {
         telemetry.start("calculateSteering")
         for (ag in agents) {
-            if (ag.state != CrowdAgentState.WALKING) {
+
+            if (ag.state != CrowdAgentState.WALKING || ag.targetState == MoveRequestState.NONE) {
                 continue
             }
-            if (ag.targetState == MoveRequestState.NONE) {
-                continue
-            }
-            val dvel = Vector3f()
+
+            val dvel = ag.desiredVelocity
             if (ag.targetState == MoveRequestState.VELOCITY) {
                 dvel.set(ag.targetPos)
                 ag.desiredSpeed = ag.targetPos.length()
@@ -858,23 +859,27 @@ class Crowd @JvmOverloads constructor(
                 val invSeparationDist = 1f / separationDist
                 val separationWeight = ag.params.separationWeight
                 var w = 0f
-                val disp = Vector3f()
+                var dispX = 0f
+                var dispZ = 0f
                 for (j in ag.neis.indices) {
                     val nei = ag.neis[j].agent
-                    val diff = Vectors.sub(ag.currentPosition, nei.currentPosition)
-                    diff.y = 0f
-                    val distSqr = diff.lengthSquared()
+                    val diffX = ag.currentPosition.x - nei.currentPosition.x
+                    val diffZ = ag.currentPosition.z - nei.currentPosition.z
+                    val distSqr = diffX * diffX + diffZ * diffZ
                     if (distSqr < 0.00001f || distSqr > separationDist * separationDist) {
                         continue
                     }
-                    val dist = sqrt(distSqr).toFloat()
+                    val dist = sqrt(distSqr)
                     val weight = separationWeight * (1f - Vectors.sq(dist * invSeparationDist))
-                    Vectors.mad2(disp, diff, weight / dist)
+                    val f = weight / dist
+                    dispX += diffX * f
+                    dispZ += diffZ * f
                     w += 1f
                 }
                 if (w > 0.0001f) {
                     // Adjust desired velocity.
-                    Vectors.mad2(dvel, disp, 1f / w)
+                    val f = 1f / w
+                    dvel.add(dispX * f, 0f, dispZ * f)
                     // Clamp desired velocity to desired speed.
                     val speedSqr = dvel.lengthSquared()
                     val desiredSqr = ag.desiredSpeed * ag.desiredSpeed
@@ -883,9 +888,6 @@ class Crowd @JvmOverloads constructor(
                     }
                 }
             }
-
-            // Set the desired velocity.
-            ag.desiredVelocity.set(dvel)
         }
         telemetry.stop("calculateSteering")
     }
@@ -1012,7 +1014,7 @@ class Crowd @JvmOverloads constructor(
             }
 
             // Move along navmesh.
-            ag.corridor.movePosition(ag.currentPosition, navQuery, m_filters[ag.params.queryFilterType]!!)
+            ag.corridor.movePosition(ag.currentPosition, navQuery, m_filters[ag.params.queryFilterType]!!, tinyNodePool)
             // Get valid constrained position back.
             ag.currentPosition.set(ag.corridor.pos)
 

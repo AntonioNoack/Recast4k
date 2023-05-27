@@ -19,10 +19,35 @@ freely, subject to the following restrictions:
 package org.recast4j.detour
 
 class NodePool {
-    val nodeMap: MutableMap<Long, MutableList<Node>> = HashMap()
-    val nodeList = ArrayList<Node>()
+
+    companion object {
+        private val nodeCache = ArrayList<Node>()
+        private val listCache = ArrayList<ArrayList<Node>>()
+        private fun createList(): ArrayList<Node> {
+            return synchronized(listCache) {
+                listCache.removeLastOrNull() ?: ArrayList()
+            }
+        }
+
+        private fun createNode(): Node {
+            return synchronized(nodeCache) {
+                nodeCache.removeLastOrNull() ?: Node()
+            }
+        }
+    }
+
+    private val nodeMap = HashMap<Long, ArrayList<Node>>(64)
+    private val nodeList = ArrayList<Node>()
+
     fun clear() {
         nodeList.clear()
+        synchronized(listCache) {
+            for ((_, v) in nodeMap) {
+                if (nodeCache.size < 512) nodeCache.addAll(v)
+                if (listCache.size < 512) listCache.add(v)
+                v.clear()
+            }
+        }
         nodeMap.clear()
     }
 
@@ -42,7 +67,7 @@ class NodePool {
     }
 
     fun getNode(id: Long, state: Int): Node {
-        val nodes: List<Node>? = nodeMap[id]
+        var nodes = nodeMap[id]
         if (nodes != null) {
             for (node in nodes) {
                 if (node.state == state) {
@@ -50,15 +75,17 @@ class NodePool {
                 }
             }
         }
-        return create(id, state)
-    }
-
-    fun create(id: Long, state: Int): Node {
-        val node = Node(nodeList.size + 1)
+        val node = createNode()
+        node.index = nodeList.size + 1
         node.polygonRef = id
         node.state = state
+        node.cost = 0f
+        node.flags = 0
+        node.shortcut = null
+        node.parentIndex = 0
+        node.pos.set(0f)
         nodeList.add(node)
-        val nodes = nodeMap.computeIfAbsent(id) { ArrayList() }
+        nodes = nodeMap.computeIfAbsent(id) { createList() }
         nodes.add(node)
         return node
     }

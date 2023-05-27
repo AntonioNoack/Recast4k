@@ -24,6 +24,7 @@ import org.recast4j.Vectors.dist2D
 import org.recast4j.Vectors.dist2DSqr
 import org.recast4j.Vectors.sub
 import org.recast4j.detour.NavMeshQuery
+import org.recast4j.detour.NodePool
 import org.recast4j.detour.QueryFilter
 import org.recast4j.detour.StraightPathItem
 import kotlin.math.min
@@ -217,8 +218,8 @@ class PathCorridor {
      * @return Corners
      * @param[in] navquery The query object used to build the corridor.
      */
-    fun findCorners(maxCorners: Int, navquery: NavMeshQuery): List<StraightPathItem> {
-        val path = navquery.findStraightPath(pos, target, this.path, maxCorners, 0)
+    fun findCorners(maxCorners: Int, navquery: NavMeshQuery, tmp: NavMeshQuery.PortalResult): List<StraightPathItem> {
+        val path = navquery.findStraightPath(pos, target, this.path, maxCorners, 0, tmp)
         if (path != null) {
             // Prune points in the beginning of the path which are too close.
             var start = 0
@@ -381,9 +382,9 @@ class PathCorridor {
      * @param navquery The query object used to build the corridor.
      * @param filter   The filter to apply to the operation.
      */
-    fun movePosition(npos: Vector3f, navquery: NavMeshQuery, filter: QueryFilter): Boolean {
+    fun movePosition(npos: Vector3f, navquery: NavMeshQuery, filter: QueryFilter, tinyNodePool: NodePool): Boolean {
         // Move along navmesh and update new position.
-        val masResult = navquery.moveAlongSurface(path[0], pos, npos, filter)
+        val masResult = navquery.moveAlongSurface(path[0], pos, npos, filter, tinyNodePool)
         return if (masResult != null) {
             path = mergeCorridorStartMoved(path, masResult.visited)
             // Adjust the position to stay on top of the navmesh.
@@ -413,10 +414,11 @@ class PathCorridor {
         npos: Vector3f,
         navquery: NavMeshQuery,
         filter: QueryFilter,
-        adjustPositionToTopOfNavMesh: Boolean
+        adjustPositionToTopOfNavMesh: Boolean,
+        tinyNodePool: NodePool
     ): Boolean {
         // Move along navmesh and update new position.
-        val masResult = navquery.moveAlongSurface(path[path.size - 1], target, npos, filter)
+        val masResult = navquery.moveAlongSurface(path[path.size - 1], target, npos, filter, tinyNodePool)
         if (masResult != null) {
             path = mergeCorridorEndMoved(path, masResult.visited)
             val resultPos = masResult.resultPos

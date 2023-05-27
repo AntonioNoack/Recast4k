@@ -26,7 +26,8 @@ import org.recast4j.Vectors
 import java.util.*
 import kotlin.math.sqrt
 
-open class NavMeshQuery(  /// Gets the navigation mesh the query object is using.
+open class NavMeshQuery(
+    /// Gets the navigation mesh the query object is using.
     /// @return The navigation mesh the query object is using.
     val nav1: NavMesh
 ) {
@@ -371,9 +372,9 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
             System.arraycopy(tile.data!!.vertices, poly.vertices[i] * 3, vertices, i * 3, 3)
         }
         if (Vectors.distancePtPolyEdgesSqr(pos, vertices, nv, edged, edget)) {
-            return Vectors.copy(pos)
+            return pos
         } else {
-            // Point is outside the polygon, dtClamp to nearest edge.
+            // Point is outside the polygon, dtClamp to the nearest edge.
             var dmin = edged[0]
             var imin = 0
             for (i in 1 until nv) {
@@ -405,13 +406,11 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         // getPolyHeight in DetourNavMesh does not do this, so special
         // case it here.
         if (poly.type == Poly.DT_POLYTYPE_OFFMESH_CONNECTION) {
-            val v0 = Vector3f()
-            val v1 = Vector3f()
             val vs = tile.data!!.vertices
-            v0.set(vs, poly.vertices[0] * 3)
-            v1.set(vs, poly.vertices[1] * 3)
-            val (_, second) = Vectors.distancePtSegSqr2D(pos, v0, v1)
-            return v0.y + (v1.y - v0.y) * second
+            val pi = poly.vertices[0] * 3
+            val qi = poly.vertices[1] * 3
+            val second = Vectors.distancePtSegSqr2DSecond(pos, vs, pi, qi)
+            return vs[pi + 1] + (vs[qi + 1] - vs[pi + 1]) * second
         }
         return nav1.getPolyHeight(tile, poly, pos) // value / NaN
     }
@@ -1265,7 +1264,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
     /// @returns The status flags for the query.
     fun findStraightPath(
         startPos: Vector3f, endPos: Vector3f, path: LongArrayList,
-        maxStraightPath: Int, options: Int
+        maxStraightPath: Int, options: Int, tmp: PortalResult
     ): List<StraightPathItem>? {
         val straightPath: MutableList<StraightPathItem> = ArrayList()
         if ((!startPos.isFinite || !endPos.isFinite
@@ -1282,7 +1281,6 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
             return straightPath
         }
         if (path.size > 1) {
-            val tmp = PortalResult()
             var portalApex = closestStartPosRes
             var portalLeft = portalApex
             var portalRight = portalApex
@@ -1465,7 +1463,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
     /// @returns Path
     fun moveAlongSurface(
         startRef: Long, startPos: Vector3f, endPos: Vector3f,
-        filter: QueryFilter
+        filter: QueryFilter, tinyNodePool: NodePool
     ): MoveAlongSurfaceResult? {
 
         // Validate input
@@ -1473,7 +1471,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
             return null
         }
 
-        val tinyNodePool = NodePool()
+        tinyNodePool.clear()
         val startNode = tinyNodePool.getNode(startRef)
         startNode.parentIndex = 0
         startNode.cost = 0f
@@ -2346,7 +2344,8 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
     /// @returns The status flags for the query.
     fun findLocalNeighbourhood(
         startRef: Long, centerPos: Vector3f, radius: Float,
-        filter: QueryFilter
+        filter: QueryFilter,
+        tinyNodePool: NodePool
     ): Result<FindLocalNeighbourhoodResult> {
 
         // Validate input
@@ -2356,7 +2355,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
 
         val resultRef = LongArrayList()
         val resultParent = LongArrayList()
-        val tinyNodePool = NodePool()
+        tinyNodePool.clear()
         val startNode = tinyNodePool.getNode(startRef)
         startNode.parentIndex = 0
         startNode.polygonRef = startRef

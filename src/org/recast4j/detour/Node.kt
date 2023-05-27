@@ -21,7 +21,10 @@ package org.recast4j.detour
 import org.joml.Vector3f
 import org.recast4j.LongArrayList
 
-class Node(val index: Int) {
+class Node() {
+
+    var index = 0
+
     /**
      * Position of the node.
      */
