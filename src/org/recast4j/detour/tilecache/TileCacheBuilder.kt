@@ -1440,7 +1440,7 @@ class TileCacheBuilder {
         bmax.x += radius
         bmax.y += height
         bmax.z += radius
-        val r2: Float = sq(radius / cs + 0.5f)
+        val r2 = sq(radius / cs + 0.5f)
         val w = layer.header.width
         val h = layer.header.height
         val ics = 1f / cs

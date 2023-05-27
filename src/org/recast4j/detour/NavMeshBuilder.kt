@@ -108,8 +108,8 @@ object NavMeshBuilder {
                 val bmin = Vector3f()
                 val bmax = Vector3f()
                 val dv = vb * 3
-                Vectors.copy(bmin, params.detailVertices, dv)
-                Vectors.copy(bmax, params.detailVertices, dv)
+                bmin.set(params.detailVertices, dv)
+                bmax.set(params.detailVertices, dv)
                 for (j in 1 until ndv) {
                     Vectors.min(bmin, params.detailVertices, dv + j * 3)
                     Vectors.max(bmax, params.detailVertices, dv + j * 3)
@@ -457,8 +457,8 @@ object NavMeshBuilder {
                 con.poly = offMeshPolyBase + n
                 // Copy connection end-points.
                 val endPts = i * 2 * 3
-                Vectors.copy(con.posA, params.offMeshConVertices, endPts)
-                Vectors.copy(con.posB, params.offMeshConVertices, endPts + 3)
+                con.posA.set(params.offMeshConVertices, endPts)
+                con.posB.set(params.offMeshConVertices, endPts + 3)
                 con.rad = params.offMeshConRad[i]
                 con.flags = if (params.offMeshConDir[i] != 0) NavMesh.DT_OFFMESH_CON_BIDIR else 0
                 con.side = offMeshConClass[i * 2 + 1]

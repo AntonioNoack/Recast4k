@@ -693,7 +693,7 @@ class Crowd @JvmOverloads constructor(
             // Update the collision boundary after certain distance has been passed or
             // if it has become invalid.
             val updateThr = ag.params.collisionQueryRange * 0.25f
-            if (Vectors.dist2DSqr(ag.currentPosition, ag.boundary.center) > Vectors.sq(updateThr)
+            if (Vectors.dist2DSqr(ag.currentPosition, ag.boundary.center) > updateThr * updateThr
                 || !ag.boundary.isValid(navQuery, m_filters[ag.params.queryFilterType]!!)
             ) {
                 ag.boundary.update(
@@ -716,20 +716,22 @@ class Crowd @JvmOverloads constructor(
         grid: ProximityGrid?
     ): List<CrowdNeighbour> {
         val result: MutableList<CrowdNeighbour> = ArrayList()
-        val proxAgents = grid!!.queryItems(pos.x - range, pos.z - range, pos.x + range, pos.z + range)
-        for (ag in proxAgents) {
+        val agents = grid!!.queryItems(pos.x - range, pos.z - range, pos.x + range, pos.z + range)
+        for (ag in agents) {
             if (ag === skip) {
                 continue
             }
 
             // Check for overlap.
-            val diff = Vectors.sub(pos, ag.currentPosition)
-            if (abs(diff.y) >= (height + ag.params.height) / 2f) {
+            val cp = ag.currentPosition
+            val dy = pos.y - cp.y
+            if (abs(dy) >= (height + ag.params.height) / 2f) {
                 continue
             }
-            diff.y = 0f
-            val distSqr = diff.lengthSquared()
-            if (distSqr > Vectors.sq(range)) continue
+            val dx = pos.x - cp.x
+            val dz = pos.z - cp.z
+            val distSqr = dx * dx + dz * dz
+            if (distSqr > range * range) continue
             result.add(CrowdNeighbour(ag, distSqr))
         }
         result.sortWith { o1: CrowdNeighbour, o2: CrowdNeighbour ->
@@ -862,7 +864,7 @@ class Crowd @JvmOverloads constructor(
                     val diff = Vectors.sub(ag.currentPosition, nei.currentPosition)
                     diff.y = 0f
                     val distSqr = diff.lengthSquared()
-                    if (distSqr < 0.00001f || distSqr > Vectors.sq(separationDist)) {
+                    if (distSqr < 0.00001f || distSqr > separationDist * separationDist) {
                         continue
                     }
                     val dist = sqrt(distSqr).toFloat()
@@ -875,7 +877,7 @@ class Crowd @JvmOverloads constructor(
                     Vectors.mad2(dvel, disp, 1f / w)
                     // Clamp desired velocity to desired speed.
                     val speedSqr = dvel.lengthSquared()
-                    val desiredSqr = Vectors.sq(ag.desiredSpeed)
+                    val desiredSqr = ag.desiredSpeed * ag.desiredSpeed
                     if (speedSqr > desiredSqr) {
                         dvel.mul(desiredSqr / speedSqr)
                     }

@@ -110,25 +110,32 @@ object RecastFilledVolumeRasterization {
             val s0 = if (i and 1 != 0) 1f else -1f
             val s1 = if (i and 2 != 0) 1f else -1f
             val s2 = if (i and 4 != 0) 1f else -1f
-            vertices[i * 3] = center.x + s0 * halfEdges[0][0] + s1 * halfEdges[1][0] + s2 * halfEdges[2][0]
-            vertices[i * 3 + 1] = center.y + s0 * halfEdges[0][1] + s1 * halfEdges[1][1] + s2 * halfEdges[2][1]
-            vertices[i * 3 + 2] = center.z + s0 * halfEdges[0][2] + s1 * halfEdges[1][2] + s2 * halfEdges[2][2]
-            bounds[0] = min(bounds[0], vertices[i * 3])
-            bounds[1] = min(bounds[1], vertices[i * 3 + 1])
-            bounds[2] = min(bounds[2], vertices[i * 3 + 2])
-            bounds[3] = max(bounds[3], vertices[i * 3])
-            bounds[4] = max(bounds[4], vertices[i * 3 + 1])
-            bounds[5] = max(bounds[5], vertices[i * 3 + 2])
+            val he0 = halfEdges[0]
+            val he1 = halfEdges[1]
+            val he2 = halfEdges[0]
+            val i3 = i * 3
+            vertices[i3] = center.x + s0 * he0[0] + s1 * he1[0] + s2 * he2[0]
+            vertices[i3 + 1] = center.y + s0 * he0[1] + s1 * he1[1] + s2 * he2[1]
+            vertices[i3 + 2] = center.z + s0 * he0[2] + s1 * he1[2] + s2 * he2[2]
+            bounds[0] = min(bounds[0], vertices[i3])
+            bounds[1] = min(bounds[1], vertices[i3 + 1])
+            bounds[2] = min(bounds[2], vertices[i3 + 2])
+            bounds[3] = max(bounds[3], vertices[i3])
+            bounds[4] = max(bounds[4], vertices[i3 + 1])
+            bounds[5] = max(bounds[5], vertices[i3 + 2])
         }
         val planes = Array(6) { FloatArray(4) }
         for (i in 0..5) {
-            val m: Float = if (i < 3) -1f else 1f
+            val m = if (i < 3) -1f else 1f
             val vi = if (i < 3) 0 else 7
-            planes[i][0] = m * normals[i % 3][0]
-            planes[i][1] = m * normals[i % 3][1]
-            planes[i][2] = m * normals[i % 3][2]
-            planes[i][3] =
-                vertices[vi * 3] * planes[i][0] + vertices[vi * 3 + 1] * planes[i][1] + vertices[vi * 3 + 2] * planes[i][2]
+            val i3 = if (i > 3) i - 3 else i
+            val plane = planes[i]
+            val normal = normals[i3]
+            plane[0] = m * normal[0]
+            plane[1] = m * normal[1]
+            plane[2] = m * normal[2]
+            val vi3 = vi * 3
+            plane[3] = vertices[vi3] * plane[0] + vertices[vi3 + 1] * plane[1] + vertices[vi3 + 2] * plane[2]
         }
         rasterizationFilledShape(hf, bounds, area, flagMergeThr) { rectangle: FloatArray ->
             intersectBox(
@@ -276,9 +283,9 @@ object RecastFilledVolumeRasterization {
         val x = max(rectangle[0], min(center.x, rectangle[2]))
         val y = rectangle[4]
         val z = max(rectangle[1], min(center.z, rectangle[3]))
-        val mx: Float = x - center.x
-        val my: Float = y - center.y
-        val mz: Float = z - center.z
+        val mx = x - center.x
+        val my = y - center.y
+        val mz = z - center.z
         val c = lenSqr(mx, my, mz) - radiusSqr
         if (c > 0f && my > 0f) {
             return null
@@ -305,7 +312,7 @@ object RecastFilledVolumeRasterization {
     ): FloatArray? {
         var s =
             mergeIntersections(intersectSphere(rectangle, start, radiusSqr), intersectSphere(rectangle, end, radiusSqr))
-        val axisLen2dSqr: Float = axis.x * axis.x + axis.z * axis.z
+        val axisLen2dSqr = axis.x * axis.x + axis.z * axis.z
         if (axisLen2dSqr > EPSILON) {
             s = slabsCylinderIntersection(rectangle, start, end, axis, radiusSqr, s)
         }
@@ -333,20 +340,20 @@ object RecastFilledVolumeRasterization {
                 ), start, axis, radiusSqr
             )
         )
-        val axisLen2dSqr: Float = axis.x * axis.x + axis.z * axis.z
+        val axisLen2dSqr = axis.x * axis.x + axis.z * axis.z
         if (axisLen2dSqr > EPSILON) {
             s = slabsCylinderIntersection(rectangle, start, end, axis, radiusSqr, s)
         }
         if (axis.y * axis.y > EPSILON) {
             val rectangleOnStartPlane = Array(4) { FloatArray(3) }
             val rectangleOnEndPlane = Array(4) { FloatArray(3) }
-            val ds: Float = axis.dot(start)
-            val de: Float = axis.dot(end)
+            val ds = axis.dot(start)
+            val de = axis.dot(end)
             for (i in 0..3) {
                 val x = rectangle[i + 1 and 2]
                 val z = rectangle[(i and 2) + 1]
-                val dotAxisA: Float = axis.dot(x, rectangle[4], z)
-                var t: Float = (ds - dotAxisA) / axis.y
+                val dotAxisA = axis.dot(x, rectangle[4], z)
+                var t = (ds - dotAxisA) / axis.y
                 rectangleOnStartPlane[i][0] = x
                 rectangleOnStartPlane[i][1] = rectangle[4] + t
                 rectangleOnStartPlane[i][2] = z
@@ -381,9 +388,9 @@ object RecastFilledVolumeRasterization {
             rectangleOnPlane[j][0] - rectangleOnPlane[i][0], rectangleOnPlane[j][1] - rectangleOnPlane[i][1],
             rectangleOnPlane[j][2] - rectangleOnPlane[i][2]
         )
-        val dl: Float = Vectors.dot(d, d)
-        val b: Float = Vectors.dot(m, d) / dl
-        val c: Float = (Vectors.dot(m, m) - radiusSqr) / dl
+        val dl = Vectors.dot(d, d)
+        val b = Vectors.dot(m, d) / dl
+        val c = (Vectors.dot(m, m) - radiusSqr) / dl
         val discr = b * b - c
         if (discr > EPSILON) {
             val discrSqrt = sqrt(discr).toFloat()
@@ -431,8 +438,8 @@ object RecastFilledVolumeRasterization {
 
     private fun xSlabRayIntersection(rectangle: FloatArray, start: Vector3f, direction: Vector3f, x: Float): Vector3f {
         // 2d intersection of plane and segment
-        val t: Float = (x - start.x) / direction.x
-        val z: Float = clamp(start.z + t * direction.z, rectangle[1], rectangle[3])
+        val t = (x - start.x) / direction.x
+        val z = clamp(start.z + t * direction.z, rectangle[1], rectangle[3])
         return Vector3f(x, rectangle[4], z)
     }
 
@@ -448,8 +455,8 @@ object RecastFilledVolumeRasterization {
 
     private fun zSlabRayIntersection(rectangle: FloatArray, start: Vector3f, direction: Vector3f, z: Float): Vector3f {
         // 2d intersection of plane and segment
-        val t: Float = (z - start.z) / direction.z
-        val x: Float = clamp(start.x + t * direction.x, rectangle[0], rectangle[2])
+        val t = (z - start.z) / direction.z
+        val x = clamp(start.x + t * direction.x, rectangle[0], rectangle[2])
         return Vector3f(x, rectangle[4], z)
     }
 
@@ -462,18 +469,18 @@ object RecastFilledVolumeRasterization {
     ): FloatArray? {
         val m = Vector3f(point.x - start.x, point.y - start.y, point.z - start.z)
         // float[] n = { 0, 1, 0 };
-        val md: Float = m.dot(axis)
+        val md = m.dot(axis)
         // float nd = dot(n, d);
-        val nd: Float = axis.y
-        val dd: Float = axis.lengthSquared()
+        val nd = axis.y
+        val dd = axis.lengthSquared()
 
         // float nn = dot(n, n);
         val nn = 1f
         // float mn = dot(m, n);
-        val mn: Float = m.y
+        val mn = m.y
         // float a = dd * nn - nd * nd;
         val a = dd - nd * nd
-        val k: Float = m.lengthSquared() - radiusSqr
+        val k = m.lengthSquared() - radiusSqr
         val c = dd * k - md * md
         if (abs(a) < EPSILON) {
             // Segment runs parallel to cylinder axis
@@ -542,9 +549,9 @@ object RecastFilledVolumeRasterization {
             for (j in 0..5) {
                 if (abs(planes[j][1]) > EPSILON) {
                     val plane = planes[j]
-                    val dotNormalPoint: Float = point.dot(plane[0], plane[1], plane[2])
+                    val dotNormalPoint = point.dot(plane[0], plane[1], plane[2])
                     val t = (planes[j][3] - dotNormalPoint) / planes[j][1]
-                    val y: Float = point.y + t
+                    val y = point.y + t
                     var valid = true
                     for (k in 0..5) {
                         if (k != j) {
@@ -714,11 +721,11 @@ object RecastFilledVolumeRasterization {
     }
 
     private fun rayTriangleIntersection(point: FloatArray, plane: Int, planes: Array<FloatArray>): Float? {
-        val t: Float = (planes[plane][3] - Vectors.dot(planes[plane], point)) / planes[plane][1]
+        val t = (planes[plane][3] - Vectors.dot(planes[plane], point)) / planes[plane][1]
         val s = floatArrayOf(point[0], point[1] + t, point[2])
-        val u: Float = Vectors.dot(s, planes[plane + 1]) - planes[plane + 1][3]
+        val u = Vectors.dot(s, planes[plane + 1]) - planes[plane + 1][3]
         if (u < 0f || u > 1f) return null
-        val v: Float = Vectors.dot(s, planes[plane + 2]) - planes[plane + 2][3]
+        val v = Vectors.dot(s, planes[plane + 2]) - planes[plane + 2][3]
         if (v < 0f) return null
         val w = 1f - u - v
         return if (w < 0f) {

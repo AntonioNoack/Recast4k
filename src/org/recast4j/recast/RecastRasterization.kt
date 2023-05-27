@@ -146,8 +146,8 @@ object RecastRasterization {
         val by = bmax.y - bmin.y
 
         // Calculate the bounding box of the triangle.
-        Vectors.copy(tmin, vertices, v0 * 3)
-        Vectors.copy(tmax, vertices, v0 * 3)
+        tmin.set(vertices, v0 * 3)
+        tmax.set(vertices, v0 * 3)
         Vectors.min(tmin, vertices, v1 * 3)
         Vectors.min(tmin, vertices, v2 * 3)
         Vectors.max(tmax, vertices, v1 * 3)

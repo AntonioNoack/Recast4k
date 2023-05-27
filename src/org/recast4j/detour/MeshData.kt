@@ -90,7 +90,7 @@ class MeshData {
                 val it = items[i]
                 it.index = i
                 val bmin = Vector3f()
-                Vectors.copy(bmin, data.vertices, data.polygons[i].vertices[0] * 3)
+                bmin.set(data.vertices, data.polygons[i].vertices[0] * 3)
                 val bmax = Vector3f(bmin)
                 for (j in 1 until data.polygons[i].vertCount) {
                     val idx = data.polygons[i].vertices[j] * 3

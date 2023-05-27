@@ -55,6 +55,7 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
         var lastBestNode = startNode
         var lastBestNodeCost = startNode.totalCost
         var status = Status.SUCCESS
+        val tmp = PortalResult()
         while (!openList.isEmpty()) {
             // Remove node from open list and put it in closed list.
             val bestNode = openList.poll()
@@ -115,7 +116,7 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
                 // If the node is visited the first time, calculate node position.
                 if (neighbourNode.flags == 0) {
                     val midpod =
-                        getEdgeMidPoint(bestRef, bestPoly, bestTile, neighbourRef, neighbourPoly, neighbourTile)
+                        getEdgeMidPoint(bestRef, bestPoly, bestTile, neighbourRef, neighbourPoly, neighbourTile, tmp)
                     if (midpod != null) {
                         neighbourNode.pos.set(midpod)
                     }
@@ -204,6 +205,7 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
             return Result.of(queryData.status, 0)
         }
         var iter = 0
+        val tmp = PortalResult()
         while (iter < maxIter && !openList.isEmpty()) {
             iter++
 
@@ -296,7 +298,7 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
                 // position.
                 if (neighbourNode.flags == 0) {
                     val midpod =
-                        getEdgeMidPoint(bestRef, bestPoly, bestTile, neighbourRef, neighbourPoly, neighbourTile)
+                        getEdgeMidPoint(bestRef, bestPoly, bestTile, neighbourRef, neighbourPoly, neighbourTile, tmp)
                     if (midpod != null) {
                         neighbourNode.pos.set(midpod)
                     }
@@ -547,11 +549,12 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
         startNode.polygonRef = startRef
         startNode.flags = Node.OPEN
         openList.offer(startNode)
-        var radiusSqr = Vectors.sq(maxRadius)
+        var radiusSqr = maxRadius * maxRadius
         val hitPos = Vector3f()
         var bestvi = -1
         var bestvj = -1
         var bestData: FloatArray? = null
+        val tmp = PortalResult()
         while (!openList.isEmpty()) {
             val bestNode = openList.poll()
             bestNode.flags = bestNode.flags and Node.OPEN.inv()
@@ -676,7 +679,7 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
                 if (neighbourNode.flags == 0) {
                     val midPoint = getEdgeMidPoint(
                         bestRef, bestPoly, bestTile, neighbourRef, neighbourPoly,
-                        neighbourTile
+                        neighbourTile, tmp
                     )
                     if (midPoint != null) {
                         neighbourNode.pos.set(midPoint)

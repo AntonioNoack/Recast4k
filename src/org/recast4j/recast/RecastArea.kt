@@ -327,8 +327,8 @@ class RecastArea {
             ctx?.startTimer("MARK_CONVEXPOLY_AREA")
             val bmin = Vector3f()
             val bmax = Vector3f()
-            Vectors.copy(bmin, vertices, 0)
-            Vectors.copy(bmax, vertices, 0)
+            bmin.set(vertices, 0)
+            bmax.set(vertices, 0)
             var i = 3
             while (i < vertices.size) {
                 Vectors.min(bmin, vertices, i)

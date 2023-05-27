@@ -49,7 +49,7 @@ class ObstacleAvoidanceDebugData(var maxSamples: Int) {
             maxPen = max(maxPen, arr[i])
         }
         val penRange = maxPen - minPen
-        val s: Float = if (penRange > 0.001f) 1f / penRange else 1f
+        val s = if (penRange > 0.001f) 1f / penRange else 1f
         for (i in 0 until n) arr[i] = clamp((arr[i] - minPen) * s, 0f, 1f)
     }
 
@@ -75,7 +75,7 @@ class ObstacleAvoidanceDebugData(var maxSamples: Int) {
 
     fun getSampleVelocity(i: Int): Vector3f {
         val vel = Vector3f()
-        copy(vel, this.vel, i * 3)
+        vel.set(this.vel, i * 3)
         return vel
     }
 

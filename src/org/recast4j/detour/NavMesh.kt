@@ -235,8 +235,8 @@ class NavMesh(
                 }
                 // Calc polygon bounds.
                 var v = p.vertices[0] * 3
-                Vectors.copy(bmin, tile.data!!.vertices, v)
-                Vectors.copy(bmax, tile.data!!.vertices, v)
+                bmin.set(tile.data!!.vertices, v)
+                bmax.set(tile.data!!.vertices, v)
                 for (j in 1 until p.vertCount) {
                     v = p.vertices[j] * 3
                     Vectors.min(bmin, tile.data!!.vertices, v)
@@ -838,8 +838,8 @@ class NavMesh(
             val v1 = Vector3f()
             for (j in 0 until poly.vertCount) {
                 val k = (j + 1) % poly.vertCount
-                Vectors.copy(v0, tile.data!!.vertices, poly.vertices[j] * 3)
-                Vectors.copy(v1, tile.data!!.vertices, poly.vertices[k] * 3)
+                v0.set(tile.data!!.vertices, poly.vertices[j] * 3)
+                v1.set(tile.data!!.vertices, poly.vertices[k] * 3)
                 val (d, t) = Vectors.distancePtSegSqr2D(pos, v0, v1)
                 if (d < dmin) {
                     dmin = d
@@ -875,10 +875,10 @@ class NavMesh(
                 for (k in 0..2) {
                     if (tile.data!!.detailTriangles[t + k] < poly.vertCount) {
                         val index = poly.vertices[tile.data!!.detailTriangles[t + k]] * 3
-                        Vectors.copy(v[k], tile.data!!.vertices, index)
+                        v[k].set(tile.data!!.vertices, index)
                     } else {
                         val index = (pd.vertBase + (tile.data!!.detailTriangles[t + k] - poly.vertCount)) * 3
-                        Vectors.copy(v[k], tile.data!!.detailVertices, index)
+                        v[k].set(tile.data!!.detailVertices, index)
                     }
                 }
                 val h = Vectors.closestHeightPointTriangle(pos, v[0], v[1], v[2])
@@ -890,10 +890,10 @@ class NavMesh(
             val v0 = Vector3f()
             val v1 = Vector3f()
             val v2 = Vector3f()
-            Vectors.copy(v0, tile.data!!.vertices, poly.vertices[0] * 3)
+            v0.set(tile.data!!.vertices, poly.vertices[0] * 3)
             for (j in 1 until poly.vertCount - 1) {
-                Vectors.copy(v1, tile.data!!.vertices, poly.vertices[j + 1] * 3)
-                Vectors.copy(v2, tile.data!!.vertices, poly.vertices[j + 2] * 3)
+                v1.set(tile.data!!.vertices, poly.vertices[j + 1] * 3)
+                v2.set(tile.data!!.vertices, poly.vertices[j + 2] * 3)
                 val h = Vectors.closestHeightPointTriangle(pos, v0, v1, v2)
                 if (java.lang.Float.isFinite(h)) return h
             }
@@ -918,13 +918,13 @@ class NavMesh(
 
         // Off-mesh connections don't have detail polygons.
         if (poly.type == Poly.DT_POLYTYPE_OFFMESH_CONNECTION) {
-            var i = poly.vertices[0] * 3
             val v = tile.data!!.vertices
-            val v0 = Vector3f(v[i], v[i + 1], v[i + 2])
-            i = poly.vertices[1] * 3
-            val v1 = Vector3f(v[i], v[i + 1], v[i + 2])
+            val v0 = Vector3f()
+            val v1 = Vector3f()
+            v0.set(v, poly.vertices[0] * 3)
+            v1.set(v, poly.vertices[1] * 3)
             val (_, second) = Vectors.distancePtSegSqr2D(pos, v0, v1)
-            return ClosestPointOnPolyResult(false, Vectors.lerp(v0, v1, second))
+            return ClosestPointOnPolyResult(false, v0.lerp(v1, second))
         }
         // Outside poly that is not an offmesh connection.
         return ClosestPointOnPolyResult(false, closestPointOnDetailEdges(tile, poly, pos, true))
@@ -1075,8 +1075,8 @@ class NavMesh(
         }
         val startPos = Vector3f()
         val endPos = Vector3f()
-        Vectors.copy(startPos, data.vertices, poly.vertices[idx0] * 3)
-        Vectors.copy(endPos, data.vertices, poly.vertices[idx1] * 3)
+        startPos.set(data.vertices, poly.vertices[idx0] * 3)
+        endPos.set(data.vertices, poly.vertices[idx1] * 3)
         return Pair(startPos, endPos)
     }
 

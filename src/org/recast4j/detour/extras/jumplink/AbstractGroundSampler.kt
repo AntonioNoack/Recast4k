@@ -1,7 +1,6 @@
 package org.recast4j.detour.extras.jumplink
 
 import org.joml.Vector3f
-import org.recast4j.Vectors
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -29,9 +28,8 @@ internal abstract class AbstractGroundSampler : GroundSampler {
         for (i in 0 until numSamples) {
             val u = i / (numSamples - 1).toFloat()
             val s = seg.samples!![i]
-            val pt = Vectors.lerp(seg.p, seg.q, u)
-            val (first, second) = heightFunc(pt, seg.height)
-            s.p.set(pt)
+            seg.p.lerp(seg.q, u, s.p)
+            val (first, second) = heightFunc(s.p, seg.height)
             s.p.y = second
             if (!first) continue
             s.validHeight = true

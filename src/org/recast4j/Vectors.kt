@@ -56,10 +56,6 @@ object Vectors {
         copy(dst, 0, input, i)
     }
 
-    fun copy(dst: Vector3f, src: FloatArray, srcI: Int) {
-        dst.set(src[srcI], src[srcI + 1], src[srcI + 2])
-    }
-
     fun copy(dst: FloatArray, src: FloatArray) {
         copy(dst, 0, src, 0)
     }
@@ -106,6 +102,7 @@ object Vectors {
      * a += b * s
      */
     fun mad2(a: Vector3f, b: Vector3f, f: Float) {
+        b.mulAdd(f, a, a)
         a.add(b.x * f, b.y * f, b.z * f)
     }
 
@@ -156,6 +153,7 @@ object Vectors {
         out.set(input[i].toFloat(), input[i + 1].toFloat(), input[i + 2].toFloat())
     }
 
+    @Deprecated("Replace it maybe", replaceWith = ReplaceWith("a*a"))
     fun sq(a: Float): Float {
         return a * a
     }
@@ -248,7 +246,7 @@ object Vectors {
                 amin.z <= bmax.z && amax.z >= bmin.z
     }
 
-    fun distancePtSegSqr2D(pt: Vector3f, p: Vector3f, q: Vector3f): Pair<Float, Float> {
+    fun distancePtSegSqr2D(pt: Vector3f, p: Vector3f, q: Vector3f): FloatPair {
         val pqx = q.x - p.x
         val pqz = q.z - p.z
         var dx = pt.x - p.x
@@ -265,7 +263,7 @@ object Vectors {
         }
         dx = p.x + t * pqx - pt.x
         dz = p.z + t * pqz - pt.z
-        return Pair(dx * dx + dz * dz, t)
+        return FloatPair(dx * dx + dz * dz, t)
     }
 
     fun closestHeightPointTriangle(p: Vector3f, a: Vector3f, b: Vector3f, c: Vector3f): Float {
@@ -520,7 +518,7 @@ object Vectors {
         return result
     }
 
-    fun distancePtSegSqr2D(pt: Vector3f, vertices: FloatArray, p: Int, q: Int): Pair<Float, Float> {
+    fun distancePtSegSqr2D(pt: Vector3f, vertices: FloatArray, p: Int, q: Int): FloatPair {
         val pqx = vertices[q] - vertices[p]
         val pqz = vertices[q + 2] - vertices[p + 2]
         var dx = pt.x - vertices[p]
@@ -537,7 +535,7 @@ object Vectors {
         }
         dx = vertices[p] + t * pqx - pt.x
         dz = vertices[p + 2] + t * pqz - pt.z
-        return Pair(dx * dx + dz * dz, t)
+        return FloatPair(dx * dx + dz * dz, t)
     }
 
     fun oppositeTile(side: Int): Int {
@@ -549,17 +547,18 @@ object Vectors {
         return a.x * b.z - a.z * b.x
     }
 
-    fun intersectSegSeg2D(ap: Vector3f, aq: Vector3f, bp: Vector3f, bq: Vector3f): Pair<Float, Float>? {
-        val u = sub(aq, ap)
-        val v = sub(bq, bp)
-        val w = sub(ap, bp)
-        val d = crossXZ(u, v)
-        if (abs(d) < 1e-6f) {
-            return null
-        }
-        val s = crossXZ(v, w) / d
-        val t = crossXZ(u, w) / d
-        return Pair(s, t)
+    fun intersectSegSeg2D(a0: Vector3f, a1: Vector3f, b0: Vector3f, b1: Vector3f): FloatPair? {
+        val ux = a1.x - a0.x
+        val uz = a1.z - a0.z
+        val vx = b1.x - b0.x
+        val vz = b1.z - b0.z
+        val wx = a0.x - b0.x
+        val wz = a0.z - b0.z
+        val d = ux * vz - uz * vx
+        if (abs(d) < 1e-6f) return null
+        val s = (vx * wz - vz * wx) / d
+        val t = (ux * wz - uz * wx) / d
+        return FloatPair(s, t)
     }
 
     class IntersectResult {

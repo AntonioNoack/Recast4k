@@ -23,7 +23,7 @@ import kotlin.math.floor
 
 class ProximityGrid(val cellSize: Float) {
 
-    private val invCellSize: Float = 1f / cellSize
+    private val invCellSize = 1f / cellSize
     private val items: MutableMap<ItemKey, MutableList<CrowdAgent>?> = HashMap()
 
     fun clear() {

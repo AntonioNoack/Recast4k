@@ -20,7 +20,6 @@ package org.recast4j.detour.crowd
 
 import org.joml.Vector3f
 import org.recast4j.LongArrayList
-import org.recast4j.Vectors.copy
 import org.recast4j.Vectors.dist2D
 import org.recast4j.Vectors.dist2DSqr
 import org.recast4j.Vectors.mad
@@ -523,6 +522,6 @@ class PathCorridor {
         get() = if (path.isEmpty()) 0 else path[path.size - 1]
 
     companion object {
-        private val MIN_TARGET_DIST: Float = 1e-4f
+        private val MIN_TARGET_DIST = 1e-4f
     }
 }

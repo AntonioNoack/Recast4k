@@ -20,14 +20,4 @@ package org.recast4j.detour
 
 import org.joml.Vector3f
 
-class StraightPathItem(pos: Vector3f, flags: Int, ref: Long) {
-    var pos: Vector3f
-    var flags: Int
-    var ref: Long
-
-    init {
-        this.pos = Vector3f(pos)
-        this.flags = flags
-        this.ref = ref
-    }
-}
+class StraightPathItem(val pos: Vector3f, var flags: Int, var ref: Long)

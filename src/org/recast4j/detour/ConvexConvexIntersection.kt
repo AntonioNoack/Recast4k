@@ -49,10 +49,10 @@ object ConvexConvexIntersection {
         val ip = Vector3f()
         val iq = Vector3f()
         do {
-            Vectors.copy(a, p, 3 * (ai % n))
-            Vectors.copy(b, q, 3 * (bi % m))
-            Vectors.copy(a1, p, 3 * ((ai + n - 1) % n)) // prev a
-            Vectors.copy(b1, q, 3 * ((bi + m - 1) % m)) // prev b
+            a.set(p, 3 * (ai % n))
+            b.set(q, 3 * (bi % m))
+            a1.set(p, 3 * ((ai + n - 1) % n)) // prev a
+            b1.set(q, 3 * ((bi + m - 1) % m)) // prev b
             val A = Vectors.sub(a, a1)
             val B = Vectors.sub(b, b1)
             var cross = B.x * A.z - A.x * B.z // triArea2D({0, 0}, A, B);

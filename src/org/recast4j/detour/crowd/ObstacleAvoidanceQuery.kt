@@ -152,7 +152,7 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
             cir.dp.set(pb).sub(pos)
             cir.dp.normalize()
             val dv: Vector3f = Vectors.sub(cir.dvel, dvel)
-            val a: Float = Vectors.triArea2D(orig, cir.dp, dv)
+            val a = Vectors.triArea2D(orig, cir.dp, dv)
             if (a < 0.01f) {
                 cir.np.x = -cir.dp.z
                 cir.np.z = cir.dp.x
@@ -167,7 +167,7 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
             // Precalc if the agent is really close to the segment.
             val r = 0.01f
             val (first) = Vectors.distancePtSegSqr2D(pos, seg!!.p, seg.q)
-            seg.touch = first < Vectors.sq(r)
+            seg.touch = first < r * r
         }
     }
 
@@ -175,11 +175,11 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
         val EPS = 0.0001f
         val s = Vectors.sub(c1, c0)
         val r = r0 + r1
-        val c: Float = Vectors.dot2D(s, s) - r * r
-        var a: Float = Vectors.dot2D(v, v)
+        val c = Vectors.dot2D(s, s) - r * r
+        var a = Vectors.dot2D(v, v)
         if (a < EPS) return null // not moving
         // Overlap, calc time to exit.
-        val b: Float = Vectors.dot2D(v, s)
+        val b = Vectors.dot2D(v, s)
         val d = b * b - a * c
         if (d < 0f) return null // no intersection.
         a = 1f / a
@@ -190,12 +190,12 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
     fun isectRaySeg(ap: Vector3f, u: Vector3f, bp: Vector3f, bq: Vector3f): Float {
         val v = Vectors.sub(bq, bp)
         val w = Vectors.sub(ap, bp)
-        var d: Float = -Vectors.crossXZ(u, v)
+        var d = -Vectors.crossXZ(u, v)
         if (abs(d) < 1e-6f) return -1f
         d = 1f / d
-        val t: Float = -Vectors.crossXZ(v, w) * d
+        val t = -Vectors.crossXZ(v, w) * d
         if (t < 0 || t > 1) return -1f
-        val s: Float = -Vectors.crossXZ(u, w) * d
+        val s = -Vectors.crossXZ(u, w) * d
         return if (s < 0 || s > 1) -1f else t
     }
 
@@ -211,8 +211,8 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
         minPenalty: Float, debug: ObstacleAvoidanceDebugData?
     ): Float {
         // penalty for straying away from the desired and current velocities
-        val vpen: Float = m_params!!.weightDesVel * (Vectors.dist2D(vcand, dvel) * m_invVmax)
-        val vcpen: Float = m_params!!.weightCurVel * (Vectors.dist2D(vcand, vel) * m_invVmax)
+        val vpen = m_params!!.weightDesVel * (Vectors.dist2D(vcand, dvel) * m_invVmax)
+        val vcpen = m_params!!.weightCurVel * (Vectors.dist2D(vcand, vel) * m_invVmax)
 
         // find the threshold hit time to bail out based on the early out penalty
         // (see how the penalty is calculated below to understnad)
@@ -301,8 +301,8 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
         m_invVmax = if (vmax > 0) 1f / vmax else Float.MAX_VALUE
         val nvel = Vector3f()
         debug?.reset()
-        val cvx: Float = dvel.x * m_params!!.velBias
-        val cvz: Float = dvel.z * m_params!!.velBias
+        val cvx = dvel.x * m_params!!.velBias
+        val cvz = dvel.z * m_params!!.velBias
         val cs = vmax * 2 * (1 - m_params!!.velBias) / (m_params!!.gridSize - 1)
         val half = (m_params!!.gridSize - 1) * cs * 0.5f
         var minPenalty = Float.MAX_VALUE

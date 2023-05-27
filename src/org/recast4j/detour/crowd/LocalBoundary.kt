@@ -49,8 +49,8 @@ class LocalBoundary {
     fun addSegment(dist: Float, s: FloatArray) {
         // Insert neighbour based on the distance.
         val seg = Segment()
-        Vectors.copy(seg.start, s, 0)
-        Vectors.copy(seg.end, s, 3)
+        seg.start.set(s, 0)
+        seg.end.set(s, 3)
         seg.pruningDist = dist
         if (segments.isEmpty()) {
             segments.add(seg)
@@ -100,7 +100,7 @@ class LocalBoundary {
                         val s = segs[k]
                         // Skip too distant segments.
                         val (first) = Vectors.distancePtSegSqr2D(pos, s, 0, 3)
-                        if (first > Vectors.sq(collisionQueryRange)) {
+                        if (first > collisionQueryRange * collisionQueryRange) {
                             ++k
                             continue
                         }

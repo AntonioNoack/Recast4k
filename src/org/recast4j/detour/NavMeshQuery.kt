@@ -199,6 +199,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         var randomPoly: Poly? = null
         var randomPolyRef = 0L
         var randomPolyVertices: FloatArray? = null
+        val tmp = PortalResult()
         while (!openList.isEmpty()) {
             val bestNode: Node = openList.poll()
             bestNode.flags = bestNode.flags and Node.OPEN.inv()
@@ -265,7 +266,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                 // Find edge and calc distance to the edge.
                 val portalpoints = getPortalPoints(
                     bestRef, bestPoly, bestTile, neighbourRef,
-                    neighbourPoly, neighbourTile, 0, 0
+                    neighbourPoly, neighbourTile, 0, 0, tmp
                 )
                 if (portalpoints == null) {
                     i = bestTile.links[i].indexOfNextLink
@@ -407,8 +408,8 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
             val v0 = Vector3f()
             val v1 = Vector3f()
             val vs = tile.data!!.vertices
-            Vectors.copy(v0, vs, poly.vertices[0] * 3)
-            Vectors.copy(v1, vs, poly.vertices[1] * 3)
+            v0.set(vs, poly.vertices[0] * 3)
+            v1.set(vs, poly.vertices[1] * 3)
             val (_, second) = Vectors.distancePtSegSqr2D(pos, v0, v1)
             return v0.y + (v1.y - v0.y) * second
         }
@@ -453,12 +454,12 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
             val qfac = data.header!!.bvQuantizationFactor
             // Calculate quantized box
             // dtClamp query box to world box.
-            val minx: Float = Vectors.clamp(qmin.x, tbmin.x, tbmax.x) - tbmin.x
-            val miny: Float = Vectors.clamp(qmin.y, tbmin.y, tbmax.y) - tbmin.y
-            val minz: Float = Vectors.clamp(qmin.z, tbmin.z, tbmax.z) - tbmin.z
-            val maxx: Float = Vectors.clamp(qmax.x, tbmin.x, tbmax.x) - tbmin.x
-            val maxy: Float = Vectors.clamp(qmax.y, tbmin.y, tbmax.y) - tbmin.y
-            val maxz: Float = Vectors.clamp(qmax.z, tbmin.z, tbmax.z) - tbmin.z
+            val minx = Vectors.clamp(qmin.x, tbmin.x, tbmax.x) - tbmin.x
+            val miny = Vectors.clamp(qmin.y, tbmin.y, tbmax.y) - tbmin.y
+            val minz = Vectors.clamp(qmin.z, tbmin.z, tbmax.z) - tbmin.z
+            val maxx = Vectors.clamp(qmax.x, tbmin.x, tbmax.x) - tbmin.x
+            val maxy = Vectors.clamp(qmax.y, tbmin.y, tbmax.y) - tbmin.y
+            val maxz = Vectors.clamp(qmax.z, tbmin.z, tbmax.z) - tbmin.z
             // Quantize
             val bmin = Vector3i(
                 (qfac * minx).toInt() and 0x7ffffffe,
@@ -506,8 +507,8 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                 }
                 // Calc polygon bounds.
                 var v = p.vertices[0] * 3
-                Vectors.copy(bmin, data.vertices, v)
-                Vectors.copy(bmax, data.vertices, v)
+                bmin.set(data.vertices, v)
+                bmax.set(data.vertices, v)
                 for (j in 1 until p.vertCount) {
                     v = p.vertices[j] * 3
                     Vectors.min(bmin, data.vertices, v)
@@ -598,7 +599,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
             return Result.invalidParam()
         }
 
-        var raycastLimitSqr: Float = Vectors.sq(raycastLimit)
+        var raycastLimitSqr = raycastLimit * raycastLimit
 
         // trade quality with performance?
         if (options and DT_FINDPATH_ANY_ANGLE != 0 && raycastLimit < 0f) {
@@ -626,6 +627,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         var lastBestNode = startNode
         var lastBestNodeCost = startNode.totalCost
         var status = Status.SUCCESS
+        val tmp = PortalResult()
         while (!openList.isEmpty()) {
             // Remove node from open list and put it in closed list.
             val bestNode: Node = openList.poll()
@@ -704,8 +706,8 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                 var neighbourPos = neighbourNode.pos
                 val midpod = if (neighbourRef == endRef) getEdgeIntersectionPoint(
                     bestNode.pos, bestRef, bestPoly, bestTile, endPos, neighbourRef,
-                    neighbourPoly, neighbourTile
-                ) else getEdgeMidPoint(bestRef, bestPoly, bestTile, neighbourRef, neighbourPoly, neighbourTile)
+                    neighbourPoly, neighbourTile, tmp
+                ) else getEdgeMidPoint(bestRef, bestPoly, bestTile, neighbourRef, neighbourPoly, neighbourTile, tmp)
                 if (midpod != null) {
                     neighbourPos = midpod
                 }
@@ -857,7 +859,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         queryData.filter = filter
         queryData.options = options
         queryData.heuristic = heuristic
-        queryData.raycastLimitSqr = Vectors.sq(raycastLimit)
+        queryData.raycastLimitSqr = raycastLimit * raycastLimit
 
         // Validate input
         if (!nav1.isValidPolyRef(startRef) || !nav1.isValidPolyRef(endRef)
@@ -909,6 +911,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
             return Result.of(queryData.status, 0)
         }
         var iter = 0
+        val tmp = PortalResult()
         while (iter < maxIter && !openList.isEmpty()) {
             iter++
 
@@ -1004,8 +1007,8 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                 var neighbourPos = neighbourNode.pos
                 val midpod = if (neighbourRef == queryData.endRef) getEdgeIntersectionPoint(
                     bestNode.pos, bestRef, bestPoly, bestTile, queryData.endPos,
-                    neighbourRef, neighbourPoly, neighbourTile
-                ) else getEdgeMidPoint(bestRef, bestPoly, bestTile, neighbourRef, neighbourPoly, neighbourTile)
+                    neighbourRef, neighbourPoly, neighbourTile, tmp
+                ) else getEdgeMidPoint(bestRef, bestPoly, bestTile, neighbourRef, neighbourPoly, neighbourTile, tmp)
                 if (midpod != null) {
                     neighbourPos = midpod
                 }
@@ -1202,6 +1205,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         val startPos = straightPath[straightPath.size - 1].pos
         // Append or update last vertex
         var stat: Status
+        val tmp = PortalResult()
         for (i in startIdx until endIdx) {
             // Calculate portal
             val from = path[i]
@@ -1210,7 +1214,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
             val to = path[i + 1]
             val toTile = nav1.getTileByRef(to) ?: return Status.FAILURE
             val toPoly = nav1.getPolyByRef(to, toTile) ?: return Status.FAILURE
-            val portals = getPortalPoints(from, fromPoly, fromTile, to, toPoly, toTile, 0, 0) ?: break
+            val portals = getPortalPoints(from, fromPoly, fromTile, to, toPoly, toTile, 0, 0, tmp) ?: break
 
             val left = portals.left
             val right = portals.right
@@ -1279,6 +1283,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
             return straightPath
         }
         if (path.size > 1) {
+            val tmp = PortalResult()
             var portalApex = Vectors.copy(closestStartPosRes)
             var portalLeft = Vectors.copy(portalApex)
             var portalRight = Vectors.copy(portalApex)
@@ -1296,7 +1301,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                 var toType: Int
                 if (i + 1 < path.size) {
                     // Next portal.
-                    val portalPoints = getPortalPoints(path[i], path[i + 1])
+                    val portalPoints = getPortalPoints(path[i], path[i + 1], tmp)
                     if (portalPoints == null) {
                         closestEndPosRes = closestPointOnPolyBoundary(path[i], endPos) ?: return null
                         closestEndPos = closestEndPosRes
@@ -1316,7 +1321,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                     // If starting really close the portal, advance.
                     if (i == 0) {
                         val (first) = Vectors.distancePtSegSqr2D(portalApex, left, right)
-                        if (first < Vectors.sq(0.001f)) {
+                        if (first < 1e-6f) {
                             ++i
                             continue
                         }
@@ -1490,7 +1495,8 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
 
         // Search constraints
         val searchPos = Vectors.lerp(startPos, endPos, 0.5f)
-        val searchRadSqr: Float = Vectors.sq(startPos.distance(endPos) * 0.5f + 0.001f)
+        val searchRad = startPos.distance(endPos) * 0.5f + 0.001f
+        val searchRadSqr = searchRad * searchRad
         val vertices = FloatArray(nav1.maxVerticesPerPoly * 3)
         while (!stack.isEmpty()) {
             // Pop front.
@@ -1608,35 +1614,29 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         return Result.success(MoveAlongSurfaceResult(bestPos, visited))
     }
 
-    class PortalResult(left: Vector3f, right: Vector3f, fromType: Int, toType: Int) {
-        val left: Vector3f
-        val right: Vector3f
-        val fromType: Int
-        val toType: Int
-
-        init {
-            this.left = left
-            this.right = right
-            this.fromType = fromType
-            this.toType = toType
-        }
+    class PortalResult(val left: Vector3f, val right: Vector3f, var fromType: Int, var toType: Int) {
+        constructor() : this(Vector3f(), Vector3f(), 0, 0)
     }
 
-    fun getPortalPoints(from: Long, to: Long): PortalResult? {
+    fun getPortalPoints(from: Long, to: Long, dst: PortalResult): PortalResult? {
         val fromTile = nav1.getTileByRef(from) ?: return null
         val fromPoly = nav1.getPolyByRef(from, fromTile) ?: return null
         val toTile = nav1.getTileByRef(to) ?: return null
         val toPoly = nav1.getPolyByRef(to, toTile) ?: return null
-        return getPortalPoints(from, fromPoly, fromTile, to, toPoly, toTile, fromPoly.type, toPoly.type)
+        return getPortalPoints(from, fromPoly, fromTile, to, toPoly, toTile, fromPoly.type, toPoly.type, dst)
     }
 
     // Returns portal points between two polygons.
     fun getPortalPoints(
         from: Long, fromPoly: Poly, fromTile: MeshTile?, to: Long, toPoly: Poly,
-        toTile: MeshTile?, fromType: Int, toType: Int
+        toTile: MeshTile?, fromType: Int, toType: Int, dst: PortalResult
     ): PortalResult? {
-        var left = Vector3f()
-        var right = Vector3f()
+
+        val left = dst.left
+        val right = dst.right
+        dst.fromType = fromType
+        dst.toType = toType
+
         // Find the link that points to the 'to' polygon.
         var link: Link? = null
         var j = fromTile!!.polyLinks[fromPoly.index]
@@ -1658,9 +1658,9 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
             while (i != NavMesh.DT_NULL_LINK) {
                 if (fromTile.links[i].neighborRef == to) {
                     val v = fromTile.links[i].indexOfPolyEdge
-                    Vectors.copy(left, fromTile.data!!.vertices, fromPoly.vertices[v] * 3)
-                    Vectors.copy(right, fromTile.data!!.vertices, fromPoly.vertices[v] * 3)
-                    return PortalResult(left, right, fromType, toType)
+                    left.set(fromTile.data!!.vertices, fromPoly.vertices[v] * 3)
+                    right.set(fromTile.data!!.vertices, fromPoly.vertices[v] * 3)
+                    return dst
                 }
                 i = fromTile.links[i].indexOfNextLink
             }
@@ -1671,9 +1671,9 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
             while (i != NavMesh.DT_NULL_LINK) {
                 if (toTile.links[i].neighborRef == from) {
                     val v = toTile.links[i].indexOfPolyEdge
-                    Vectors.copy(left, toTile.data!!.vertices, toPoly.vertices[v] * 3)
-                    Vectors.copy(right, toTile.data!!.vertices, toPoly.vertices[v] * 3)
-                    return PortalResult(left, right, fromType, toType)
+                    left.set(toTile.data!!.vertices, toPoly.vertices[v] * 3)
+                    right.set(toTile.data!!.vertices, toPoly.vertices[v] * 3)
+                    return dst
                 }
                 i = toTile.links[i].indexOfNextLink
             }
@@ -1683,8 +1683,8 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         // Find portal vertices.
         val v0 = fromPoly.vertices[link.indexOfPolyEdge]
         val v1 = fromPoly.vertices[(link.indexOfPolyEdge + 1) % fromPoly.vertCount]
-        Vectors.copy(left, fromTile.data!!.vertices, v0 * 3)
-        Vectors.copy(right, fromTile.data!!.vertices, v1 * 3)
+        left.set(fromTile.data!!.vertices, v0 * 3)
+        right.set(fromTile.data!!.vertices, v1 * 3)
 
         // If the link is at tile boundary, dtClamp the vertices to
         // the link width.
@@ -1698,28 +1698,25 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                 Vectors.lerp(fromTile.data!!.vertices, v0 * 3, v1 * 3, tmax, right)
             }
         }
-        return PortalResult(left, right, fromType, toType)
+        return dst
     }
 
     fun getEdgeMidPoint(
-        from: Long,
-        fromPoly: Poly,
-        fromTile: MeshTile?,
-        to: Long,
-        toPoly: Poly,
-        toTile: MeshTile?
+        from: Long, fromPoly: Poly, fromTile: MeshTile?,
+        to: Long, toPoly: Poly, toTile: MeshTile?,
+        tmp: PortalResult
     ): Vector3f? {
-        val ppoints = getPortalPoints(from, fromPoly, fromTile, to, toPoly, toTile, 0, 0) ?: return null
+        val ppoints = getPortalPoints(from, fromPoly, fromTile, to, toPoly, toTile, 0, 0, tmp) ?: return null
         val left = ppoints.left
         val right = ppoints.right
-        return Vector3f(left).add(right).mul(0.5f)
+        return left.add(right).mul(0.5f)
     }
 
     fun getEdgeIntersectionPoint(
         fromPos: Vector3f, from: Long, fromPoly: Poly, fromTile: MeshTile?,
-        toPos: Vector3f, to: Long, toPoly: Poly, toTile: MeshTile?
+        toPos: Vector3f, to: Long, toPoly: Poly, toTile: MeshTile?, tmp: PortalResult
     ): Vector3f? {
-        val ppoints = getPortalPoints(from, fromPoly, fromTile, to, toPoly, toTile, 0, 0) ?: return null
+        val ppoints = getPortalPoints(from, fromPoly, fromTile, to, toPoly, toTile, 0, 0, tmp) ?: return null
         val left = ppoints.left
         val right = ppoints.right
         var t = 0.5f
@@ -1727,7 +1724,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         if (intersect != null) {
             t = Vectors.clamp(intersect.second, 0.1f, 0.9f)
         }
-        return Vectors.lerp(left, right, t)
+        return left.lerp(right, t)
     }
 
     /// @par
@@ -1915,7 +1912,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                     }
 
                     // Find Z intersection.
-                    val z: Float = startPos.z + (endPos.z - startPos.z) * iresult.tmax
+                    val z = startPos.z + (endPos.z - startPos.z) * iresult.tmax
                     if (z in lmin..lmax) {
                         nextRef = link.neighborRef
                         break
@@ -2054,7 +2051,8 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         startNode.polygonRef = startRef
         startNode.flags = Node.OPEN
         openList.offer(startNode)
-        val radiusSqr: Float = Vectors.sq(radius)
+        val radiusSqr = radius * radius
+        val tmp = PortalResult()
         while (!openList.isEmpty()) {
             val bestNode: Node = openList.poll()
             bestNode.flags = bestNode.flags and Node.OPEN.inv()
@@ -2103,7 +2101,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                 // Find edge and calc distance to the edge.
                 val pp = getPortalPoints(
                     bestRef, bestPoly, bestTile, neighbourRef, neighbourPoly,
-                    neighbourTile, 0, 0
+                    neighbourTile, 0, 0, tmp
                 )
                 if (pp == null) {
                     i = bestTile.links[i].indexOfNextLink
@@ -2216,6 +2214,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         startNode.polygonRef = startRef
         startNode.flags = Node.OPEN
         openList.offer(startNode)
+        val tmp = PortalResult()
         while (!openList.isEmpty()) {
             val bestNode: Node = openList.poll()
             bestNode.flags = bestNode.flags and Node.OPEN.inv()
@@ -2264,7 +2263,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                 // Find edge and calc distance to the edge.
                 val pp = getPortalPoints(
                     bestRef, bestPoly, bestTile, neighbourRef, neighbourPoly,
-                    neighbourTile, 0, 0
+                    neighbourTile, 0, 0, tmp
                 )
                 if (pp == null) {
                     i = bestTile.links[i].indexOfNextLink
@@ -2374,9 +2373,10 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         stack.add(startNode)
         resultRef.add(startNode.polygonRef)
         resultParent.add(0L)
-        val radiusSqr: Float = Vectors.sq(radius)
+        val radiusSqr = radius * radius
         val pa = FloatArray(nav1.maxVerticesPerPoly * 3)
         val pb = FloatArray(nav1.maxVerticesPerPoly * 3)
+        val tmp = PortalResult()
         while (!stack.isEmpty()) {
             // Pop front.
             val curNode: Node = stack.pop()
@@ -2421,7 +2421,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                 // Find edge and calc distance to the edge.
                 val pp = getPortalPoints(
                     curRef, curPoly, curTile, neighbourRef, neighbourPoly,
-                    neighbourTile, 0, 0
+                    neighbourTile, 0, 0, tmp
                 )
                 if (pp == null) {
                     i = curTile.links[i].indexOfNextLink
@@ -2671,11 +2671,12 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
         startNode.polygonRef = startRef
         startNode.flags = Node.OPEN
         openList.offer(startNode)
-        var radiusSqr: Float = Vectors.sq(maxRadius)
+        var radiusSqr = maxRadius * maxRadius
         val hitPos = Vector3f()
         var bestvi = -1
         var bestvj = -1
         var bestData: FloatArray? = null
+        val tmp = PortalResult()
         while (!openList.isEmpty()) {
             val bestNode: Node = openList.poll()
             bestNode.flags = bestNode.flags and Node.OPEN.inv()
@@ -2798,7 +2799,7 @@ open class NavMeshQuery(  /// Gets the navigation mesh the query object is using
                 // Cost
                 if (neighbourNode.flags == 0) {
                     val midPoint =
-                        getEdgeMidPoint(bestRef, bestPoly, bestTile, neighbourRef, neighbourPoly, neighbourTile)
+                        getEdgeMidPoint(bestRef, bestPoly, bestTile, neighbourRef, neighbourPoly, neighbourTile, tmp)
                     if (midPoint != null) {
                         neighbourNode.pos.set(midPoint)
                     }
