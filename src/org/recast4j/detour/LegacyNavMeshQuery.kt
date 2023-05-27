@@ -181,7 +181,8 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
                 i = bestTile.links[i].indexOfNextLink
             }
         }
-        val path = getPathToNode(lastBestNode)
+        val path = LongArrayList()
+        getPathToNode(lastBestNode, path)
         if (lastBestNode.polygonRef != endRef) {
             status = Status.PARTIAL_RESULT
         }
@@ -659,7 +660,7 @@ class LegacyNavMeshQuery(val nav: NavMesh) : NavMeshQuery(nav) {
                 // Calc distance to the edge.
                 val va = bestPoly.vertices[link.indexOfPolyEdge] * 3
                 val vb = bestPoly.vertices[(link.indexOfPolyEdge + 1) % bestPoly.vertCount] * 3
-                val (distSqr) = Vectors.distancePtSegSqr2D(centerPos, bestTile.data!!.vertices, va, vb)
+                val distSqr = Vectors.distancePtSegSqr2DFirst(centerPos, bestTile.data!!.vertices, va, vb)
                 // If the circle is not touching the next polygon, skip it.
                 if (distSqr > radiusSqr) {
                     k = bestTile.links[k].indexOfNextLink

@@ -359,34 +359,35 @@ open class NavMeshQuery(
     /// @param[in] pos The position to check.
     /// @param[out] closest The closest point.
     /// @returns The status flags for the query.
-    fun closestPointOnPolyBoundary(ref: Long, pos: Vector3f): Vector3f? {
+    fun closestPointOnPolyBoundary(
+        ref: Long, pos: Vector3f,
+        tmpVertices: FloatArray, // nav1.maxVerticesPerPoly * 3
+        tmpEdges0: FloatArray, tmpEdges1: FloatArray // nav1.maxVerticesPerPoly
+    ): Vector3f? {
         if (!pos.isFinite) return null
         val tile = nav1.getTileByRef(ref) ?: return null
         val poly = nav1.getPolyByRef(ref, tile) ?: return null
         // Collect vertices.
-        val vertices = FloatArray(nav1.maxVerticesPerPoly * 3)
-        val edged = FloatArray(nav1.maxVerticesPerPoly)
-        val edget = FloatArray(nav1.maxVerticesPerPoly)
         val nv = poly.vertCount
         for (i in 0 until nv) {
-            System.arraycopy(tile.data!!.vertices, poly.vertices[i] * 3, vertices, i * 3, 3)
+            System.arraycopy(tile.data!!.vertices, poly.vertices[i] * 3, tmpVertices, i * 3, 3)
         }
-        if (Vectors.distancePtPolyEdgesSqr(pos, vertices, nv, edged, edget)) {
+        if (Vectors.distancePtPolyEdgesSqr(pos, tmpVertices, nv, tmpEdges0, tmpEdges1)) {
             return pos
         } else {
             // Point is outside the polygon, dtClamp to the nearest edge.
-            var dmin = edged[0]
+            var dmin = tmpEdges0[0]
             var imin = 0
             for (i in 1 until nv) {
-                if (edged[i] < dmin) {
-                    dmin = edged[i]
+                if (tmpEdges0[i] < dmin) {
+                    dmin = tmpEdges0[i]
                     imin = i
                 }
             }
             val va = imin * 3
             val vb = (imin + 1) % nv * 3
             val dst = Vector3f()
-            Vectors.lerp(vertices, va, vb, edget[imin], dst)
+            Vectors.lerp(tmpVertices, va, vb, tmpEdges1[imin], dst)
             return dst
         }
     }
@@ -750,7 +751,7 @@ open class NavMeshQuery(
                         neighbourPos, endPos, bestRef, bestTile, bestPoly, neighbourRef,
                         neighbourTile, neighbourPoly, 0L, null, null
                     )
-                    cost = cost + endCost
+                    cost += endCost
                 } else {
                     // Cost
                     heuristicCost = heuristic.getCost(neighbourPos, endPos)
@@ -794,7 +795,8 @@ open class NavMeshQuery(
                 i = bestTile.links[i].indexOfNextLink
             }
         }
-        val path: LongArrayList = getPathToNode(lastBestNode)
+        val path = LongArrayList()
+        getPathToNode(lastBestNode, path)
         if (lastBestNode.polygonRef != endRef) {
             status = Status.PARTIAL_RESULT
         }
@@ -1110,21 +1112,24 @@ open class NavMeshQuery(
     /// [(polyRef) * @p pathCount]
     /// @returns The status flags for the query.
     open fun finalizeSlicedFindPath(): Result<LongArrayList> {
-        var path = LongArrayList(64)
         if (queryData.status.isFailed) {
             // Reset query.
             queryData = QueryData()
-            return Result.failure(path)
+            return Result.failure(LongArrayList.empty)
         }
-        if (queryData.startRef == queryData.endRef) {
+        val path = if (queryData.startRef == queryData.endRef) {
             // Special case: the search starts and ends at same poly.
+            val path = LongArrayList(1)
             path.add(queryData.startRef)
+            path
         } else {
             // Reverse the path.
             if (queryData.lastBestNode!!.polygonRef != queryData.endRef) {
                 queryData.status = Status.PARTIAL_RESULT
             }
-            path = getPathToNode(queryData.lastBestNode)
+            val path = LongArrayList()
+            getPathToNode(queryData.lastBestNode, path)
+            path
         }
         val status = queryData.status
         // Reset query.
@@ -1140,18 +1145,19 @@ open class NavMeshQuery(
     /// [(polyRef) * @p pathCount]
     /// @returns The status flags for the query.
     open fun finalizeSlicedFindPathPartial(existing: LongArrayList): Result<LongArrayList> {
-        var path = LongArrayList(64)
         if (existing.isEmpty()) {
-            return Result.failure(path)
+            return Result.failure(LongArrayList.empty)
         }
         if (queryData.status.isFailed) {
             // Reset query.
             queryData = QueryData()
-            return Result.failure(path)
+            return Result.failure(LongArrayList.empty)
         }
-        if (queryData.startRef == queryData.endRef) {
+        val path = if (queryData.startRef == queryData.endRef) {
             // Special case: the search starts and ends at same poly.
+            val path = LongArrayList(1)
             path.add(queryData.startRef)
+            path
         } else {
             // Find the furthest existing node that was visited.
             var node: Node? = null
@@ -1165,7 +1171,9 @@ open class NavMeshQuery(
                 queryData.status = Status.PARTIAL_RESULT
                 node = queryData.lastBestNode
             }
-            path = getPathToNode(node)
+            val path = LongArrayList()
+            getPathToNode(node, path)
+            path
         }
         val status = queryData.status
         // Reset query.
@@ -1264,7 +1272,8 @@ open class NavMeshQuery(
     /// @returns The status flags for the query.
     fun findStraightPath(
         startPos: Vector3f, endPos: Vector3f, path: LongArrayList,
-        maxStraightPath: Int, options: Int, tmp: PortalResult
+        maxStraightPath: Int, options: Int, tmp: PortalResult,
+        tmpVertices: FloatArray, tmpEdges0: FloatArray, tmpEdges1: FloatArray
     ): List<StraightPathItem>? {
         val straightPath: MutableList<StraightPathItem> = ArrayList()
         if ((!startPos.isFinite || !endPos.isFinite
@@ -1272,8 +1281,12 @@ open class NavMeshQuery(
         ) return null
 
         // TODO: Should this be callers responsibility?
-        val closestStartPosRes = closestPointOnPolyBoundary(path[0], startPos) ?: return null
-        var closestEndPosRes = closestPointOnPolyBoundary(path[path.size - 1], endPos) ?: return null
+        val closestStartPosRes = closestPointOnPolyBoundary(
+            path[0], startPos, tmpVertices, tmpEdges0, tmpEdges1
+        ) ?: return null
+        var closestEndPosRes = closestPointOnPolyBoundary(
+            path[path.size - 1], endPos, tmpVertices, tmpEdges0, tmpEdges1
+        ) ?: return null
         var closestEndPos = closestEndPosRes
         // Add start point.
         var stat = appendVertex(closestStartPosRes, DT_STRAIGHTPATH_START, path[0], straightPath, maxStraightPath)
@@ -1300,7 +1313,10 @@ open class NavMeshQuery(
                     // Next portal.
                     val portalPoints = getPortalPoints(path[i], path[i + 1], tmp)
                     if (portalPoints == null) {
-                        closestEndPosRes = closestPointOnPolyBoundary(path[i], endPos) ?: return null
+                        closestEndPosRes = closestPointOnPolyBoundary(
+                            path[i], endPos,
+                            tmpVertices, tmpEdges0, tmpEdges1
+                        ) ?: return null
                         closestEndPos = closestEndPosRes
                         // Append portals along the current straight path segment.
                         if (options and (DT_STRAIGHTPATH_AREA_CROSSINGS or DT_STRAIGHTPATH_ALL_CROSSINGS) != 0) {
@@ -1463,7 +1479,9 @@ open class NavMeshQuery(
     /// @returns Path
     fun moveAlongSurface(
         startRef: Long, startPos: Vector3f, endPos: Vector3f,
-        filter: QueryFilter, tinyNodePool: NodePool
+        filter: QueryFilter, tinyNodePool: NodePool,
+        tmpVertices: FloatArray, neis: LongArray,
+        visited: LongArrayList
     ): MoveAlongSurfaceResult? {
 
         // Validate input
@@ -1478,8 +1496,10 @@ open class NavMeshQuery(
         startNode.totalCost = 0f
         startNode.polygonRef = startRef
         startNode.flags = Node.CLOSED
-        val stack: LinkedList<Node> = LinkedList<Node>()
+
+        val stack = LinkedList<Node>()
         stack.add(startNode)
+
         val bestPos = Vector3f(startPos)
         var bestDist = Float.MAX_VALUE
         var bestNode: Node? = null
@@ -1489,7 +1509,6 @@ open class NavMeshQuery(
         val searchPosZ = (startPos.z + endPos.z) * 0.5f
         val searchRad = startPos.distance(endPos) * 0.5f + 0.001f
         val searchRadSqr = searchRad * searchRad
-        val vertices = FloatArray(nav1.maxVerticesPerPoly * 3)
         while (!stack.isEmpty()) {
             // Pop front.
             val curNode: Node = stack.pop()
@@ -1503,25 +1522,23 @@ open class NavMeshQuery(
             // Collect vertices.
             val nvertices = curPoly.vertCount
             for (i in 0 until nvertices) {
-                System.arraycopy(curTile.data!!.vertices, curPoly.vertices[i] * 3, vertices, i * 3, 3)
+                System.arraycopy(curTile.data!!.vertices, curPoly.vertices[i] * 3, tmpVertices, i * 3, 3)
             }
 
             // If target is inside the poly, stop search.
-            if (Vectors.pointInPolygon(endPos, vertices, nvertices)) {
+            if (Vectors.pointInPolygon(endPos, tmpVertices, nvertices)) {
                 bestNode = curNode
                 bestPos.set(endPos)
                 break
             }
 
-            // Find wall edges and find nearest point inside the walls.
+            // Find wall edges and find the nearest point inside the walls.
             var i = 0
             var j = curPoly.vertCount - 1
             while (i < curPoly.vertCount) {
 
                 // Find links to neighbours.
-                val MAX_NEIS = 8
                 var nneis = 0
-                val neis = LongArray(MAX_NEIS)
                 if (curPoly.neighborData[j] and NavMesh.DT_EXT_LINK != 0) {
                     // Tile border.
                     var k = curTile.polyLinks[curPoly.index]
@@ -1551,10 +1568,10 @@ open class NavMeshQuery(
                     // Wall edge, calc distance.
                     val vj = j * 3
                     val vi = i * 3
-                    val (distSqr, tseg) = Vectors.distancePtSegSqr2D(endPos, vertices, vj, vi)
+                    val (distSqr, tseg) = Vectors.distancePtSegSqr2D(endPos, tmpVertices, vj, vi)
                     if (distSqr < bestDist) {
                         // Update nearest distance.
-                        Vectors.lerp(vertices, vj, vi, tseg, bestPos)
+                        Vectors.lerp(tmpVertices, vj, vi, tseg, bestPos)
                         bestDist = distSqr
                         bestNode = curNode
                     }
@@ -1568,7 +1585,7 @@ open class NavMeshQuery(
 
                         // Skip the link if it is too far from search constraint.
                         // TODO: Maybe should use getPortalPoints(), but this one is way faster.
-                        val (distSqr) = Vectors.distancePtSegSqr2D(searchPosX, searchPosZ, vertices, j * 3, i * 3)
+                        val distSqr = Vectors.distancePtSegSqr2DFirst(searchPosX, searchPosZ, tmpVertices, j * 3, i * 3)
                         if (distSqr > searchRadSqr) {
                             continue
                         }
@@ -1582,7 +1599,8 @@ open class NavMeshQuery(
                 j = i++
             }
         }
-        val visited = LongArrayList()
+
+        visited.clear()
         if (bestNode != null) {
             // Reverse the path.
             var prev: Node? = null
@@ -2345,16 +2363,17 @@ open class NavMeshQuery(
     fun findLocalNeighbourhood(
         startRef: Long, centerPos: Vector3f, radius: Float,
         filter: QueryFilter,
-        tinyNodePool: NodePool
-    ): Result<FindLocalNeighbourhoodResult> {
+        tinyNodePool: NodePool,
+        pa: FloatArray, pb: FloatArray, // FloatArray(nav1.maxVerticesPerPoly * 3)
+        resultRef: LongArrayList,
+    ): Boolean {
 
         // Validate input
         if (!nav1.isValidPolyRef(startRef) || !centerPos.isFinite || radius < 0 || !radius.isFinite()) {
-            return Result.invalidParam()
+            return false
         }
 
-        val resultRef = LongArrayList()
-        val resultParent = LongArrayList()
+        resultRef.clear()
         tinyNodePool.clear()
         val startNode = tinyNodePool.getNode(startRef)
         startNode.parentIndex = 0
@@ -2363,11 +2382,9 @@ open class NavMeshQuery(
         val stack: LinkedList<Node> = LinkedList<Node>()
         stack.add(startNode)
         resultRef.add(startNode.polygonRef)
-        resultParent.add(0L)
         val radiusSqr = radius * radius
-        val pa = FloatArray(nav1.maxVerticesPerPoly * 3)
-        val pb = FloatArray(nav1.maxVerticesPerPoly * 3)
         val tmp = PortalResult()
+        val tmpN = Vector3f()
         while (!stack.isEmpty()) {
             // Pop front.
             val curNode: Node = stack.pop()
@@ -2447,16 +2464,16 @@ open class NavMeshQuery(
                     val pastRef: Long = resultRef[idx]
                     // Connected polys do not overlap.
                     var connected = false
-                    run {
-                        var k = curTile.polyLinks[curPoly.index]
-                        while (k != NavMesh.DT_NULL_LINK) {
-                            if (curTile.links[k].neighborRef == pastRef) {
-                                connected = true
-                                break
-                            }
-                            k = curTile.links[k].indexOfNextLink
+
+                    var k = curTile.polyLinks[curPoly.index]
+                    while (k != NavMesh.DT_NULL_LINK) {
+                        if (curTile.links[k].neighborRef == pastRef) {
+                            connected = true
+                            break
                         }
+                        k = curTile.links[k].indexOfNextLink
                     }
+
                     if (connected) {
                         idx++
                         continue
@@ -2468,10 +2485,10 @@ open class NavMeshQuery(
 
                     // Get vertices and test overlap
                     val npb = pastPoly.vertCount
-                    for (k in 0 until npb) {
-                        System.arraycopy(pastTile.data!!.vertices, pastPoly.vertices[k] * 3, pb, k * 3, 3)
+                    for (l in 0 until npb) {
+                        System.arraycopy(pastTile.data!!.vertices, pastPoly.vertices[l] * 3, pb, l * 3, 3)
                     }
-                    if (Vectors.overlapPolyPoly2D(pa, npa, pb, npb)) {
+                    if (Vectors.overlapPolyPoly2D(pa, npa, pb, npb, tmpN)) {
                         overlap = true
                         break
                     }
@@ -2482,12 +2499,11 @@ open class NavMeshQuery(
                     continue
                 }
                 resultRef.add(neighbourRef)
-                resultParent.add(curRef)
                 stack.add(neighbourNode)
                 i = curTile.links[i].indexOfNextLink
             }
         }
-        return Result.success(FindLocalNeighbourhoodResult(resultRef, resultParent))
+        return true
     }
 
     class SegInterval(var ref: Long, var tmin: Int, var tmax: Int)
@@ -2528,13 +2544,17 @@ open class NavMeshQuery(
     fun getPolyWallSegments(
         ref: Long,
         storePortals: Boolean,
-        filter: QueryFilter
-    ): Pair<List<FloatArray>, LongArrayList>? {
+        filter: QueryFilter,
+        segmentVertices: ArrayList<FloatArray>,
+        ints: ArrayList<SegInterval>,
+    ): List<FloatArray>? {
+
+        segmentVertices.clear()
+        ints.clear()
+
         val tile = nav1.getTileByRef(ref) ?: return null
         val poly = nav1.getPolyByRef(ref, tile) ?: return null
-        val segmentRefs = LongArrayList()
-        val segmentVertices: MutableList<FloatArray> = ArrayList()
-        val ints: MutableList<SegInterval> = ArrayList(16)
+        val vs = tile.data!!.vertices
         var i = 0
         var j = poly.vertCount - 1
         while (i < poly.vertCount) {
@@ -2575,11 +2595,10 @@ open class NavMeshQuery(
                 }
                 val vj = poly.vertices[j] * 3
                 val vi = poly.vertices[i] * 3
-                val seg = FloatArray(6)
-                System.arraycopy(tile.data!!.vertices, vj, seg, 0, 3)
-                System.arraycopy(tile.data!!.vertices, vi, seg, 3, 3)
+                val seg = createSegment()
+                System.arraycopy(vs, vj, seg, 0, 3)
+                System.arraycopy(vs, vi, seg, 3, 3)
                 segmentVertices.add(seg)
-                segmentRefs.add(neiRef)
                 j = i++
                 continue
             }
@@ -2597,11 +2616,10 @@ open class NavMeshQuery(
                 if (storePortals && ints[k].ref != 0L) {
                     val tmin = ints[k].tmin * inv
                     val tmax = ints[k].tmax * inv
-                    val seg = FloatArray(6)
-                    Vectors.lerp(tile.data!!.vertices, vj, vi, tmin, seg, 0)
-                    Vectors.lerp(tile.data!!.vertices, vj, vi, tmax, seg, 3)
+                    val seg = createSegment()
+                    Vectors.lerp(vs, vj, vi, tmin, seg, 0)
+                    Vectors.lerp(vs, vj, vi, tmax, seg, 3)
                     segmentVertices.add(seg)
-                    segmentRefs.add(ints[k].ref)
                 }
 
                 // Wall segment.
@@ -2610,16 +2628,15 @@ open class NavMeshQuery(
                 if (imin != imax) {
                     val tmin = imin * inv
                     val tmax = imax * inv
-                    val seg = FloatArray(6)
-                    Vectors.lerp(tile.data!!.vertices, vj, vi, tmin, seg, 0)
-                    Vectors.lerp(tile.data!!.vertices, vj, vi, tmax, seg, 3)
+                    val seg = createSegment()
+                    Vectors.lerp(vs, vj, vi, tmin, seg, 0)
+                    Vectors.lerp(vs, vj, vi, tmax, seg, 3)
                     segmentVertices.add(seg)
-                    segmentRefs.add(0L)
                 }
             }
             j = i++
         }
-        return Pair(segmentVertices, segmentRefs)
+        return segmentVertices
     }
 
     /// @par
@@ -2771,7 +2788,7 @@ open class NavMeshQuery(
                 // Calc distance to the edge.
                 val va = bestPoly.vertices[link.indexOfPolyEdge] * 3
                 val vb = bestPoly.vertices[(link.indexOfPolyEdge + 1) % bestPoly.vertCount] * 3
-                val (distSqr) = Vectors.distancePtSegSqr2D(centerPos, bestTile.data!!.vertices, va, vb)
+                val distSqr = Vectors.distancePtSegSqr2DFirst(centerPos, bestTile.data!!.vertices, va, vb)
                 // If the circle is not touching the next polygon, skip it.
                 if (distSqr > radiusSqr) {
                     k = bestTile.links[k].indexOfNextLink
@@ -2857,32 +2874,34 @@ open class NavMeshQuery(
         val endNode = nodes[0]
         return if (endNode.flags and Node.CLOSED == 0) {
             Result.invalidParam("Invalid end ref")
-        } else Result.success(getPathToNode(endNode))
+        } else {
+            val path = LongArrayList()
+            getPathToNode(endNode, path)
+            Result.success(path)
+        }
     }
 
     /**
      * Gets the path leading to the specified end node.
      */
-    fun getPathToNode(endNode: Node?): LongArrayList {
-        val path = LongArrayList()
+    fun getPathToNode(endNode: Node?, dst: LongArrayList) {
         // Reverse the path.
         var curNode = endNode
         do {
-            path.add(curNode!!.polygonRef)
+            dst.add(curNode!!.polygonRef)
             val nextNode = nodePool.getNodeAtIdx(curNode.parentIndex)
             if (curNode.shortcut != null) {
                 // remove potential duplicates from shortcut path
                 for (i in curNode.shortcut!!.size - 1 downTo 0) {
                     val id = curNode.shortcut!![i]
                     if (id != curNode.polygonRef && id != nextNode!!.polygonRef) {
-                        path.add(id)
+                        dst.add(id)
                     }
                 }
             }
             curNode = nextNode
         } while (curNode != null)
-        path.reverse()
-        return path
+        dst.reverse()
     }
 
     /**
@@ -2930,5 +2949,16 @@ open class NavMeshQuery(
 
         /// where area changes.
         const val DT_STRAIGHTPATH_ALL_CROSSINGS = 0x02 /// < Add a vertex at every polygon edge crossing.
+
+        val segmentCache = ArrayList<FloatArray>()
+
+        val MAX_NEIS = 8
+
+        fun createSegment(): FloatArray {
+            return synchronized(segmentCache) {
+                segmentCache.removeLastOrNull() ?: FloatArray(6)
+            }
+        }
+
     }
 }

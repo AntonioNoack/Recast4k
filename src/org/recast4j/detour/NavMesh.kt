@@ -871,7 +871,7 @@ class NavMesh(
             val pd = tile.data!!.detailMeshes!![ip]
             for (j in 0 until pd.triCount) {
                 val t = (pd.triBase + j) * 4
-                val v: Array<Vector3f> = arrayOf(Vector3f(), Vector3f(), Vector3f())
+                val v = arrayOf(Vector3f(), Vector3f(), Vector3f())
                 for (k in 0..2) {
                     if (tile.data!!.detailTriangles[t + k] < poly.vertCount) {
                         val index = poly.vertices[tile.data!!.detailTriangles[t + k]] * 3
@@ -882,7 +882,7 @@ class NavMesh(
                     }
                 }
                 val h = Vectors.closestHeightPointTriangle(pos, v[0], v[1], v[2])
-                if (java.lang.Float.isFinite(h)) {
+                if (h.isFinite()) {
                     return h
                 }
             }

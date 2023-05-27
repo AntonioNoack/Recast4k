@@ -18,16 +18,24 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.crowd
 
-import java.util.stream.Collectors
+import kotlin.math.abs
 import kotlin.math.floor
 
 class ProximityGrid(val cellSize: Float) {
 
     private val invCellSize = 1f / cellSize
-    private val items: MutableMap<ItemKey, MutableList<CrowdAgent>?> = HashMap()
+    private val agents = HashMap<Long, ArrayList<CrowdAgent>>(1024)
+
+    companion object {
+        private val cache = ArrayList<ArrayList<CrowdAgent>>()
+    }
 
     fun clear() {
-        items.clear()
+        for ((_, v) in agents) {
+            if (cache.size < 512) cache.add(v)
+            v.clear()
+        }
+        agents.clear()
     }
 
     fun addItem(agent: CrowdAgent, minXf: Float, minYf: Float, maxXf: Float, maxYf: Float) {
@@ -37,55 +45,52 @@ class ProximityGrid(val cellSize: Float) {
         val maxY = floor((maxYf * invCellSize)).toInt()
         for (y in minY..maxY) {
             for (x in minX..maxX) {
-                val key = ItemKey(x, y)
-                val ids = items.computeIfAbsent(key) { ArrayList() }
-                ids!!.add(agent)
+                val key = createItemKey(x, y)
+                val agents = agents.getOrPut(key) {
+                    synchronized(cache) {
+                        cache.removeLastOrNull() ?: ArrayList()
+                    }
+                }
+                agents.add(agent)
             }
         }
     }
 
-    fun queryItems(minXf: Float, minYf: Float, maxXf: Float, maxYf: Float): Set<CrowdAgent> {
+    fun queryItems(
+        minXf: Float, minYf: Float,
+        maxXf: Float, maxYf: Float,
+        self: CrowdAgent, range: Float,
+        dst: ArrayList<CrowdAgent>
+    ) {
         val minX = floor((minXf * invCellSize)).toInt()
         val minY = floor((minYf * invCellSize)).toInt()
         val maxX = floor((maxXf * invCellSize)).toInt()
         val maxY = floor((maxYf * invCellSize)).toInt()
-        val result: MutableSet<CrowdAgent> = HashSet()
+        dst.clear()
+        val pos = self.currentPosition
+        val height = self.params.height
         for (y in minY..maxY) {
             for (x in minX..maxX) {
-                val key = ItemKey(x, y)
-                val ids: List<CrowdAgent>? = items[key]
-                if (ids != null) {
-                    result.addAll(ids)
+                val key = createItemKey(x, y)
+                val agents = agents[key] ?: continue
+                for (i in agents.indices) {
+                    val ag = agents[i]
+                    if (ag === self) continue
+                    // Check for overlap.
+                    val cp = ag.currentPosition
+                    val dy = pos.y - cp.y
+                    if (abs(dy) < (height + ag.params.height) / 2f) {
+                        val dx = pos.x - cp.x
+                        val dz = pos.z - cp.z
+                        val distSqr = dx * dx + dz * dz
+                        if (distSqr < range * range && ag !in dst) {
+                            dst.add(ag)
+                        }
+                    }
                 }
             }
         }
-        return result
     }
 
-    val itemCounts: List<IntArray>
-        get() = items.entries.stream()
-            .filter { (_, value): Map.Entry<ItemKey, List<CrowdAgent>?> -> value != null && value.isNotEmpty() }
-            .map { (key, value): Map.Entry<ItemKey, List<CrowdAgent>?> ->
-                intArrayOf(
-                    key.x, key.y, value!!.size
-                )
-            }.collect(Collectors.toList())
-
-    private class ItemKey(var x: Int, var y: Int) {
-        override fun hashCode(): Int {
-            val prime = 31
-            var result = 1
-            result = prime * result + x
-            result = prime * result + y
-            return result
-        }
-
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (other == null) return false
-            if (javaClass != other.javaClass) return false
-            other as ItemKey
-            return if (x != other.x) false else y == other.y
-        }
-    }
+    private fun createItemKey(x: Int, y: Int) = x.toLong().shl(32) or y.toLong().and(0xffffffffL)
 }

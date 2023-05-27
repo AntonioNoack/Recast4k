@@ -336,17 +336,6 @@ object Vectors {
         return c
     }
 
-    fun projectPoly(axis: Vector3f, polygons: FloatArray, numPolygons: Int): FloatPair {
-        var rmax = dot2D(axis, polygons, 0)
-        var rmin = rmax
-        for (i in 1 until numPolygons) {
-            val d = dot2D(axis, polygons, i * 3)
-            rmin = kotlin.math.min(rmin, d)
-            rmax = kotlin.math.max(rmax, d)
-        }
-        return FloatPair(rmin, rmax)
-    }
-
     fun overlapRange(amin: Float, amax: Float, bmin: Float, bmax: Float, eps: Float): Boolean {
         return amin + eps <= bmax && amax - eps >= bmin
     }
@@ -364,38 +353,51 @@ object Vectors {
     /**
      * All vertices are projected onto the xz-plane, so the y-values are ignored.
      */
-    fun overlapPolyPoly2D(polya: FloatArray, npolya: Int, polyb: FloatArray, npolyb: Int): Boolean {
-        run {
-            var i = 0
-            var j = npolya - 1
-            while (i < npolya) {
-                val va = j * 3
-                val vb = i * 3
-                val n = Vector3f(polya[vb + 2] - polya[va + 2], 0f, -(polya[vb] - polya[va]))
-                val aminmax = projectPoly(n, polya, npolya)
-                val bminmax = projectPoly(n, polyb, npolyb)
-                if (!overlapRange(aminmax.first, aminmax.second, bminmax.first, bminmax.second, eps)) {
-                    // Found separating axis
-                    return false
-                }
-                j = i++
-            }
-        }
+    fun overlapPolyPoly2D(polya: FloatArray, npolya: Int, polyb: FloatArray, npolyb: Int, tmp: Vector3f): Boolean {
         var i = 0
-        var j = npolyb - 1
+        var j = npolya - 1
+        while (i < npolya) {
+            val va = j * 3
+            val vb = i * 3
+            overlapRangeSetN(tmp, polya, va, vb)
+            if (overlapRangeX(tmp, polya, polyb, npolya, npolyb)) return false
+            j = i++
+        }
+        i = 0
+        j = npolyb - 1
         while (i < npolyb) {
             val va = j * 3
             val vb = i * 3
-            val n = Vector3f(polyb[vb + 2] - polyb[va + 2], 0f, -(polyb[vb] - polyb[va]))
-            val aminmax = projectPoly(n, polya, npolya)
-            val bminmax = projectPoly(n, polyb, npolyb)
-            if (!overlapRange(aminmax.first, aminmax.second, bminmax.first, bminmax.second, eps)) {
-                // Found separating axis
-                return false
-            }
+            overlapRangeSetN(tmp, polyb, va, vb)
+            if (overlapRangeX(tmp, polya, polyb, npolya, npolyb)) return false
             j = i++
         }
         return true
+    }
+
+    private fun overlapRangeSetN(n: Vector3f, polya: FloatArray, va: Int, vb: Int) {
+        n.set(polya[vb + 2] - polya[va + 2], 0f, polya[va] - polya[vb])
+    }
+
+    private fun overlapRangeX(n: Vector3f, polya: FloatArray, polyb: FloatArray, npolya: Int, npolyb: Int): Boolean {
+
+        var amax = dot2D(n, polya, 0)
+        var amin = amax
+        for (i in 1 until npolya) {
+            val d = dot2D(n, polya, i * 3)
+            amin = kotlin.math.min(amin, d)
+            amax = kotlin.math.max(amax, d)
+        }
+
+        var bmax = dot2D(n, polyb, 0)
+        var bmin = bmax
+        for (i in 1 until npolyb) {
+            val d = dot2D(n, polyb, i * 3)
+            bmin = kotlin.math.min(bmin, d)
+            bmax = kotlin.math.max(bmax, d)
+        }
+
+        return !overlapRange(amin, amax, bmin, bmax, eps)
     }
 
     // Returns a random point in a convex polygon.
@@ -542,6 +544,32 @@ object Vectors {
 
     fun distancePtSegSqr2D(pt: Vector3f, vertices: FloatArray, p: Int, q: Int): FloatPair {
         return distancePtSegSqr2D(pt.x, pt.z, vertices, p, q)
+    }
+
+    fun distancePtSegSqr2DFirst(ptx: Float, ptz: Float, data: FloatArray, pi: Int, qi: Int): Float {
+        val px = data[pi]
+        val pz = data[pi + 2]
+        val pqx = data[qi] - px
+        val pqz = data[qi + 2] - pz
+        var dx = ptx - px
+        var dz = ptz - pz
+        val d = pqx * pqx + pqz * pqz
+        var t = pqx * dx + pqz * dz
+        if (d > 0) {
+            t /= d
+        }
+        if (t < 0) {
+            t = 0f
+        } else if (t > 1) {
+            t = 1f
+        }
+        dx = px + t * pqx - ptx
+        dz = pz + t * pqz - ptz
+        return dx * dx + dz * dz
+    }
+
+    fun distancePtSegSqr2DFirst(pt: Vector3f, vertices: FloatArray, p: Int, q: Int): Float {
+        return distancePtSegSqr2DFirst(pt.x, pt.z, vertices, p, q)
     }
 
     fun distancePtSegSqr2DSecond(ptx: Float, ptz: Float, data: FloatArray, pi: Int, qi: Int): Float {

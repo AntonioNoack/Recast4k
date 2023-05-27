@@ -28,18 +28,14 @@ import org.recast4j.detour.QueryFilter
 class LocalBoundary {
 
     class Segment {
-        var start = Vector3f()
-        var end = Vector3f()
+        val start = Vector3f()
+        val end = Vector3f()
         var pruningDist = 0f
     }
 
-    var center = Vector3f()
-    var segments: MutableList<Segment> = ArrayList()
+    val center = Vector3f(Float.MAX_VALUE)
+    val segments = ArrayList<Segment>()
     var polygons = LongArrayList()
-
-    init {
-        center.set(Float.MAX_VALUE)
-    }
 
     fun reset() {
         center.set(Float.MAX_VALUE)
@@ -49,7 +45,9 @@ class LocalBoundary {
 
     fun addSegment(dist: Float, s: FloatArray) {
         // Insert neighbour based on the distance.
-        val seg = Segment()
+        val seg = synchronized(cache) {
+            cache.removeLastOrNull() ?: Segment()
+        }
         seg.start.set(s, 0)
         seg.end.set(s, 3)
         seg.pruningDist = dist
@@ -71,45 +69,50 @@ class LocalBoundary {
             }
             segments.add(i, seg)
         }
-        while (segments.size > MAX_LOCAL_SEGS) {
-            segments.removeAt(segments.size - 1)
+        synchronized(cache) {
+            while (segments.size > MAX_LOCAL_SEGS) {
+                cache.add(segments.removeAt(segments.size - 1))
+            }
         }
     }
 
-    fun update(ref: Long, pos: Vector3f, collisionQueryRange: Float, navquery: NavMeshQuery, filter: QueryFilter, tinyNodePool: NodePool) {
+    fun update(
+        ref: Long,
+        pos: Vector3f,
+        collisionQueryRange: Float,
+        navquery: NavMeshQuery,
+        filter: QueryFilter,
+        tinyNodePool: NodePool,
+        pa: FloatArray, pb: FloatArray,
+        tmpSegments: ArrayList<FloatArray>,
+        tmpInts: ArrayList<NavMeshQuery.SegInterval>
+    ) {
         if (ref == 0L) {
             reset()
             return
         }
         center.set(pos)
         // First query non-overlapping polygons.
-        val res = navquery.findLocalNeighbourhood(ref, pos, collisionQueryRange, filter, tinyNodePool)
-        if (res.succeeded()) {
-            polygons = res.result!!.refs
+        val res = navquery.findLocalNeighbourhood(ref, pos, collisionQueryRange, filter, tinyNodePool, pa, pb, polygons)
+        if (res) {
             segments.clear()
             // Secondly, store all polygon edges.
-            var i = 0
-            val l0 = polygons.size
-            while (i < l0) {
+            for (i in 0 until polygons.size) {
                 val poly = polygons[i]
-                val res2 = navquery.getPolyWallSegments(poly, false, filter)
-                if (res2 != null) {
-                    var k = 0
-                    val (segs, refs) = res2
-                    val l = refs.size
-                    while (k < l) {
-                        val s = segs[k]
+                val segments = navquery.getPolyWallSegments(poly, false, filter, tmpSegments, tmpInts)
+                if (segments != null) {
+                    for (k in segments.indices) {
+                        val segment = segments[k]
                         // Skip too distant segments.
-                        val (first) = Vectors.distancePtSegSqr2D(pos, s, 0, 3)
-                        if (first > collisionQueryRange * collisionQueryRange) {
-                            ++k
-                            continue
+                        val t = Vectors.distancePtSegSqr2DFirst(pos, segment, 0, 3)
+                        if (t < collisionQueryRange * collisionQueryRange) {
+                            addSegment(t, segment)
                         }
-                        addSegment(first, s)
-                        ++k
+                    }
+                    synchronized(NavMeshQuery.segmentCache) {
+                        NavMeshQuery.segmentCache.addAll(segments)
                     }
                 }
-                i++
             }
         }
     }
@@ -131,5 +134,6 @@ class LocalBoundary {
 
     companion object {
         private const val MAX_LOCAL_SEGS = 8
+        private val cache = ArrayList<Segment>()
     }
 }

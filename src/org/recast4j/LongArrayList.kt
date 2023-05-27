@@ -13,13 +13,37 @@ class LongArrayList(cap: Int = 16) {
         size = src.size
     }
 
-    fun add(v: Long) {
-        if (size + 1 >= values.size) {
-            val data = LongArray(max(values.size * 2, 16))
+    fun ensureCapacity(size: Int) {
+        ensureExtra(size - this.size)
+    }
+
+    fun ensureExtra(extra: Int) {
+        if (size + extra >= values.size) {
+            val data = LongArray(max(values.size * 2, max(size + extra, 16)))
             System.arraycopy(values, 0, data, 0, size)
             this.values = data
         }
+    }
+
+    operator fun set(idx: Int, value: Long) {
+        values[idx] = value
+    }
+
+    fun add(v: Long) {
+        ensureExtra(1)
         values[size++] = v
+    }
+
+    fun shiftRight(step: Int) {
+        if (step > 0) {
+            // move everything right
+            ensureExtra(step)
+            System.arraycopy(values, 0, values, step, size)
+        } else {
+            // move everything left
+            System.arraycopy(values, -step, values, 0, size + step)
+        }
+        size += step
     }
 
     operator fun get(index: Int) = values[index]

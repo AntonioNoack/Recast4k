@@ -22,6 +22,7 @@ import org.joml.Vector3f
 import org.recast4j.LongArrayList
 import org.recast4j.Vectors
 import org.recast4j.detour.*
+import org.recast4j.detour.NavMeshQuery.Companion.MAX_NEIS
 import org.recast4j.detour.crowd.CrowdAgent.CrowdAgentState
 import org.recast4j.detour.crowd.CrowdAgent.MoveRequestState
 import org.recast4j.detour.crowd.ObstacleAvoidanceQuery.ObstacleAvoidanceParams
@@ -30,7 +31,6 @@ import org.recast4j.detour.crowd.debug.ObstacleAvoidanceDebugData
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.IntFunction
-import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.sqrt
 
@@ -131,7 +131,7 @@ class Crowd @JvmOverloads constructor(
     val pathQueue: PathQueue
     private val m_obstacleQueryParams = arrayOfNulls<ObstacleAvoidanceParams>(CROWD_MAX_OBSTAVOIDANCE_PARAMS)
     private val obstacleAvoidanceQuery: ObstacleAvoidanceQuery
-    var grid: ProximityGrid? = null
+    val grid = ProximityGrid(config.maxAgentRadius * 3)
     val queryExtends = Vector3f()
     private val m_filters = arrayOfNulls<QueryFilter>(CROWD_MAX_QUERY_FILTER_TYPE)
     private var navQuery: NavMeshQuery
@@ -674,16 +674,18 @@ class Crowd @JvmOverloads constructor(
 
     private fun buildProximityGrid(agents: Collection<CrowdAgent>) {
         telemetry.start("buildProximityGrid")
-        grid = ProximityGrid(config.maxAgentRadius * 3)
+        grid.clear()
         for (ag in agents) {
             val p = ag.currentPosition
             val r = ag.params.radius
-            grid!!.addItem(ag, p.x - r, p.z - r, p.x + r, p.z + r)
+            grid.addItem(ag, p.x - r, p.z - r, p.x + r, p.z + r)
         }
         telemetry.stop("buildProximityGrid")
     }
 
     private val tinyNodePool = NodePool()
+    private val tmpSegments = ArrayList<FloatArray>()
+    private val tmpInts = ArrayList<NavMeshQuery.SegInterval>()
     private fun buildNeighbours(agents: Collection<CrowdAgent>) {
         telemetry.start("buildNeighbours")
         for (ag in agents) {
@@ -699,46 +701,43 @@ class Crowd @JvmOverloads constructor(
             ) {
                 ag.boundary.update(
                     ag.corridor.firstPoly, ag.currentPosition, ag.params.collisionQueryRange, navQuery,
-                    m_filters[ag.params.queryFilterType]!!, tinyNodePool
+                    m_filters[ag.params.queryFilterType]!!, tinyNodePool, tmpVertices, tmpVertices2,
+                    tmpSegments, tmpInts
                 )
             }
             // Query neighbour agents
-            ag.neis.clear()
-            ag.neis.addAll(getNeighbours(ag.currentPosition, ag.params.height, ag.params.collisionQueryRange, ag, grid))
+            getNeighbours(ag, ag.params.collisionQueryRange, grid, ag.neis)
         }
         telemetry.stop("buildNeighbours")
     }
 
+    private val tmpAgents = ArrayList<CrowdAgent>()
     private fun getNeighbours(
-        pos: Vector3f,
-        height: Float,
+        self: CrowdAgent,
         range: Float,
-        skip: CrowdAgent,
-        grid: ProximityGrid?
-    ): List<CrowdNeighbour> {
-        val result: MutableList<CrowdNeighbour> = ArrayList()
-        val agents = grid!!.queryItems(pos.x - range, pos.z - range, pos.x + range, pos.z + range)
-        for (ag in agents) {
-            if (ag === skip) {
-                continue
-            }
-
+        grid: ProximityGrid?,
+        dst: ArrayList<CrowdNeighbour>
+    ) {
+        dst.clear()
+        val pos = self.currentPosition
+        val agents = tmpAgents
+        grid!!.queryItems(
+            pos.x - range, pos.z - range,
+            pos.x + range, pos.z + range,
+            self, range, agents
+        )
+        for (i in agents.indices) {
+            val ag = agents[i]
             // Check for overlap.
             val cp = ag.currentPosition
-            val dy = pos.y - cp.y
-            if (abs(dy) >= (height + ag.params.height) / 2f) {
-                continue
-            }
             val dx = pos.x - cp.x
             val dz = pos.z - cp.z
             val distSqr = dx * dx + dz * dz
-            if (distSqr > range * range) continue
-            result.add(CrowdNeighbour(ag, distSqr))
+            dst.add(CrowdNeighbour(ag, distSqr))
         }
-        result.sortWith { o1: CrowdNeighbour, o2: CrowdNeighbour ->
+        dst.sortWith { o1: CrowdNeighbour, o2: CrowdNeighbour ->
             o1.dist.compareTo(o2.dist)
         }
-        return result
     }
 
     private val tmp = NavMeshQuery.PortalResult()
@@ -757,7 +756,12 @@ class Crowd @JvmOverloads constructor(
 
             // Find corners for steering
             ag.corners.clear()
-            ag.corners.addAll(ag.corridor.findCorners(CROWDAGENT_MAX_CORNERS, navQuery, tmp))
+            ag.corners.addAll(
+                ag.corridor.findCorners(
+                    CROWDAGENT_MAX_CORNERS, navQuery, tmp,
+                    tmpVertices, tmpVertices2, tmpVertices3
+                )
+            )
 
             // Check to see if the corner after the next corner is directly visible,
             // and short cut to there.
@@ -964,36 +968,42 @@ class Crowd @JvmOverloads constructor(
                 if (ag.state != CrowdAgentState.WALKING) {
                     continue
                 }
-                ag.disp.set(0f)
+                val disp = ag.disp.set(0f)
                 var w = 0f
                 for (j in ag.neis.indices) {
                     val nei = ag.neis[j].agent
                     val idx1 = nei.idx
-                    val diff = Vectors.sub(ag.currentPosition, nei.currentPosition)
-                    diff.y = 0f
-                    var dist = diff.lengthSquared()
+                    val p0 = ag.currentPosition
+                    val p1 = nei.currentPosition
+                    var dx = p0.x - p1.x
+                    var dz = p0.z - p1.z
+
+                    var dist = dx * dx + dz * dz
                     if (dist > Vectors.sq(ag.params.radius + nei.params.radius)) {
                         continue
                     }
-                    dist = sqrt(dist).toFloat()
+
+                    dist = sqrt(dist)
                     var pen = ag.params.radius + nei.params.radius - dist
                     pen = if (dist < 0.0001f) {
                         // Agents on top of each other, try to choose diverging separation directions.
                         if (idx0 > idx1) {
-                            diff.set(-ag.desiredVelocity.z, 0f, ag.desiredVelocity.x)
+                            dx = -ag.desiredVelocity.z
+                            dz = ag.desiredVelocity.x
                         } else {
-                            diff.set(ag.desiredVelocity.z, 0f, -ag.desiredVelocity.x)
+                            dx = ag.desiredVelocity.z
+                            dz = -ag.desiredVelocity.x
                         }
                         0.01f
                     } else {
-                        1f / dist * (pen * 0.5f) * config.collisionResolveFactor
+                        (pen * 0.5f) * config.collisionResolveFactor / dist
                     }
-                    Vectors.mad2(ag.disp, diff, pen)
+                    disp.add(dx * pen, 0f, dz * pen)
                     w += 1f
                 }
                 if (w > 0.0001f) {
                     val iw = 1f / w
-                    ag.disp.mul(iw)
+                    disp.mul(iw)
                 }
             }
             for (ag in agents) {
@@ -1006,6 +1016,11 @@ class Crowd @JvmOverloads constructor(
         telemetry.stop("handleCollisions")
     }
 
+    private val tmpVertices = FloatArray(nav.maxVerticesPerPoly * 3)
+    private val tmpVertices2 = FloatArray(nav.maxVerticesPerPoly * 3)
+    private val tmpVertices3 = FloatArray(nav.maxVerticesPerPoly)
+    private val tmpNeis = LongArray(MAX_NEIS)
+    private val tmpVisited = LongArrayList()
     private fun moveAgents(agents: Collection<CrowdAgent>) {
         telemetry.start("moveAgents")
         for (ag in agents) {
@@ -1014,7 +1029,10 @@ class Crowd @JvmOverloads constructor(
             }
 
             // Move along navmesh.
-            ag.corridor.movePosition(ag.currentPosition, navQuery, m_filters[ag.params.queryFilterType]!!, tinyNodePool)
+            ag.corridor.movePosition(
+                ag.currentPosition, navQuery, m_filters[ag.params.queryFilterType]!!,
+                tinyNodePool, tmpVertices, tmpNeis, tmpVisited
+            )
             // Get valid constrained position back.
             ag.currentPosition.set(ag.corridor.pos)
 
