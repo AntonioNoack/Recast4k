@@ -21,13 +21,7 @@ package org.recast4j.detour
 import org.joml.Vector3f
 import org.recast4j.LongArrayList
 
-class MoveAlongSurfaceResult(
-    /**
-     * The result position of the mover.
-     */
-    val resultPos: Vector3f,
-    /**
-     * The reference ids of the polygons visited during the move.
-     */
-    val visited: LongArrayList
-)
+/**
+ * Result position of the mover, reference ids of the polygons visited during the move.
+ */
+typealias MoveAlongSurfaceResult = Pair<Vector3f, LongArrayList>

@@ -29,7 +29,11 @@ class NavMesh(
     /**
      * Current initialization params.
      */
-    val params: NavMeshParams, maxVerticesPerPoly: Int
+    val params: NavMeshParams,
+    /**
+     * The maximum number of vertices per navigation polygon.
+     */
+    val maxVerticesPerPoly: Int
 ) {
 
     /**
@@ -61,10 +65,6 @@ class NavMesh(
     private val m_tiles /// < List of tiles.
             : Array<MeshTile?>
 
-    /**
-     * The maximum number of vertices per navigation polygon.
-     */
-    val maxVerticesPerPoly: Int
     var tileCount = 0
 
     /**
@@ -169,7 +169,6 @@ class NavMesh(
 
     init {
         // Init tiles
-        this.maxVerticesPerPoly = maxVerticesPerPoly
         tileLutMask = max(1, Vectors.nextPow2(params.maxTiles)) - 1
         m_tiles = arrayOfNulls(maxTiles)
         for (i in 0 until maxTiles) {
@@ -821,9 +820,7 @@ class NavMesh(
                 }
             }
         } else {
-            val tri = tripletVec3f.get()
-            val v0 = tri[0]
-            val v1 = tri[1]
+            val (v0, v1) = tripletVec3f.get()
             for (j in 0 until poly.vertCount) {
                 val k = (j + 1) % poly.vertCount
                 v0.set(tile.data!!.vertices, poly.vertices[j] * 3)
@@ -838,6 +835,65 @@ class NavMesh(
             }
         }
         return Vectors.lerp(pmin, pmax, tmin)
+    }
+
+    /**
+     * Returns closest point on polygon.
+     */
+    fun closestPointOnDetailEdgesY(tile: MeshTile, poly: Poly, pos: Vector3f, onlyBoundary: Boolean): Float {
+        val flagAnyBoundaryEdge =
+            DT_DETAIL_EDGE_BOUNDARY or (DT_DETAIL_EDGE_BOUNDARY shl 2) or (DT_DETAIL_EDGE_BOUNDARY shl 4)
+        val ip = poly.index
+        var dmin = Float.MAX_VALUE
+        var y = 0f
+        val tileData = tile.data
+        if (tileData?.detailMeshes != null) {
+            val pd = tileData.detailMeshes!![ip]
+            for (i in 0 until pd.triCount) {
+                val ti = (pd.triBase + i) * 4
+                val tris = tile.data!!.detailTriangles
+                if (onlyBoundary && tris[ti + 3] and flagAnyBoundaryEdge == 0) {
+                    continue
+                }
+                val v = tripletVec3f.get()
+                fill(tileData, ti + 0, poly, v[0], pd)
+                fill(tileData, ti + 1, poly, v[1], pd)
+                fill(tileData, ti + 2, poly, v[2], pd)
+                var k = 0
+                var j = 2
+                while (k < 3) {
+                    if (getDetailTriEdgeFlags(tris[ti + 3], j) and DT_DETAIL_EDGE_BOUNDARY == 0
+                        && (onlyBoundary || tris[ti + j] < tris[ti + k])
+                    ) {
+                        // Only looking at boundary edges and this is internal, or
+                        // this is an inner edge, that we will see again or have already seen.
+                        j = k++
+                        continue
+                    }
+                    val (d, t) = Vectors.distancePtSegSqr2D(pos, v[j], v[k])
+                    if (d < dmin) {
+                        dmin = d
+                        y = v[j].y + (v[k].y - v[j].y) * t
+                    }
+                    j = k++
+                }
+            }
+        } else {
+            val (v0, v1) = tripletVec3f.get()
+            val vs = tile.data!!.vertices
+            val ix = poly.vertices
+            for (j in 0 until poly.vertCount) {
+                val k = (j + 1) % poly.vertCount
+                v0.set(vs, ix[j] * 3)
+                v1.set(vs, ix[k] * 3)
+                val d = Vectors.distancePtSegSqr2DFirst(pos, v0, v1)
+                if (d < dmin) {
+                    dmin = d
+                    y = v0.y
+                }
+            }
+        }
+        return y
     }
 
     private fun fill(tileData: MeshData, tk: Int, poly: Poly, vk: Vector3f, pd: PolyDetail) {
@@ -858,7 +914,7 @@ class NavMesh(
         // over them does not make sense.
         if (poly.type == Poly.DT_POLYTYPE_OFFMESH_CONNECTION) return Float.NaN
         val ip = poly.index
-        val vertices = FloatArray(maxVerticesPerPoly * 3)
+        val vertices = tmpVertices.get()
         val nv = poly.vertCount
         for (i in 0 until nv) {
             System.arraycopy(tile!!.data!!.vertices, poly.vertices[i] * 3, vertices, i * 3, 3)
@@ -868,9 +924,7 @@ class NavMesh(
         }
 
         // Find height at the location.
-        val v0 = Vector3f()
-        val v1 = Vector3f()
-        val v2 = Vector3f()
+        val (v0, v1, v2) = tripletVec3f.get()
         val tileData = tile!!.data
         if (tileData?.detailMeshes != null) {
             val pd = tile.data!!.detailMeshes!![ip]
@@ -883,10 +937,12 @@ class NavMesh(
                 if (h.isFinite()) return h
             }
         } else {
-            v0.set(tile.data!!.vertices, poly.vertices[0] * 3)
+            val vs = tile.data!!.vertices
+            val ix = poly.vertices
+            v0.set(vs, ix[0] * 3)
             for (j in 1 until poly.vertCount - 1) {
-                v1.set(tile.data!!.vertices, poly.vertices[j + 1] * 3)
-                v2.set(tile.data!!.vertices, poly.vertices[j + 2] * 3)
+                v1.set(vs, ix[j + 1] * 3)
+                v2.set(vs, ix[j + 2] * 3)
                 val h = Vectors.closestHeightPointTriangle(pos, v0, v1, v2)
                 if (h.isFinite()) return h
             }
@@ -895,8 +951,7 @@ class NavMesh(
         // If all triangle checks failed above (can happen with degenerate triangles
         // or larger floating point values) the point is on an edge, so just select
         // closest. This should almost never happen, so the extra iteration here is ok.
-        val closest = closestPointOnDetailEdges(tile, poly, pos, false)
-        return closest.y
+        return closestPointOnDetailEdgesY(tile, poly, pos, false)
     }
 
     fun closestPointOnPoly(ref: Long, pos: Vector3f): ClosestPointOnPolyResult {
@@ -1208,6 +1263,10 @@ class NavMesh(
 
         private val tripletVec3f = object : ThreadLocal<Array<Vector3f>>() {
             override fun initialValue() = Array(3) { Vector3f() }
+        }
+
+        private val tmpVertices = object : ThreadLocal<FloatArray>() {
+            override fun initialValue() = FloatArray(6 * 3)
         }
 
         /**

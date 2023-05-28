@@ -23,7 +23,8 @@ import kotlin.math.max
 class CrowdTelemetry {
     var maxTimeToEnqueueRequest = 0f
     var maxTimeToFindPath = 0f
-    val executionTimings: MutableMap<String, Long> = HashMap()
+    val executionTimings = HashMap<String, Long>()
+
     private val executionTimingSamples: MutableMap<String, LongArrayList> = HashMap()
     fun start() {
         maxTimeToEnqueueRequest = 0f

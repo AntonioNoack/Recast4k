@@ -7,6 +7,7 @@ class StraightPathItem private constructor(val pos: Vector3f, var flags: Int, va
 
     companion object {
         private val cache = ArrayList<StraightPathItem>()
+
         fun create(pos: Vector3f, flags: Int, ref: Long): StraightPathItem {
             val item = synchronized(cache) {
                 cache.removeLastOrNull() ?: StraightPathItem()
@@ -20,6 +21,10 @@ class StraightPathItem private constructor(val pos: Vector3f, var flags: Int, va
         fun clear(list: MutableList<StraightPathItem>) {
             synchronized(cache) { cache.addAll(list) }
             list.clear()
+        }
+
+        fun clear(item: StraightPathItem) {
+            synchronized(cache) { cache.add(item) }
         }
     }
 

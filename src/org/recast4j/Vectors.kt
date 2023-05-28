@@ -247,6 +247,26 @@ object Vectors {
         return FloatPair(dx * dx + dz * dz, t)
     }
 
+    fun distancePtSegSqr2DFirst(pt: Vector3f, p: Vector3f, q: Vector3f): Float {
+        val pqx = q.x - p.x
+        val pqz = q.z - p.z
+        var dx = pt.x - p.x
+        var dz = pt.z - p.z
+        val d = pqx * pqx + pqz * pqz
+        var t = pqx * dx + pqz * dz
+        if (d > 0) {
+            t /= d
+        }
+        if (t < 0) {
+            t = 0f
+        } else if (t > 1) {
+            t = 1f
+        }
+        dx = p.x + t * pqx - pt.x
+        dz = p.z + t * pqz - pt.z
+        return dx * dx + dz * dz
+    }
+
     fun closestHeightPointTriangle(p: Vector3f, a: Vector3f, b: Vector3f, c: Vector3f): Float {
         val ax = a.x
         val az = a.z

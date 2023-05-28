@@ -48,7 +48,7 @@ open class NavMeshQuery(
      * @param random Function returning a random number [0..1).
      * @return Random location
      */
-    fun findRandomPoint(filter: QueryFilter, random: Random): Result<FindRandomPointResult?> {
+    fun findRandomPoint(filter: QueryFilter, random: Random): FindRandomPointResult? {
 
         // Randomly pick one tile. Assume that all tiles cover roughly the same area.
 
@@ -69,9 +69,7 @@ open class NavMeshQuery(
             }
         }
 
-        if (tile == null) {
-            return Result.invalidParam("Tile not found")
-        }
+        if (tile == null) return null
 
         // Randomly pick one polygon weighted by polygon area.
         var poly: Poly? = null
@@ -108,9 +106,7 @@ open class NavMeshQuery(
                 polyRef = ref
             }
         }
-        if (poly == null) {
-            return Result.invalidParam("Poly not found")
-        }
+        if (poly == null) return null
 
         // Randomly pick point on polygon.
         val vertices = FloatArray(3 * nav1.maxVerticesPerPoly)
@@ -122,11 +118,10 @@ open class NavMeshQuery(
         val s = random.nextFloat()
         val t = random.nextFloat()
         val pt = Vectors.randomPointInConvexPoly(vertices, poly.vertCount, areas, s, t)
-        val result = FindRandomPointResult(polyRef, pt)
-        val pheight = getPolyHeight(polyRef, pt)
-        if (!java.lang.Float.isFinite(pheight)) return Result.of(Status.FAILURE, result)
-        pt.y = pheight
-        return Result.success(result)
+        val y = getPolyHeight(polyRef, pt)
+        if (!y.isFinite()) return null
+        pt.y = y
+        return FindRandomPointResult(polyRef, pt)
     }
 
     /**
@@ -203,12 +198,8 @@ open class NavMeshQuery(
         var randomPoly: Poly? = null
         var randomTile: MeshTile? = null
         var randomPolyRef = 0L
-        // var randomPolyVertices: FloatArray? = null
         val tmp = PortalResult()
-        val maxPolyVertices = 12
-        val polyVertices = FloatSubArray(maxPolyVertices * 3) // navmesh polygon
-        val tmp1 = FloatSubArray(CIRCLE_SEGMENTS * 3) // circle polygon
-        val tmp2 = FloatSubArray(CIRCLE_SEGMENTS * 9) // intersection polygon
+        val (polyVertices, tmp1, tmp2) = fsaCache.get()
         while (!openList.isEmpty()) {
             val bestNode = openList.poll()
             bestNode.flags = bestNode.flags and Node.OPEN.inv()
@@ -376,7 +367,7 @@ open class NavMeshQuery(
     fun closestPointOnPolyBoundary(
         ref: Long, pos: Vector3f,
         tmpVertices: FloatArray, // nav1.maxVerticesPerPoly * 3
-        tmpEdges0: FloatArray, tmpEdges1: FloatArray // nav1.maxVerticesPerPoly
+        tmpEdges0: FloatArray, tmpEdges1: FloatArray, // nav1.maxVerticesPerPoly
     ): Vector3f? {
         if (!pos.isFinite) return null
         val tile = nav1.getTileByRef(ref) ?: return null
@@ -825,18 +816,16 @@ open class NavMeshQuery(
         filter: QueryFilter,
         options: Int,
         raycastLimit: Float
-    ): Status {
-        return initSlicedFindPath(
-            startRef,
-            endRef,
-            startPos,
-            endPos,
-            filter,
-            options,
-            DefaultQueryHeuristic(),
-            raycastLimit
-        )
-    }
+    ): Status = initSlicedFindPath(
+        startRef,
+        endRef,
+        startPos,
+        endPos,
+        filter,
+        options,
+        DefaultQueryHeuristic(),
+        raycastLimit
+    )
 
     /**
      * Intializes a sliced path query.
@@ -1288,8 +1277,8 @@ open class NavMeshQuery(
         startPos: Vector3f, endPos: Vector3f, path: LongArrayList,
         maxStraightPath: Int, options: Int, tmp: PortalResult,
         tmpVertices: FloatArray, tmpEdges0: FloatArray, tmpEdges1: FloatArray
-    ): List<StraightPathItem>? {
-        val straightPath: MutableList<StraightPathItem> = ArrayList()
+    ): ArrayList<StraightPathItem>? {
+        val straightPath = ArrayList<StraightPathItem>()
         if ((!startPos.isFinite || !endPos.isFinite
                     || path.isEmpty()) || path[0] == 0L || maxStraightPath <= 0
         ) return null
@@ -2372,7 +2361,8 @@ open class NavMeshQuery(
         startRef: Long, centerPos: Vector3f, radius: Float,
         filter: QueryFilter,
         tinyNodePool: NodePool, pa: FloatArray, pb: FloatArray, // FloatArray(nav1.maxVerticesPerPoly * 3)
-        resultRef: LongArrayList,
+        resultRef: LongArrayList, tmp: PortalResult, tmpN: Vector3f,
+        stack: LinkedList<Node>
     ): Boolean {
 
         // Validate input
@@ -2386,12 +2376,10 @@ open class NavMeshQuery(
         startNode.parentIndex = 0
         startNode.polygonRef = startRef
         startNode.flags = Node.CLOSED
-        val stack: LinkedList<Node> = LinkedList<Node>()
         stack.add(startNode)
         resultRef.add(startNode.polygonRef)
         val radiusSqr = radius * radius
-        val tmp = PortalResult()
-        val tmpN = Vector3f()
+
         while (!stack.isEmpty()) {
             // Pop front.
             val curNode: Node = stack.pop()
@@ -2466,7 +2454,7 @@ open class NavMeshQuery(
                 }
                 var overlap = false
                 var idx = 0
-                val len: Int = resultRef.size
+                val len = resultRef.size
                 while (idx < len) {
                     val pastRef: Long = resultRef[idx]
                     // Connected polys do not overlap.
@@ -2935,7 +2923,7 @@ open class NavMeshQuery(
          * Raycast should calculate movement cost along the ray and fill RaycastHit::cost
          */
         const val DT_RAYCAST_USE_COSTS = 0x01
-        /// Vertex flags returned by findStraightPath.
+
         /**
          * The vertex is the start position in the path.
          */
@@ -2951,16 +2939,30 @@ open class NavMeshQuery(
          */
         const val DT_STRAIGHTPATH_OFFMESH_CONNECTION = 0x04
 
-        /// Options for findStraightPath.
-        const val DT_STRAIGHTPATH_AREA_CROSSINGS = 0x01 /// < Add a vertex at every polygon edge crossing
+        /**
+         *  Add a vertex at every polygon edge crossing. Options for findStraightPath.
+         * */
+        const val DT_STRAIGHTPATH_AREA_CROSSINGS = 0x01
 
-        /// where area changes.
-        const val DT_STRAIGHTPATH_ALL_CROSSINGS = 0x02 /// < Add a vertex at every polygon edge crossing.
-
-        val segmentCache = ArrayList<FloatArray>()
+        /**
+         * Add a vertex at every polygon edge crossing. where area changes.
+         * */
+        const val DT_STRAIGHTPATH_ALL_CROSSINGS = 0x02
 
         val MAX_NEIS = 8
 
+        private const val maxPolyVertices = 12
+        private fun createCachedFSAs() = arrayOf(
+            FloatSubArray(maxPolyVertices * 3), // navmesh polygon
+            FloatSubArray(CIRCLE_SEGMENTS * 3), // circle polygon
+            FloatSubArray(CIRCLE_SEGMENTS * 9) // intersection polygon
+        )
+
+        private val fsaCache = object : ThreadLocal<Array<FloatSubArray>>() {
+            override fun initialValue() = createCachedFSAs()
+        }
+
+        val segmentCache = ArrayList<FloatArray>()
         fun createSegment(): FloatArray {
             return synchronized(segmentCache) {
                 segmentCache.removeLastOrNull() ?: FloatArray(6)

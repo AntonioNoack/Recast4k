@@ -302,7 +302,7 @@ class Crowd @JvmOverloads constructor(
     fun update(dt: Float, debug: CrowdAgentDebugInfo?): CrowdTelemetry {
         m_velocitySampleCount = 0
         telemetry.start()
-        val agents: Collection<CrowdAgent> = getActiveAgents()
+        val agents = getActiveAgents()
 
         // Check that all agents still have valid paths.
         checkPathValidity(agents, dt)
@@ -345,6 +345,7 @@ class Crowd @JvmOverloads constructor(
 
     private fun checkPathValidity(agents: Collection<CrowdAgent>, dt: Float) {
         telemetry.start("checkPathValidity")
+        val agentPos = Vector3f()
         for (ag in agents) {
             if (ag.state != CrowdAgentState.WALKING) {
                 continue
@@ -353,7 +354,6 @@ class Crowd @JvmOverloads constructor(
             var replan = false
 
             // First check, that the current location is valid.
-            val agentPos = Vector3f()
             var agentRef = ag.corridor.firstPoly
             agentPos.set(ag.currentPosition)
             if (!navQuery.isValidPolyRef(agentRef, m_filters[ag.params.queryFilterType]!!)) {
@@ -389,9 +389,7 @@ class Crowd @JvmOverloads constructor(
 
             // If the agent does not have move target or is controlled by
             // velocity, no need to recover the target nor replan.
-            if (ag.targetState == MoveRequestState.NONE
-                || ag.targetState == MoveRequestState.VELOCITY
-            ) {
+            if (ag.targetState == MoveRequestState.NONE || ag.targetState == MoveRequestState.VELOCITY) {
                 continue
             }
 
@@ -686,6 +684,9 @@ class Crowd @JvmOverloads constructor(
     private val tinyNodePool = NodePool()
     private val tmpSegments = ArrayList<FloatArray>()
     private val tmpInts = ArrayList<NavMeshQuery.SegInterval>()
+    private val tmpPortal = NavMeshQuery.PortalResult()
+    private val tmpN = Vector3f()
+    private val tmpStack = LinkedList<Node>()
     private fun buildNeighbours(agents: Collection<CrowdAgent>) {
         telemetry.start("buildNeighbours")
         for (ag in agents) {
@@ -702,7 +703,7 @@ class Crowd @JvmOverloads constructor(
                 ag.boundary.update(
                     ag.corridor.firstPoly, ag.currentPosition, ag.params.collisionQueryRange, navQuery,
                     m_filters[ag.params.queryFilterType]!!, tinyNodePool, tmpVertices, tmpVertices2,
-                    tmpSegments, tmpInts
+                    tmpSegments, tmpInts, tmpPortal, tmpN, tmpStack
                 )
             }
             // Query neighbour agents
@@ -718,6 +719,9 @@ class Crowd @JvmOverloads constructor(
         grid: ProximityGrid?,
         dst: ArrayList<CrowdNeighbour>
     ) {
+        synchronized(neighbourCache) {
+            neighbourCache.addAll(dst)
+        }
         dst.clear()
         val pos = self.currentPosition
         val agents = tmpAgents
@@ -733,10 +737,10 @@ class Crowd @JvmOverloads constructor(
             val dx = pos.x - cp.x
             val dz = pos.z - cp.z
             val distSqr = dx * dx + dz * dz
-            dst.add(CrowdNeighbour(ag, distSqr))
+            dst.add(createNeighbour(ag, distSqr))
         }
-        dst.sortWith { o1: CrowdNeighbour, o2: CrowdNeighbour ->
-            o1.dist.compareTo(o2.dist)
+        dst.sortWith { a, b ->
+            a.dist.compareTo(b.dist)
         }
     }
 
@@ -823,6 +827,9 @@ class Crowd @JvmOverloads constructor(
                     anim.tMax = Vectors.dist2D(anim.startPos, anim.endPos) / ag.params.maxSpeed * 0.5f
                     ag.state = CrowdAgentState.OFFMESH
                     StraightPathItem.clear(ag.corners)
+                    synchronized(neighbourCache) {
+                        neighbourCache.addAll(ag.neis)
+                    }
                     ag.neis.clear()
                 }
                 // else Path validity check will ensure that bad/blocked connections will be replanned.
@@ -1092,11 +1099,11 @@ class Crowd @JvmOverloads constructor(
         /**
          * The index of the neighbor in the crowd.
          */
-        val agent: CrowdAgent,
+        var agent: CrowdAgent,
         /**
          * The distance between the current agent and the neighbor.
          */
-        val dist: Float
+        var dist: Float
     )
 
     companion object {
@@ -1116,5 +1123,19 @@ class Crowd @JvmOverloads constructor(
         /// @see dtQueryFilter, dtCrowd::getFilter() dtCrowd::getEditableFilter(),
         /// dtCrowdAgentParams::queryFilterType
         const val CROWD_MAX_QUERY_FILTER_TYPE = 16
+
+        private val neighbourCache = ArrayList<CrowdNeighbour>()
+        fun createNeighbour(agent: CrowdAgent, dist: Float): CrowdNeighbour {
+            return synchronized(neighbourCache) {
+                val nei = neighbourCache.removeLastOrNull()
+                if (nei == null) CrowdNeighbour(agent, dist)
+                else {
+                    nei.agent = agent
+                    nei.dist = dist
+                    nei
+                }
+            }
+        }
+
     }
 }

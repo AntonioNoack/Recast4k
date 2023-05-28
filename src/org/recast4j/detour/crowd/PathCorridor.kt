@@ -238,7 +238,9 @@ class PathCorridor {
                     break
                 }
             }
-            return path.subList(start, end)
+            if (end < path.size) StraightPathItem.clear(path.subList(end, path.size))
+            if (start > 0) StraightPathItem.clear(path.subList(0, start))
+            return path
         } else return emptyList()
     }
 
@@ -312,9 +314,7 @@ class PathCorridor {
      * @param filter   The filter to apply to the operation.
      */
     fun optimizePathTopology(query: NavMeshQuery, filter: QueryFilter?, maxIterations: Int) {
-        if (path.size < 3) {
-            return
-        }
+        if (path.size < 3) return
         query.initSlicedFindPath(path[0], path[path.size - 1], pos, target, filter!!, 0)
         query.updateSlicedFindPath(maxIterations)
         val fpr = query.finalizeSlicedFindPathPartial(path)

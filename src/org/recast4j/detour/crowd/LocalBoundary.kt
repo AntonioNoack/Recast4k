@@ -22,8 +22,10 @@ import org.joml.Vector3f
 import org.recast4j.LongArrayList
 import org.recast4j.Vectors
 import org.recast4j.detour.NavMeshQuery
+import org.recast4j.detour.Node
 import org.recast4j.detour.NodePool
 import org.recast4j.detour.QueryFilter
+import java.util.*
 
 class LocalBoundary {
 
@@ -85,7 +87,9 @@ class LocalBoundary {
         tinyNodePool: NodePool,
         pa: FloatArray, pb: FloatArray,
         tmpSegments: ArrayList<FloatArray>,
-        tmpInts: ArrayList<NavMeshQuery.SegInterval>
+        tmpInts: ArrayList<NavMeshQuery.SegInterval>,
+        tmp: NavMeshQuery.PortalResult, tmpN: Vector3f,
+        stack: LinkedList<Node>
     ) {
         if (ref == 0L) {
             reset()
@@ -93,7 +97,10 @@ class LocalBoundary {
         }
         center.set(pos)
         // First query non-overlapping polygons.
-        val res = navquery.findLocalNeighbourhood(ref, pos, collisionQueryRange, filter, tinyNodePool, pa, pb, polygons)
+        val res = navquery.findLocalNeighbourhood(
+            ref, pos, collisionQueryRange, filter,
+            tinyNodePool, pa, pb, polygons, tmp, tmpN, stack
+        )
         if (res) {
             synchronized(cache) { cache.addAll(segments) }
             segments.clear()
