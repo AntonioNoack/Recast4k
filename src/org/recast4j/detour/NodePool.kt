@@ -18,6 +18,8 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour
 
+import org.recast4j.LongHashMap
+
 class NodePool {
 
     companion object {
@@ -36,13 +38,13 @@ class NodePool {
         }
     }
 
-    private val nodeMap = HashMap<Long, ArrayList<Node>>(64)
+    private val nodeMap = LongHashMap<ArrayList<Node>>(64)
     private val nodeList = ArrayList<Node>()
 
     fun clear() {
         nodeList.clear()
         synchronized(listCache) {
-            for ((_, v) in nodeMap) {
+            nodeMap.forEachValue { v ->
                 if (nodeCache.size < 512) nodeCache.addAll(v)
                 if (listCache.size < 512) listCache.add(v)
                 v.clear()
@@ -85,7 +87,7 @@ class NodePool {
         node.parentIndex = 0
         node.pos.set(0f)
         nodeList.add(node)
-        nodes = nodeMap.computeIfAbsent(id) { createList() }
+        nodes = nodeMap.getOrPut(id) { createList() }
         nodes.add(node)
         return node
     }

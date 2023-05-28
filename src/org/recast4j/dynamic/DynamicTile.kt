@@ -26,15 +26,21 @@ import org.recast4j.dynamic.io.VoxelTile
 import org.recast4j.recast.*
 import org.recast4j.recast.RecastBuilder.RecastBuilderResult
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.max
 
 class DynamicTile(val voxelTile: VoxelTile) {
     var checkpoint: DynamicTileCheckpoint? = null
     var recastResult: RecastBuilderResult? = null
     var meshData: MeshData? = null
-    private val colliders: MutableMap<Long, Collider?> = ConcurrentHashMap()
+    private val colliders = ConcurrentHashMap<Long, Collider?>()
     private var dirty = true
     private var id = 0L
-    fun build(builder: RecastBuilder, config: DynamicNavMeshConfig, telemetry: Telemetry, walkableAreaModification: AreaModification): Boolean {
+    fun build(
+        builder: RecastBuilder,
+        config: DynamicNavMeshConfig,
+        telemetry: Telemetry,
+        walkableAreaModification: AreaModification
+    ): Boolean {
         if (dirty) {
             val heightfield = buildHeightfield(config, telemetry)
             val r = buildRecast(builder, config, voxelTile, heightfield, telemetry, walkableAreaModification)
@@ -51,9 +57,9 @@ class DynamicTile(val voxelTile: VoxelTile) {
     private fun buildHeightfield(config: DynamicNavMeshConfig, telemetry: Telemetry): Heightfield {
         val rasterizedColliders: Collection<Long> = if (checkpoint != null) checkpoint!!.colliders else emptySet()
         val heightfield = if (checkpoint != null) checkpoint!!.heightfield else voxelTile.heightfield()
-        colliders.forEach { (id: Long, c: Collider?) ->
+        colliders.forEach { (id, c) ->
             if (!rasterizedColliders.contains(id)) {
-                heightfield.bmax.y = Math.max(heightfield.bmax.y, c!!.bounds()[4] + heightfield.cellHeight * 2)
+                heightfield.bmax.y = max(heightfield.bmax.y, c!!.bounds()[4] + heightfield.cellHeight * 2)
                 c.rasterize(heightfield, telemetry)
             }
         }

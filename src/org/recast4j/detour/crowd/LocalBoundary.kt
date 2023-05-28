@@ -95,6 +95,7 @@ class LocalBoundary {
         // First query non-overlapping polygons.
         val res = navquery.findLocalNeighbourhood(ref, pos, collisionQueryRange, filter, tinyNodePool, pa, pb, polygons)
         if (res) {
+            synchronized(cache) { cache.addAll(segments) }
             segments.clear()
             // Secondly, store all polygon edges.
             for (i in 0 until polygons.size) {

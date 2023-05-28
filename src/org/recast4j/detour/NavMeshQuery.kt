@@ -21,9 +21,12 @@ package org.recast4j.detour
 import org.joml.Vector3f
 import org.joml.Vector3i
 import org.recast4j.FloatArrayList
+import org.recast4j.FloatSubArray
 import org.recast4j.LongArrayList
 import org.recast4j.Vectors
+import org.recast4j.detour.PolygonByCircleConstraint.StrictPolygonByCircleConstraint.CIRCLE_SEGMENTS
 import java.util.*
+import kotlin.math.min
 import kotlin.math.sqrt
 
 open class NavMeshQuery(
@@ -145,7 +148,7 @@ open class NavMeshQuery(
         random: Random
     ) = findRandomPointAroundCircle(
         startRef, centerPos, maxRadius, filter, random,
-        PolygonByCircleConstraint.noop()
+        PolygonByCircleConstraint.NoOpPolygonByCircleConstraint
     )
 
     /**
@@ -155,7 +158,7 @@ open class NavMeshQuery(
      * @param startRef  The reference id of the polygon where the search starts.
      * @param centerPos The center of the search circle. [(x, y, z)]
      * @param filter    The polygon filter to apply to the query.
-     * @param frand     Function returning a random number [0..1).
+     * @param random     Function returning a random number [0..1).
      * @return Random location
      */
     fun findRandomPointWithinCircle(
@@ -163,15 +166,15 @@ open class NavMeshQuery(
         centerPos: Vector3f,
         maxRadius: Float,
         filter: QueryFilter,
-        frand: Random
+        random: Random
     ) = findRandomPointAroundCircle(
-        startRef, centerPos, maxRadius, filter, frand,
-        PolygonByCircleConstraint.strict()
+        startRef, centerPos, maxRadius, filter, random,
+        PolygonByCircleConstraint.StrictPolygonByCircleConstraint
     )
 
     fun findRandomPointAroundCircle(
         startRef: Long, centerPos: Vector3f, maxRadius: Float,
-        filter: QueryFilter, frand: Random, constraint: PolygonByCircleConstraint
+        filter: QueryFilter, random: Random, constraint: PolygonByCircleConstraint
     ): FindRandomPointResult? {
 
         // Validate input
@@ -198,11 +201,16 @@ open class NavMeshQuery(
         val radiusSqr = maxRadius * maxRadius
         var areaSum = 0f
         var randomPoly: Poly? = null
+        var randomTile: MeshTile? = null
         var randomPolyRef = 0L
-        var randomPolyVertices: FloatArray? = null
+        // var randomPolyVertices: FloatArray? = null
         val tmp = PortalResult()
+        val maxPolyVertices = 12
+        val polyVertices = FloatSubArray(maxPolyVertices * 3) // navmesh polygon
+        val tmp1 = FloatSubArray(CIRCLE_SEGMENTS * 3) // circle polygon
+        val tmp2 = FloatSubArray(CIRCLE_SEGMENTS * 9) // intersection polygon
         while (!openList.isEmpty()) {
-            val bestNode: Node = openList.poll()
+            val bestNode = openList.poll()
             bestNode.flags = bestNode.flags and Node.OPEN.inv()
             bestNode.flags = bestNode.flags or Node.CLOSED
             // Get poly and tile.
@@ -211,30 +219,34 @@ open class NavMeshQuery(
             val bestTile = nav1.getTileByRefUnsafe(bestRef)
             val bestPoly = nav1.getPolyByRefUnsafe(bestRef, bestTile)
 
-            // Place random locations on on ground.
+            // Place random locations on the ground.
             if (bestPoly.type == Poly.DT_POLYTYPE_GROUND) {
                 // Calc area of the polygon.
                 var polyArea = 0f
-                val polyVertices = FloatArray(bestPoly.vertCount * 3)
-                for (j in 0 until bestPoly.vertCount) {
-                    System.arraycopy(bestTile.data!!.vertices, bestPoly.vertices[j] * 3, polyVertices, j * 3, 3)
+                val src = bestTile.data!!.vertices
+                val dst = polyVertices.data
+                val srcIndices = bestPoly.vertices
+                val vertCount = min(bestPoly.vertCount, maxPolyVertices)
+                for (i in 0 until vertCount) {
+                    System.arraycopy(src, srcIndices[i] * 3, dst, i * 3, 3)
                 }
-                val constrainedVertices = constraint.apply(polyVertices, centerPos, maxRadius)
+                polyVertices.size = vertCount * 3 // should be 9
+                val constrainedVertices = constraint.apply(polyVertices, centerPos, maxRadius, tmp1, tmp2)
                 if (constrainedVertices != null) {
-                    val vertCount = constrainedVertices.size / 3
-                    for (j in 2 until vertCount) {
+                    val vertCount1 = constrainedVertices.size / 3
+                    for (j in 2 until vertCount1) {
                         val va = 0
                         val vb = (j - 1) * 3
                         val vc = j * 3
-                        polyArea += Vectors.triArea2D(constrainedVertices, va, vb, vc)
+                        polyArea += Vectors.triArea2D(constrainedVertices.data, va, vb, vc)
                     }
-                    // Choose random polygon weighted by area, using reservoi sampling.
+                    // Choose random polygon weighted by area, using reservoir sampling.
                     areaSum += polyArea
-                    val u = frand.nextFloat()
-                    if (u * areaSum <= polyArea) {
+                    if (random.nextFloat() * areaSum <= polyArea) {
+                        randomTile = bestTile
                         randomPoly = bestPoly
                         randomPolyRef = bestRef
-                        randomPolyVertices = constrainedVertices
+                        // randomPolyVertices = constrainedVertices
                     }
                 }
             }
@@ -265,16 +277,16 @@ open class NavMeshQuery(
                 }
 
                 // Find edge and calc distance to the edge.
-                val portalpoints = getPortalPoints(
+                val portalPoints = getPortalPoints(
                     bestRef, bestPoly, bestTile, neighbourRef,
                     neighbourPoly, neighbourTile, 0, 0, tmp
                 )
-                if (portalpoints == null) {
+                if (portalPoints == null) {
                     i = bestTile.links[i].indexOfNextLink
                     continue
                 }
-                val va = portalpoints.left
-                val vb = portalpoints.right
+                val va = portalPoints.left
+                val vb = portalPoints.right
 
                 // If the circle is not touching the next polygon, skip it.
                 val (distSqr) = Vectors.distancePtSegSqr2D(centerPos, va, vb)
@@ -313,20 +325,29 @@ open class NavMeshQuery(
                 i = bestTile.links[i].indexOfNextLink
             }
         }
+
         if (randomPoly == null) {
             return null
         }
 
         // Randomly pick point on polygon.
-        val s = frand.nextFloat()
-        val t = frand.nextFloat()
-        val areas = FloatArray(randomPolyVertices!!.size / 3)
-        val pt = Vectors.randomPointInConvexPoly(randomPolyVertices, randomPolyVertices.size / 3, areas, s, t)
-        val result = FindRandomPointResult(randomPolyRef, pt)
-        val pheight = getPolyHeight(randomPolyRef, pt)
-        if (!pheight.isFinite()) return null
-        pt.y = pheight
-        return result
+        val s = random.nextFloat()
+        val t = random.nextFloat()
+        val src = randomTile!!.data!!.vertices
+        val dst = polyVertices.data
+        val srcIndices = randomPoly.vertices
+        val vertCount = min(randomPoly.vertCount, maxPolyVertices)
+        for (i in 0 until vertCount) {
+            System.arraycopy(src, srcIndices[i] * 3, dst, i * 3, 3)
+        }
+        polyVertices.size = vertCount * 3
+        val randomPolyVertices = constraint.apply(polyVertices, centerPos, maxRadius, tmp1, tmp2) ?: return null
+        val areas = FloatArray(randomPolyVertices.size / 3)
+        val pt = Vectors.randomPointInConvexPoly(randomPolyVertices.data, randomPolyVertices.size / 3, areas, s, t)
+        val y = getPolyHeight(randomPolyRef, pt)
+        if (!y.isFinite()) return null
+        pt.y = y
+        return FindRandomPointResult(randomPolyRef, pt)
     }
 
     /**
@@ -342,23 +363,16 @@ open class NavMeshQuery(
         else nav1.closestPointOnPoly(ref, pos)
     }
 
-    /// @par
-    ///
-    /// Much faster than closestPointOnPoly().
-    ///
-    /// If the provided position lies within the polygon's xz-bounds (above or below),
-    /// then @p pos and @p closest will be equal.
-    ///
-    /// The height of @p closest will be the polygon boundary. The height detail is not used.
-    ///
-    /// @p pos does not have to be within the bounds of the polygon or the navigation mesh.
-    ///
-    /// Returns a point on the boundary closest to the source point if the source point is outside the
-    /// polygon's xz-bounds.
-    /// @param[in] ref The reference id to the polygon.
-    /// @param[in] pos The position to check.
-    /// @param[out] closest The closest point.
-    /// @returns The status flags for the query.
+    /**
+     * Much faster than closestPointOnPoly().
+     *
+     * If the provided position lies within the polygon's xz-bounds (above or below), then @p pos and @p closest will be equal.
+     * The height of @p closest will be the polygon boundary. The height detail is not used.
+     *
+     * @p pos does not have to be within the bounds of the polygon or the navigation mesh.
+     *
+     * Returns a point on the boundary closest to the source point if the source point is outside the polygon's xz-bounds.
+     * */
     fun closestPointOnPolyBoundary(
         ref: Long, pos: Vector3f,
         tmpVertices: FloatArray, // nav1.maxVerticesPerPoly * 3
@@ -2329,25 +2343,19 @@ open class NavMeshQuery(
 
     /// @par
     ///
-    /// This method is optimized for a small search radius and small number of result
-    /// polygons.
+    /// This method is optimized for a small search radius and small number of result polygons.
     ///
-    /// Candidate polygons are found by searching the navigation graph beginning at
-    /// the start polygon.
+    /// Candidate polygons are found by searching the navigation graph beginning at the start polygon.
     ///
-    /// The same intersection test restrictions that apply to the findPolysAroundCircle
-    /// mehtod applies to this method.
+    /// The same intersection test restrictions that apply to the findPolysAroundCircle method applies to this method.
     ///
     /// The value of the center point is used as the start point for cost calculations.
-    /// It is not projected onto the surface of the mesh, so its y-value will effect
-    /// the costs.
+    /// It is not projected onto the surface of the mesh, so its y-value will effect the costs.
     ///
     /// Intersection tests occur in 2D. All polygons and the search circle are
-    /// projected onto the xz-plane. So the y-value of the center point does not
-    /// effect intersection tests.
+    /// projected onto the xz-plane. So the y-value of the center point does not effect intersection tests.
     ///
-    /// If the result arrays are is too small to hold the entire result set, they will
-    /// be filled to capacity.
+    /// If the result arrays are is too small to hold the entire result set, they will be filled to capacity.
     ///
     /// Finds the non-overlapping navigation polygons in the local neighbourhood around the center position.
     /// @param[in] startRef The reference id of the polygon where the search starts.
@@ -2363,8 +2371,7 @@ open class NavMeshQuery(
     fun findLocalNeighbourhood(
         startRef: Long, centerPos: Vector3f, radius: Float,
         filter: QueryFilter,
-        tinyNodePool: NodePool,
-        pa: FloatArray, pb: FloatArray, // FloatArray(nav1.maxVerticesPerPoly * 3)
+        tinyNodePool: NodePool, pa: FloatArray, pb: FloatArray, // FloatArray(nav1.maxVerticesPerPoly * 3)
         resultRef: LongArrayList,
     ): Boolean {
 

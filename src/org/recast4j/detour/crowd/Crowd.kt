@@ -755,7 +755,7 @@ class Crowd @JvmOverloads constructor(
             }
 
             // Find corners for steering
-            ag.corners.clear()
+            StraightPathItem.clear(ag.corners)
             ag.corners.addAll(
                 ag.corridor.findCorners(
                     CROWDAGENT_MAX_CORNERS, navQuery, tmp,
@@ -764,7 +764,7 @@ class Crowd @JvmOverloads constructor(
             )
 
             // Check to see if the corner after the next corner is directly visible,
-            // and short cut to there.
+            // and short-cut to there.
             if (ag.params.updateFlags and CrowdAgentParams.CROWD_OPTIMIZE_VIS != 0 && ag.corners.size > 0) {
                 val target = ag.corners[min(1, ag.corners.size - 1)].pos
                 ag.corridor.optimizePathVisibility(

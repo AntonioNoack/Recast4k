@@ -17,6 +17,7 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.dynamic
 
+import org.recast4j.LongHashMap
 import org.recast4j.detour.NavMesh
 import org.recast4j.detour.NavMeshParams
 import org.recast4j.dynamic.collider.Collider
@@ -32,7 +33,6 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicLong
-import java.util.function.BiFunction
 import java.util.function.Consumer
 import java.util.stream.Collectors
 import kotlin.math.floor
@@ -40,7 +40,7 @@ import kotlin.math.floor
 class DynamicNavMesh(voxelFile: VoxelFile) {
     val config: DynamicNavMeshConfig
     private val builder: RecastBuilder
-    private val tiles: MutableMap<Long, DynamicTile> = HashMap()
+    private val tiles = LongHashMap<DynamicTile>()
     private val telemetry: Telemetry
     private val navMeshParams: NavMeshParams
     private val updateQueue: Queue<UpdateQueueItem> = LinkedBlockingQueue()
@@ -198,7 +198,7 @@ class DynamicNavMesh(voxelFile: VoxelFile) {
     }
 
     private fun getTilesByCollider(cid: Long): Collection<DynamicTile> {
-        return tiles.values.stream().filter { t: DynamicTile -> t.containsCollider(cid) }.collect(Collectors.toList())
+        return tiles.values.filter { t -> t.containsCollider(cid) }
     }
 
     private fun rebuild(tile: DynamicTile, walkableAreaModification: AreaModification) {
@@ -210,7 +210,7 @@ class DynamicNavMesh(voxelFile: VoxelFile) {
     private fun updateNavMesh(): Boolean {
         if (dirty) {
             val navMesh = NavMesh(navMeshParams, MAX_VERTICES_PER_POLY)
-            tiles.values.forEach(Consumer { t: DynamicTile -> t.addTo(navMesh) })
+            tiles.forEachValue { it.addTo(navMesh) }
             this.navMesh = navMesh
             dirty = false
             return true
@@ -227,11 +227,11 @@ class DynamicNavMesh(voxelFile: VoxelFile) {
     }
 
     fun voxelTiles(): List<VoxelTile> {
-        return tiles.values.stream().map { t: DynamicTile -> t.voxelTile }.collect(Collectors.toList())
+        return tiles.values.map { it.voxelTile }
     }
 
     fun recastResults(): List<RecastBuilderResult?> {
-        return tiles.values.stream().map { t: DynamicTile -> t.recastResult }.collect(Collectors.toList())
+        return tiles.values.map { it.recastResult }
     }
 
     companion object {

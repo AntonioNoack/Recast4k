@@ -142,9 +142,6 @@ object Vectors {
         dst.set(src[srcI].toFloat(), src[srcI + 1].toFloat(), src[srcI + 2].toFloat())
     }
 
-    @Deprecated("Don't allocate!")
-    fun copy(s: Vector3f) = Vector3f(s)
-
     fun sq(a: Float): Float {
         return a * a
     }
@@ -181,30 +178,23 @@ object Vectors {
         return p0.distanceSquared(p1) < EQUAL_THRESHOLD
     }
 
-    /// Derives the dot product of two vectors on the xz-plane. (@p u . @p v)
-    /// @param[in] u A vector [(x, y, z)]
-    /// @param[in] v A vector [(x, y, z)]
-    /// @return The dot product on the xz-plane.
-    ///
-    /// The vectors are projected onto the xz-plane, so the y-values are
-    /// ignored.
+    /**
+     * Derives the dot product of two vectors on the xz-plane.
+     * */
     fun dot2D(u: Vector3f, v: Vector3f): Float {
         return u.x * v.x + u.z * v.z
     }
 
+    /**
+     * Derives the dot product of two vectors on the xz-plane.
+     * */
     fun dot2D(u: Vector3f, v: FloatArray, vi: Int): Float {
         return u.x * v[vi] + u.z * v[vi + 2]
     }
 
-    /// @}
-    /// @name Computational geometry helper functions.
-    /// @{
-    /// Derives the signed xz-plane area of the triangle ABC, or the
-    /// relationship of line AB to point C.
-    /// @param[in] a Vertex A. [(x, y, z)]
-    /// @param[in] b Vertex B. [(x, y, z)]
-    /// @param[in] c Vertex C. [(x, y, z)]
-    /// @return The signed xz-plane area of the triangle.
+    /**
+     * Derives the signed xz-plane area of the triangle ABC, or the relationship of line AB to point C.
+     * */
     fun triArea2D(vertices: FloatArray, a: Int, b: Int, c: Int): Float {
         val abx = vertices[b] - vertices[a]
         val abz = vertices[b + 2] - vertices[a + 2]
@@ -290,9 +280,9 @@ object Vectors {
         } else Float.NaN
     }
 
-    /// @par
-    ///
-    /// All points are projected onto the xz-plane, so the y-values are ignored.
+    /**
+     * All points are projected onto the xz-plane, so the y-values are ignored.
+     * */
     fun pointInPolygon(pt: Vector3f, vertices: FloatArray, numVertices: Int): Boolean {
         var c = false
         var i = 0
@@ -302,9 +292,7 @@ object Vectors {
             val vj = j * 3
             if (vertices[vi + 2] > pt.z != vertices[vj + 2] > pt.z && (pt.x < (vertices[vj] - vertices[vi])
                         * (pt.z - vertices[vi + 2]) / (vertices[vj + 2] - vertices[vi + 2]) + vertices[vi])
-            ) {
-                c = !c
-            }
+            ) c = !c
             j = i++
         }
         return c

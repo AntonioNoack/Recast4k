@@ -18,7 +18,7 @@ class StraightPathItem private constructor(val pos: Vector3f, var flags: Int, va
         }
 
         fun clear(list: MutableList<StraightPathItem>) {
-            if (cache.size < 512) synchronized(cache) { cache.addAll(list) }
+            synchronized(cache) { cache.addAll(list) }
             list.clear()
         }
     }

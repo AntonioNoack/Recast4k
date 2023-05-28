@@ -226,9 +226,7 @@ class PathCorridor {
             for (spi in path) {
                 if (spi.flags and NavMeshQuery.DT_STRAIGHTPATH_OFFMESH_CONNECTION != 0
                     || dist2DSqr(spi.pos, pos) > MIN_TARGET_DIST
-                ) {
-                    break
-                }
+                ) break
                 start++
             }
             var end = path.size

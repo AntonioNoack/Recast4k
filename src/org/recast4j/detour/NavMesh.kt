@@ -356,15 +356,11 @@ class NavMesh(
         return getTileRef(tile)
     }
 
-    /// Removes the specified tile from the navigation mesh.
-    /// @param[in] ref The reference of the tile to remove.
-    /// @param[out] data Data associated with deleted tile.
-    /// @param[out] dataSize Size of the data associated with deleted tile.
-    ///
-    /// This function returns the data for the tile so that, if desired,
-    /// it can be added back to the navigation mesh at a later point.
-    ///
-    /// @see #addTile
+    /**
+     * Removes the specified tile from the navigation mesh.
+     *
+     * This function returns the data for the tile so that, if desired, it can be added back to the navigation mesh at a later point.
+     * */
     fun removeTile(ref: Long): Long {
         if (ref == 0L) {
             return 0
@@ -420,7 +416,9 @@ class NavMesh(
         return getTileRef(tile)
     }
 
-    /// Builds internal polygons links for a tile.
+    /**
+     * Builds internal polygons links for a tile.
+     * */
     fun connectIntLinks(tile: MeshTile?) {
         if (tile == null) return
         val base = getPolyRefBase(tile)
@@ -780,38 +778,27 @@ class NavMesh(
     /**
      * Returns closest point on polygon.
      */
-    fun closestPointOnDetailEdges(tile: MeshTile?, poly: Poly, pos: Vector3f, onlyBoundary: Boolean): Vector3f {
-        val ANY_BOUNDARY_EDGE =
+    fun closestPointOnDetailEdges(tile: MeshTile, poly: Poly, pos: Vector3f, onlyBoundary: Boolean): Vector3f {
+        val flagAnyBoundaryEdge =
             DT_DETAIL_EDGE_BOUNDARY or (DT_DETAIL_EDGE_BOUNDARY shl 2) or (DT_DETAIL_EDGE_BOUNDARY shl 4)
         val ip = poly.index
         var dmin = Float.MAX_VALUE
         var tmin = 0f
         lateinit var pmin: Vector3f
         lateinit var pmax: Vector3f
-        if (tile!!.data?.detailMeshes != null) {
-            val pd = tile.data!!.detailMeshes!![ip]
+        val tileData = tile.data
+        if (tileData?.detailMeshes != null) {
+            val pd = tileData.detailMeshes!![ip]
             for (i in 0 until pd.triCount) {
                 val ti = (pd.triBase + i) * 4
                 val tris = tile.data!!.detailTriangles
-                if (onlyBoundary && tris[ti + 3] and ANY_BOUNDARY_EDGE == 0) {
+                if (onlyBoundary && tris[ti + 3] and flagAnyBoundaryEdge == 0) {
                     continue
                 }
-                val v: Array<Vector3f> = arrayOf(Vector3f(), Vector3f(), Vector3f())
-                for (j in 0..2) {
-                    if (tris[ti + j] < poly.vertCount) {
-                        val index = poly.vertices[tris[ti + j]] * 3
-                        v[j].set(
-                            tile.data!!.vertices[index], tile.data!!.vertices[index + 1],
-                            tile.data!!.vertices[index + 2]
-                        )
-                    } else {
-                        val index = (pd.vertBase + (tris[ti + j] - poly.vertCount)) * 3
-                        v[j].set(
-                            tile.data!!.detailVertices[index], tile.data!!.detailVertices[index + 1],
-                            tile.data!!.detailVertices[index + 2]
-                        )
-                    }
-                }
+                val v = tripletVec3f.get()
+                fill(tileData, ti + 0, poly, v[0], pd)
+                fill(tileData, ti + 1, poly, v[1], pd)
+                fill(tileData, ti + 2, poly, v[2], pd)
                 var k = 0
                 var j = 2
                 while (k < 3) {
@@ -819,7 +806,7 @@ class NavMesh(
                         && (onlyBoundary || tris[ti + j] < tris[ti + k])
                     ) {
                         // Only looking at boundary edges and this is internal, or
-                        // this is an inner edge that we will see again or have already seen.
+                        // this is an inner edge, that we will see again or have already seen.
                         j = k++
                         continue
                     }
@@ -834,8 +821,9 @@ class NavMesh(
                 }
             }
         } else {
-            val v0 = Vector3f()
-            val v1 = Vector3f()
+            val tri = tripletVec3f.get()
+            val v0 = tri[0]
+            val v1 = tri[1]
             for (j in 0 until poly.vertCount) {
                 val k = (j + 1) % poly.vertCount
                 v0.set(tile.data!!.vertices, poly.vertices[j] * 3)
@@ -850,6 +838,19 @@ class NavMesh(
             }
         }
         return Vectors.lerp(pmin, pmax, tmin)
+    }
+
+    private fun fill(tileData: MeshData, tk: Int, poly: Poly, vk: Vector3f, pd: PolyDetail) {
+        val index: Int
+        val data: FloatArray
+        if (tileData.detailTriangles[tk] < poly.vertCount) {
+            index = poly.vertices[tileData.detailTriangles[tk]]
+            data = tileData.vertices
+        } else {
+            index = (pd.vertBase + (tileData.detailTriangles[tk] - poly.vertCount))
+            data = tileData.detailVertices
+        }
+        vk.set(data, index * 3)
     }
 
     fun getPolyHeight(tile: MeshTile?, poly: Poly, pos: Vector3f): Float {
@@ -867,29 +868,21 @@ class NavMesh(
         }
 
         // Find height at the location.
-        if (tile!!.data?.detailMeshes != null) {
+        val v0 = Vector3f()
+        val v1 = Vector3f()
+        val v2 = Vector3f()
+        val tileData = tile!!.data
+        if (tileData?.detailMeshes != null) {
             val pd = tile.data!!.detailMeshes!![ip]
             for (j in 0 until pd.triCount) {
                 val t = (pd.triBase + j) * 4
-                val v = arrayOf(Vector3f(), Vector3f(), Vector3f())
-                for (k in 0..2) {
-                    if (tile.data!!.detailTriangles[t + k] < poly.vertCount) {
-                        val index = poly.vertices[tile.data!!.detailTriangles[t + k]] * 3
-                        v[k].set(tile.data!!.vertices, index)
-                    } else {
-                        val index = (pd.vertBase + (tile.data!!.detailTriangles[t + k] - poly.vertCount)) * 3
-                        v[k].set(tile.data!!.detailVertices, index)
-                    }
-                }
-                val h = Vectors.closestHeightPointTriangle(pos, v[0], v[1], v[2])
-                if (h.isFinite()) {
-                    return h
-                }
+                fill(tileData, t + 0, poly, v0, pd)
+                fill(tileData, t + 1, poly, v1, pd)
+                fill(tileData, t + 2, poly, v2, pd)
+                val h = Vectors.closestHeightPointTriangle(pos, v0, v1, v2)
+                if (h.isFinite()) return h
             }
         } else {
-            val v0 = Vector3f()
-            val v1 = Vector3f()
-            val v2 = Vector3f()
             v0.set(tile.data!!.vertices, poly.vertices[0] * 3)
             for (j in 1 until poly.vertCount - 1) {
                 v1.set(tile.data!!.vertices, poly.vertices[j + 1] * 3)
@@ -1213,6 +1206,10 @@ class NavMesh(
          */
         var DT_RAY_CAST_LIMIT_PROPORTIONS = 50f
 
+        private val tripletVec3f = object : ThreadLocal<Array<Vector3f>>() {
+            override fun initialValue() = Array(3) { Vector3f() }
+        }
+
         /**
          * Derives a standard polygon reference.
          *
@@ -1226,27 +1223,29 @@ class NavMesh(
             return salt.toLong() shl DT_POLY_BITS + DT_TILE_BITS or (it.toLong() shl DT_POLY_BITS) or ip.toLong()
         }
 
-        /// Extracts a tile's salt value from the specified polygon reference.
-        /// @note This function is generally meant for internal use only.
-        /// @param[in] ref The polygon reference.
-        /// @see #encodePolyId
+        /**
+         * Extracts a tile's salt value from the specified polygon reference.
+         * @note This function is generally meant for internal use only.
+         * @see #encodePolyId
+         * */
         fun decodePolyIdSalt(ref: Long): Int {
             return (ref shr DT_POLY_BITS + DT_TILE_BITS and saltMask).toInt()
         }
 
-        /// Extracts the tile's index from the specified polygon reference.
-        /// @note This function is generally meant for internal use only.
-        /// @param[in] ref The polygon reference.
-        /// @see #encodePolyId
+        /**
+         * Extracts the tile's index from the specified polygon reference.
+         * @note This function is generally meant for internal use only.
+         * @see #encodePolyId
+         * */
         fun decodePolyIdTile(ref: Long): Int {
             return (ref shr DT_POLY_BITS and tileMask).toInt()
         }
 
-        /// Extracts the polygon's index (within its tile) from the specified
-        /// polygon reference.
-        /// @note This function is generally meant for internal use only.
-        /// @param[in] ref The polygon reference.
-        /// @see #encodePolyId
+        /**
+         * Extracts the polygon's index (within its tile) from the specified polygon reference.
+         * @note This function is generally meant for internal use only.
+         * @see #encodePolyId
+         * */
         fun decodePolyIdPoly(ref: Long): Int {
             return (ref and polyMask).toInt()
         }

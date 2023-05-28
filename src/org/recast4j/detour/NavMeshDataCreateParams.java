@@ -28,7 +28,6 @@ public class NavMeshDataCreateParams {
     /// @name Polygon Mesh Attributes
     /// Used to create the base navigation graph.
     /// See #rcPolyMesh for details related to these attributes.
-    /// @{
 
     /**
      * The polygon mesh vertices. [(x, y, z) * #vertCount] [Unit: vx]

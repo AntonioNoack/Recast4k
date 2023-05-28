@@ -18,27 +18,42 @@ freely, subject to the following restrictions:
 package org.recast4j.detour
 
 import org.joml.Vector3f
+import org.recast4j.FloatSubArray
 import org.recast4j.Vectors
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
 interface PolygonByCircleConstraint {
-    fun apply(polyVertices: FloatArray, circleCenter: Vector3f, radius: Float): FloatArray?
-    class NoOpPolygonByCircleConstraint : PolygonByCircleConstraint {
-        override fun apply(polyVertices: FloatArray, circleCenter: Vector3f, radius: Float) = polyVertices
+
+    fun apply(
+        polyVertices: FloatSubArray, circleCenter: Vector3f, radius: Float,
+        tmp1: FloatSubArray, tmp2: FloatSubArray
+    ): FloatSubArray?
+
+    object NoOpPolygonByCircleConstraint : PolygonByCircleConstraint {
+        override fun apply(
+            polyVertices: FloatSubArray, circleCenter: Vector3f, radius: Float,
+            tmp1: FloatSubArray, tmp2: FloatSubArray
+        ) = polyVertices
     }
 
     /**
      * Calculate the intersection between a polygon and a circle. A dodecagon is used as an approximation of the circle.
      */
-    class StrictPolygonByCircleConstraint : PolygonByCircleConstraint {
-        override fun apply(polyVertices: FloatArray, circleCenter: Vector3f, radius: Float): FloatArray? {
+    object StrictPolygonByCircleConstraint : PolygonByCircleConstraint {
+        override fun apply(
+            polyVertices: FloatSubArray,
+            circleCenter: Vector3f,
+            radius: Float,
+            tmp1: FloatSubArray,
+            tmp2: FloatSubArray
+        ): FloatSubArray? {
             val radiusSqr = radius * radius
             var outsideVertex = -1
             var pv = 0
             while (pv < polyVertices.size) {
-                if (Vectors.dist2DSqr(circleCenter, polyVertices, pv) > radiusSqr) {
+                if (Vectors.dist2DSqr(circleCenter, polyVertices.data, pv) > radiusSqr) {
                     outsideVertex = pv
                     break
                 }
@@ -48,48 +63,35 @@ interface PolygonByCircleConstraint {
                 // polygon inside circle
                 return polyVertices
             }
-            val circle = circle(circleCenter, radius)
-            val intersection = ConvexConvexIntersection.intersect(polyVertices, circle)
-            return if (intersection == null && Vectors.pointInPolygon(
-                    circleCenter,
-                    polyVertices,
-                    polyVertices.size / 3
-                )
-            ) {
-                // circle inside polygon
-                circle
-            } else intersection
+            circle(circleCenter, radius, tmp1.data)
+            val intersection = ConvexConvexIntersection.intersect(polyVertices, tmp1, tmp2)
+            return if (intersection == null &&
+                Vectors.pointInPolygon(circleCenter, polyVertices.data, polyVertices.size / 3)
+            ) tmp1 // circle inside polygon
+            else intersection
         }
 
-        private fun circle(center: Vector3f, radius: Float): FloatArray {
-            if (unitCircle == null) {
-                unitCircle = FloatArray(CIRCLE_SEGMENTS * 3)
-                for (i in 0 until CIRCLE_SEGMENTS) {
-                    val a = i * PI * 2 / CIRCLE_SEGMENTS
-                    unitCircle!![3 * i] = cos(a).toFloat()
-                    unitCircle!![3 * i + 1] = 0f
-                    unitCircle!![3 * i + 2] = -sin(a).toFloat()
-                }
-            }
-            val circle = FloatArray(12 * 3)
-            var i = 0
-            while (i < CIRCLE_SEGMENTS * 3) {
-                circle[i] = unitCircle!![i] * radius + center.x
+        private fun circle(center: Vector3f, radius: Float, circle: FloatArray) {
+            for (i in unitCircle.indices step 3) {
+                circle[i] = unitCircle[i] * radius + center.x
                 circle[i + 1] = center.y
-                circle[i + 2] = unitCircle!![i + 2] * radius + center.z
-                i += 3
+                circle[i + 2] = unitCircle[i + 2] * radius + center.z
             }
-            return circle
         }
 
-        companion object {
-            private const val CIRCLE_SEGMENTS = 12
-            private var unitCircle: FloatArray? = null
+        const val CIRCLE_SEGMENTS = 12
+        private val unitCircle = FloatArray(CIRCLE_SEGMENTS * 3)
+
+        init {
+            val da = (PI * 2 / CIRCLE_SEGMENTS).toFloat()
+            for (i in 0 until CIRCLE_SEGMENTS) {
+                val a = i * da
+                unitCircle[3 * i] = cos(a)
+                unitCircle[3 * i + 1] = 0f
+                unitCircle[3 * i + 2] = -sin(a)
+            }
         }
+
     }
 
-    companion object {
-        fun noop() = NoOpPolygonByCircleConstraint()
-        fun strict() = StrictPolygonByCircleConstraint()
-    }
 }

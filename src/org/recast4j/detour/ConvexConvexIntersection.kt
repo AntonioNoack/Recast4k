@@ -18,10 +18,9 @@ freely, subject to the following restrictions:
 package org.recast4j.detour
 
 import org.joml.Vector3f
+import org.recast4j.FloatSubArray
 import org.recast4j.Vectors
-import java.util.*
 import kotlin.math.abs
-import kotlin.math.max
 
 /**
  * Convex-convex intersection based on "Computational Geometry in C" by Joseph O'Rourke
@@ -30,10 +29,12 @@ object ConvexConvexIntersection {
 
     private const val EPSILON = 0.0001f
 
-    fun intersect(p: FloatArray, q: FloatArray): FloatArray? {
+    fun intersect(
+        p: FloatSubArray, q: FloatSubArray,
+        tmp: FloatSubArray // FloatArray(max(p.size, q.size) * 3)
+    ): FloatSubArray? {
         val n = p.size / 3
         val m = q.size / 3
-        val inters = FloatArray(max(m, n) * 3 * 3)
         var ii = 0
         /* Initialize variables. */
         val a = Vector3f()
@@ -48,44 +49,44 @@ object ConvexConvexIntersection {
         var isFirstPoint = true
         val ip = Vector3f()
         val iq = Vector3f()
+        val A = Vector3f()
+        val B = Vector3f()
         do {
-            a.set(p, 3 * (ai % n))
-            b.set(q, 3 * (bi % m))
-            a1.set(p, 3 * ((ai + n - 1) % n)) // prev a
-            b1.set(q, 3 * ((bi + m - 1) % m)) // prev b
-            val A = Vectors.sub(a, a1)
-            val B = Vectors.sub(b, b1)
+            a.set(p.data, 3 * (ai % n))
+            b.set(q.data, 3 * (bi % m))
+            a1.set(p.data, 3 * ((ai + n - 1) % n)) // prev a
+            b1.set(q.data, 3 * ((bi + m - 1) % m)) // prev b
+            a.sub(a1, A)
+            b.sub(b1, B)
             var cross = B.x * A.z - A.x * B.z // triArea2D({0, 0}, A, B);
             val aHB = Vectors.triArea2D(b1, b, a)
             val bHA = Vectors.triArea2D(a1, a, b)
-            if (abs(cross) < EPSILON) {
-                cross = 0f
-            }
+            if (abs(cross) < EPSILON) cross = 0f
             val parallel = cross == 0f
             val code = if (parallel) parallelInt(a1, a, b1, b, ip, iq) else segSegInt(a1, a, b1, b, ip)
             if (code == Intersection.Single) {
                 if (isFirstPoint) {
                     isFirstPoint = false
                     ba = 0
-                    aa = ba
+                    aa = 0
                 }
-                ii = addVertex(inters, ii, ip)
+                ii = addVertex(tmp, ii, ip)
                 f = inOut(f, aHB, bHA)
             }
 
             /*-----Advance rules-----*/
 
-            /* Special case: A & B overlap and oppositely oriented. */if (code == Intersection.Overlap && Vectors.dot2D(
-                    A,
-                    B
-                ) < 0
+            /* Special case: A & B overlap and oppositely oriented. */
+            if (code == Intersection.Overlap &&
+                Vectors.dot2D(A, B) < 0
             ) {
-                ii = addVertex(inters, ii, ip)
-                ii = addVertex(inters, ii, iq)
+                ii = addVertex(tmp, ii, ip)
+                ii = addVertex(tmp, ii, iq)
                 break
             }
 
-            /* Special case: A & B parallel and separated. */if (parallel && aHB < 0f && bHA < 0f) {
+            /* Special case: A & B parallel and separated. */
+            if (parallel && aHB < 0f && bHA < 0f) {
                 return null
             } else if (parallel && abs(aHB) < EPSILON && abs(bHA) < EPSILON) {
                 /* Advance but do not output point. */
@@ -99,13 +100,13 @@ object ConvexConvexIntersection {
             } else if (cross >= 0) {
                 if (bHA > 0) {
                     if (f == InFlag.Pin) {
-                        ii = addVertex(inters, ii, a)
+                        ii = addVertex(tmp, ii, a)
                     }
                     aa++
                     ai++
                 } else {
                     if (f == InFlag.Qin) {
-                        ii = addVertex(inters, ii, b)
+                        ii = addVertex(tmp, ii, b)
                     }
                     ba++
                     bi++
@@ -113,13 +114,13 @@ object ConvexConvexIntersection {
             } else {
                 if (aHB > 0) {
                     if (f == InFlag.Qin) {
-                        ii = addVertex(inters, ii, b)
+                        ii = addVertex(tmp, ii, b)
                     }
                     ba++
                     bi++
                 } else {
                     if (f == InFlag.Pin) {
-                        ii = addVertex(inters, ii, a)
+                        ii = addVertex(tmp, ii, a)
                     }
                     aa++
                     ai++
@@ -128,12 +129,16 @@ object ConvexConvexIntersection {
             /* Quit when both adv. indices have cycled, or one has cycled twice. */
         } while ((aa < n || ba < m) && aa < 2 * n && ba < 2 * m)
 
-        /* Deal with special cases: not implemented. */return if (f == InFlag.Unknown) {
-            null
-        } else Arrays.copyOf(inters, ii)
+        /* Deal with special cases: not implemented. */
+        return if (f == InFlag.Unknown) null
+        else {
+            tmp.size = ii
+            tmp
+        }
     }
 
-    private fun addVertex(inters: FloatArray, ii: Int, p: Vector3f): Int {
+    private fun addVertex(inters0: FloatSubArray, ii: Int, p: Vector3f): Int {
+        val inters = inters0.data
         if (ii > 0) {
             if (inters[ii - 3] == p.x && inters[ii - 2] == p.y && inters[ii - 1] == p.z) return ii
             if (inters[0] == p.x && inters[1] == p.y && inters[2] == p.z) return ii

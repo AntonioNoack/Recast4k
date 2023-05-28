@@ -18,20 +18,21 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.crowd
 
+import org.recast4j.LongHashMap
 import kotlin.math.abs
 import kotlin.math.floor
 
 class ProximityGrid(val cellSize: Float) {
 
     private val invCellSize = 1f / cellSize
-    private val agents = HashMap<Long, ArrayList<CrowdAgent>>(1024)
+    private val agents = LongHashMap<ArrayList<CrowdAgent>>()
 
     companion object {
         private val cache = ArrayList<ArrayList<CrowdAgent>>()
     }
 
     fun clear() {
-        for ((_, v) in agents) {
+        agents.forEachValue { v ->
             if (cache.size < 512) cache.add(v)
             v.clear()
         }
