@@ -23,22 +23,19 @@ import org.recast4j.detour.io.NavMeshParamWriter
 import org.recast4j.detour.tilecache.TileCache
 import org.recast4j.detour.tilecache.TileCacheBuilder
 import org.recast4j.detour.tilecache.TileCacheParams
-import java.io.IOException
 import java.io.OutputStream
 import java.nio.ByteOrder
 
 class TileCacheWriter : DetourWriter() {
+
     private val paramWriter = NavMeshParamWriter()
     private val builder = TileCacheBuilder()
 
-    @Throws(IOException::class)
-    fun write(stream: OutputStream, cache: TileCache, order: ByteOrder?, cCompatibility: Boolean) {
+    fun write(stream: OutputStream, cache: TileCache, order: ByteOrder, cCompatibility: Boolean) {
         write(stream, TileCacheSetHeader.TILECACHESET_MAGIC, order)
-        write(
-            stream,
-            if (cCompatibility) TileCacheSetHeader.TILECACHESET_VERSION else TileCacheSetHeader.TILECACHESET_VERSION_RECAST4J,
-            order
-        )
+        val version = if (cCompatibility) TileCacheSetHeader.TILECACHESET_VERSION
+        else TileCacheSetHeader.TILECACHESET_VERSION_RECAST4J
+        write(stream, version, order)
         var numTiles = 0
         for (i in 0 until cache.tileCount) {
             val tile = cache.getTile(i)
@@ -59,8 +56,7 @@ class TileCacheWriter : DetourWriter() {
         }
     }
 
-    @Throws(IOException::class)
-    private fun writeCacheParams(stream: OutputStream, params: TileCacheParams, order: ByteOrder?) {
+    private fun writeCacheParams(stream: OutputStream, params: TileCacheParams, order: ByteOrder) {
         write(stream, params.orig, order)
         write(stream, params.cellSize, order)
         write(stream, params.cellHeight, order)

@@ -16,14 +16,21 @@ freely, subject to the following restrictions:
  misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
-package org.recast4j.detour;
+package org.recast4j.detour
 
-import org.joml.Vector3f;
+import org.jetbrains.annotations.NotNull
+import org.jetbrains.annotations.Nullable
+import org.joml.Vector3f
 
 /**
- * Represents the source data used to build an navigation mesh tile.
+ * Represents the source data used to build a navigation mesh tile.
  */
-public class NavMeshDataCreateParams {
+class NavMeshDataCreateParams {
+
+    companion object {
+        private val i0 = IntArray(0)
+        private val f0 = FloatArray(0)
+    }
 
     /// @name Polygon Mesh Attributes
     /// Used to create the base navigation graph.
@@ -32,31 +39,41 @@ public class NavMeshDataCreateParams {
     /**
      * The polygon mesh vertices. [(x, y, z) * #vertCount] [Unit: vx]
      */
-    public int[] vertices;
+    @Nullable
+    var vertices: IntArray? = null
+
     /**
      * The number vertices in the polygon mesh. [Limit: >= 3]
      */
-    public int vertCount;
+    var vertCount = 0
+
     /**
      * The polygon data. [Size: #polyCount * 2 * #nvp]
      */
-    public int[] polys;
+    @Nullable
+    var polys: IntArray? = null
+
     /**
      * The user defined flags assigned to each polygon. [Size: #polyCount]
      */
-    public int[] polyFlags;
+    @NotNull
+    var polyFlags: IntArray = i0
+
     /**
      * The user defined area ids assigned to each polygon. [Size: #polyCount]
      */
-    public int[] polyAreas;
+    @NotNull
+    var polyAreas: IntArray = i0
+
     /**
      * Number of polygons in the mesh. [Limit: >= 1]
      */
-    public int polyCount;
+    var polyCount = 0
+
     /**
      * Number maximum number of vertices per polygon. [Limit: >= 3]
      */
-    public int maxVerticesPerPolygon;
+    var maxVerticesPerPolygon = 3
 
     /// @}
     /// @name Height Detail Attributes (Optional)
@@ -66,23 +83,30 @@ public class NavMeshDataCreateParams {
     /**
      * The height detail sub-mesh data. [Size: 4 * #polyCount]
      */
-    public int[] detailMeshes;
+    @Nullable
+    var detailMeshes: IntArray? = null
+
     /**
      * The detail mesh vertices. [Size: 3 * #detailVerticesCount]
      */
-    public float[] detailVertices;
+    @Nullable
+    var detailVertices: FloatArray? = null
+
     /**
      * The number of vertices in the detail mesh.
      */
-    public int detailVerticesCount;
+    var detailVerticesCount = 0
+
     /**
      * The detail mesh triangles. [Size: 4 * #detailTriCount]
      */
-    public int[] detailTris;
+    @Nullable
+    var detailTris: IntArray? = null
+
     /**
      * The number of triangles in the detail mesh.
      */
-    public int detailTriCount;
+    var detailTriCount = 0
 
     /// @}
     /// @name Off-Mesh Connections Attributes (Optional)
@@ -94,29 +118,40 @@ public class NavMeshDataCreateParams {
     /**
      * Off-mesh connection vertices. [(ax, ay, az, bx, by, bz) * #offMeshConCount]
      */
-    public float[] offMeshConVertices;
+    @NotNull
+    var offMeshConVertices: FloatArray = f0
+
     /**
      * Off-mesh connection radii. [Size: #offMeshConCount]
      */
-    public float[] offMeshConRad;
+    @NotNull
+    var offMeshConRad: FloatArray = f0
+
     /**
      * User defined flags assigned to the off-mesh connections. [Size: #offMeshConCount]
      */
-    public int[] offMeshConFlags;
+    @NotNull
+    var offMeshConFlags: IntArray = i0
+
     /**
      * User defined area ids assigned to the off-mesh connections. [Size: #offMeshConCount]
      */
-    public int[] offMeshConAreas;
+    @NotNull
+    var offMeshConAreas: IntArray = i0
 
     /**
      * The permitted travel direction of the off-mesh connections. [Size: #offMeshConCount]
      * 0 = Travel only from endpoint A to endpoint B. Bidirectional travel.
      * */
-    public int[] offMeshConDir;
+    @NotNull
+    var offMeshConDir: IntArray = i0
+
     /** The user defined ids of the off-mesh connection. [Size: #offMeshConCount] */
-    public int[] offMeshConUserID;
+    @NotNull
+    var offMeshConUserID: IntArray = i0
+
     /** The number of off-mesh connections. [Limit: >= 0] */
-    public int offMeshConCount;
+    var offMeshConCount = 0
 
     /// @}
     /// @name Tile Attributes
@@ -126,50 +161,60 @@ public class NavMeshDataCreateParams {
     /**
      * The user defined id of the tile.
      */
-    public int userId;
+    var userId = 0
+
     /**
      * The tile's x-grid location within the multi-tile destination mesh. (Along the x-axis.)
      */
-    public int tileX;
+    var tileX = 0
+
     /**
      * The tile's y-grid location within the multi-tile desitation mesh. (Along the z-axis.)
      */
-    public int tileZ;
+    var tileZ = 0
+
     /**
      * The tile's layer within the layered destination mesh. [Limit: >= 0] (Along the y-axis.)
      */
-    public int tileLayer;
+    var tileLayer = 0
 
-    public Vector3f bmin, bmax; /// < The bounds of the tile. [(x, y, z)]
+    /**
+     * The bounds of the tile. [(x, y, z)]
+     * */
+    lateinit var bmin: Vector3f
+    lateinit var bmax: Vector3f
 
     /* General Configuration Attributes */
 
     /**
      * The agent height.
      */
-    public float walkableHeight;
+    var walkableHeight = 0f
+
     /**
      * The agent radius.
      */
-    public float walkableRadius;
+    var walkableRadius = 0f
+
     /**
      * The agent maximum traversable ledge. (Up/Down)
      */
-    public float walkableClimb;
+    var walkableClimb = 0f
+
     /**
      * The xz-plane cell size of the polygon mesh. [Limit: > 0]
      */
-    public float cellSize;
+    var cellSize = 0f
+
     /**
      * The y-axis cell height of the polygon mesh. [Limit: > 0]
      */
-    public float cellHeight;
+    var cellHeight = 0f
 
     /**
      * True if a bounding volume tree should be built for the tile.
      * @note The BVTree is not normally needed for layered navigation meshes.
      */
-    public boolean buildBvTree;
-
+    var buildBvTree = false
 
 }

@@ -15,66 +15,63 @@ freely, subject to the following restrictions:
  misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
-package org.recast4j.detour.io;
+package org.recast4j.detour.io
 
-import org.joml.Vector3f;
+import org.joml.Vector3f
+import java.io.OutputStream
+import java.nio.ByteOrder
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.ByteOrder;
+abstract class DetourWriter {
 
-public abstract class DetourWriter {
-
-    protected void write(OutputStream stream, float value, ByteOrder order) throws IOException {
-        write(stream, Float.floatToIntBits(value), order);
+    protected fun write(stream: OutputStream, value: Float, order: ByteOrder) {
+        write(stream, java.lang.Float.floatToIntBits(value), order)
     }
 
-    protected void write(OutputStream stream, Vector3f value, ByteOrder order) throws IOException {
-        write(stream, Float.floatToIntBits(value.getX()), order);
-        write(stream, Float.floatToIntBits(value.getY()), order);
-        write(stream, Float.floatToIntBits(value.getZ()), order);
+    protected fun write(stream: OutputStream, value: Vector3f, order: ByteOrder) {
+        write(stream, java.lang.Float.floatToIntBits(value.x), order)
+        write(stream, java.lang.Float.floatToIntBits(value.y), order)
+        write(stream, java.lang.Float.floatToIntBits(value.z), order)
     }
 
-    protected void write(OutputStream stream, short value, ByteOrder order) throws IOException {
+    protected fun write(stream: OutputStream, value: Short, order: ByteOrder) {
         if (order == ByteOrder.BIG_ENDIAN) {
-            stream.write((value >> 8) & 0xFF);
-            stream.write(value & 0xFF);
+            stream.write(value.toInt() shr 8 and 0xFF)
+            stream.write(value.toInt() and 0xFF)
         } else {
-            stream.write(value & 0xFF);
-            stream.write((value >> 8) & 0xFF);
+            stream.write(value.toInt() and 0xFF)
+            stream.write(value.toInt() shr 8 and 0xFF)
         }
     }
 
-    protected void write(OutputStream stream, long value, ByteOrder order) throws IOException {
+    protected fun write(stream: OutputStream, value: Long, order: ByteOrder) {
         if (order == ByteOrder.BIG_ENDIAN) {
-            write(stream, (int) (value >>> 32), order);
-            write(stream, (int) (value), order);
+            write(stream, (value ushr 32).toInt(), order)
+            write(stream, value.toInt(), order)
         } else {
-            write(stream, (int) (value), order);
-            write(stream, (int) (value >>> 32), order);
+            write(stream, value.toInt(), order)
+            write(stream, (value ushr 32).toInt(), order)
         }
     }
 
-    protected void write(OutputStream stream, int value, ByteOrder order) throws IOException {
+    protected fun write(stream: OutputStream, value: Int, order: ByteOrder) {
         if (order == ByteOrder.BIG_ENDIAN) {
-            stream.write((value >> 24) & 0xFF);
-            stream.write((value >> 16) & 0xFF);
-            stream.write((value >> 8) & 0xFF);
-            stream.write(value & 0xFF);
+            stream.write(value shr 24 and 0xFF)
+            stream.write(value shr 16 and 0xFF)
+            stream.write(value shr 8 and 0xFF)
+            stream.write(value and 0xFF)
         } else {
-            stream.write(value & 0xFF);
-            stream.write((value >> 8) & 0xFF);
-            stream.write((value >> 16) & 0xFF);
-            stream.write((value >> 24) & 0xFF);
+            stream.write(value and 0xFF)
+            stream.write(value shr 8 and 0xFF)
+            stream.write(value shr 16 and 0xFF)
+            stream.write(value shr 24 and 0xFF)
         }
     }
 
-    protected void write(OutputStream stream, boolean bool) throws IOException {
-        write(stream, (byte) (bool ? 1 : 0));
+    protected fun write(stream: OutputStream, bool: Boolean) {
+        write(stream, (if (bool) 1 else 0).toByte())
     }
 
-    protected void write(OutputStream stream, byte value) throws IOException {
-        stream.write(value);
+    protected fun write(stream: OutputStream, value: Byte) {
+        stream.write(value.toInt())
     }
-
 }

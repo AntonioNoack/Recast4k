@@ -24,15 +24,15 @@ import java.io.OutputStream
 import java.nio.ByteOrder
 
 class MeshSetWriter : DetourWriter() {
+
     private val writer = MeshDataWriter()
     private val paramWriter = NavMeshParamWriter()
-    @Throws(IOException::class)
+
     fun write(stream: OutputStream, mesh: NavMesh, order: ByteOrder) {
         writeHeader(stream, mesh, order)
         writeTiles(stream, mesh, order)
     }
 
-    @Throws(IOException::class)
     private fun writeHeader(stream: OutputStream, mesh: NavMesh, order: ByteOrder) {
         write(stream, NavMeshSetHeader.NAVMESHSET_MAGIC, order)
         write(stream, NavMeshSetHeader.NAVMESHSET_VERSION_RECAST4J, order)
@@ -49,7 +49,6 @@ class MeshSetWriter : DetourWriter() {
         write(stream, mesh.maxVerticesPerPoly, order)
     }
 
-    @Throws(IOException::class)
     private fun writeTiles(stream: OutputStream, mesh: NavMesh, order: ByteOrder) {
         for (i in 0 until mesh.maxTiles) {
             val tile = mesh.getTile(i)

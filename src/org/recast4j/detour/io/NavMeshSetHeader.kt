@@ -20,6 +20,7 @@ package org.recast4j.detour.io
 import org.recast4j.detour.NavMeshParams
 
 class NavMeshSetHeader {
+
     var magic = 0
     var version = 0
     var numTiles = 0

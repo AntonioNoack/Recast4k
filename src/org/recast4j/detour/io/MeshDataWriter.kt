@@ -24,7 +24,7 @@ import java.io.OutputStream
 import java.nio.ByteOrder
 
 class MeshDataWriter : DetourWriter() {
-    @Throws(IOException::class)
+
     fun write(stream: OutputStream, data: MeshData, order: ByteOrder) {
         val header = data.header
         write(stream, header!!.magic, order)
@@ -57,14 +57,12 @@ class MeshDataWriter : DetourWriter() {
         writeOffMeshCons(stream, data, order)
     }
 
-    @Throws(IOException::class)
     private fun writeVertices(stream: OutputStream, vertices: FloatArray, count: Int, order: ByteOrder) {
         for (i in 0 until count * 3) {
             write(stream, vertices[i], order)
         }
     }
 
-    @Throws(IOException::class)
     private fun writePolys(stream: OutputStream, data: MeshData, order: ByteOrder) {
         for (i in 0 until data.header!!.polyCount) {
             for (j in data.polygons[i].vertices.indices) {
@@ -79,7 +77,6 @@ class MeshDataWriter : DetourWriter() {
         }
     }
 
-    @Throws(IOException::class)
     private fun writePolyDetails(stream: OutputStream, data: MeshData, order: ByteOrder) {
         for (i in 0 until data.header!!.detailMeshCount) {
             write(stream, data.detailMeshes!![i].vertBase, order)
@@ -89,14 +86,12 @@ class MeshDataWriter : DetourWriter() {
         }
     }
 
-    @Throws(IOException::class)
     private fun writeDTris(stream: OutputStream, data: MeshData) {
         for (i in 0 until data.header!!.detailTriCount * 4) {
             stream.write(data.detailTriangles[i])
         }
     }
 
-    @Throws(IOException::class)
     private fun writeBVTree(stream: OutputStream, data: MeshData, order: ByteOrder) {
         for (i in 0 until data.header!!.bvNodeCount) {
             write(stream, data.bvTree!![i].minX, order)
@@ -109,7 +104,6 @@ class MeshDataWriter : DetourWriter() {
         }
     }
 
-    @Throws(IOException::class)
     private fun writeOffMeshCons(stream: OutputStream, data: MeshData, order: ByteOrder) {
         for (i in 0 until data.header!!.offMeshConCount) {
             write(stream, data.offMeshCons[i].posA, order)

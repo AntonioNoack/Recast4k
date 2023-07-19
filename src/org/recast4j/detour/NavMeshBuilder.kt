@@ -102,17 +102,19 @@ object NavMeshBuilder {
             val it = items[i]
             it.index = i
             // Calc polygon bounds. Use detail meshes if available.
-            if (params.detailMeshes != null) {
-                val vb = params.detailMeshes[i * 4]
-                val ndv = params.detailMeshes[i * 4 + 1]
+            val pm = params.detailMeshes
+            if (pm != null) {
+                val dvs = params.detailVertices!!
+                val vb = pm[i * 4]
+                val ndv = pm[i * 4 + 1]
                 val bmin = Vector3f()
                 val bmax = Vector3f()
                 val dv = vb * 3
-                bmin.set(params.detailVertices, dv)
-                bmax.set(params.detailVertices, dv)
+                bmin.set(dvs, dv)
+                bmax.set(dvs, dv)
                 for (j in 1 until ndv) {
-                    Vectors.min(bmin, params.detailVertices, dv + j * 3)
-                    Vectors.max(bmax, params.detailVertices, dv + j * 3)
+                    Vectors.min(bmin, dvs, dv + j * 3)
+                    Vectors.max(bmax, dvs, dv + j * 3)
                 }
 
                 // BV-tree uses cs for all dimensions
@@ -124,17 +126,19 @@ object NavMeshBuilder {
                 it.maxZ = Vectors.clamp(((bmax.z - params.bmin.z) * quantFactor).toInt(), 0, 0x7fffffff)
             } else {
                 val p = i * params.maxVerticesPerPolygon * 2
-                it.maxX = params.vertices[params.polys[p] * 3]
+                val pv = params.vertices!!
+                val pp = params.polys!!
+                it.maxX = pv[pp[p] * 3]
                 it.minX = it.maxX
-                it.maxY = params.vertices[params.polys[p] * 3 + 1]
+                it.maxY = pv[pp[p] * 3 + 1]
                 it.minY = it.maxY
-                it.maxZ = params.vertices[params.polys[p] * 3 + 2]
+                it.maxZ = pv[pp[p] * 3 + 2]
                 it.minZ = it.maxZ
                 for (j in 1 until params.maxVerticesPerPolygon) {
-                    if (params.polys[p + j] == MESH_NULL_IDX) break
-                    val x = params.vertices[params.polys[p + j] * 3]
-                    val y = params.vertices[params.polys[p + j] * 3 + 1]
-                    val z = params.vertices[params.polys[p + j] * 3 + 2]
+                    if (pp[p + j] == MESH_NULL_IDX) break
+                    val x = pv[pp[p + j] * 3]
+                    val y = pv[pp[p + j] * 3 + 1]
+                    val z = pv[pp[p + j] * 3 + 2]
                     if (x < it.minX) it.minX = x
                     if (y < it.minY) it.minY = y
                     if (z < it.minZ) it.minZ = z
@@ -198,16 +202,18 @@ object NavMeshBuilder {
             // locations.
             var hmin = Float.MAX_VALUE
             var hmax = -Float.MAX_VALUE
-            if (params.detailVertices != null && params.detailVerticesCount != 0) {
+            val dv = params.detailVertices
+            if (dv != null && params.detailVerticesCount != 0) {
                 for (i in 0 until params.detailVerticesCount) {
-                    val h = params.detailVertices[i * 3 + 1]
+                    val h = dv[i * 3 + 1]
                     hmin = min(hmin, h)
                     hmax = max(hmax, h)
                 }
             } else {
+                val pv = params.vertices!!
                 for (i in 0 until params.vertCount) {
                     val iv = i * 3
-                    val h = params.bmin.y + params.vertices[iv + 1] * params.cellHeight
+                    val h = params.bmin.y + pv[iv + 1] * params.cellHeight
                     hmin = min(hmin, h)
                     hmax = max(hmax, h)
                 }
@@ -238,20 +244,21 @@ object NavMeshBuilder {
             }
         }
 
-        // Off-mesh connectionss are stored as polygons, adjust values.
+        // Off-mesh connections are stored as polygons, adjust values.
         val totPolyCount = params.polyCount + storedOffMeshConCount
         val totVertCount = params.vertCount + storedOffMeshConCount * 2
 
-        // Find portal edges which are at tile borders.
+        // Find portal edges, which are at tile borders.
         var edgeCount = 0
         var portalCount = 0
+        val pp = params.polys!!
         for (i in 0 until params.polyCount) {
             val p = i * 2 * nvp
             for (j in 0 until nvp) {
-                if (params.polys[p + j] == MESH_NULL_IDX) break
+                if (pp[p + j] == MESH_NULL_IDX) break
                 edgeCount++
-                if (params.polys[p + nvp + j] and 0x8000 != 0) {
-                    val dir = params.polys[p + nvp + j] and 0xf
+                if (pp[p + nvp + j] and 0x8000 != 0) {
+                    val dir = pp[p + nvp + j] and 0xf
                     if (dir != 0xf) portalCount++
                 }
             }
@@ -261,16 +268,17 @@ object NavMeshBuilder {
         // Find unique detail vertices.
         var uniqueDetailVertCount = 0
         var detailTriCount = 0
-        if (params.detailMeshes != null) {
+        val pm = params.detailMeshes
+        if (pm != null) {
             // Has detail mesh, count unique detail vertex count and use input
             // detail tri count.
             detailTriCount = params.detailTriCount
             for (i in 0 until params.polyCount) {
                 val p = i * nvp * 2
-                var ndv = params.detailMeshes[i * 4 + 1]
+                var ndv = pm[i * 4 + 1]
                 var nv = 0
                 for (j in 0 until nvp) {
-                    if (params.polys[p + j] == MESH_NULL_IDX) break
+                    if (pp[p + j] == MESH_NULL_IDX) break
                     nv++
                 }
                 ndv -= nv
@@ -283,7 +291,7 @@ object NavMeshBuilder {
                 val p = i * nvp * 2
                 var nv = 0
                 for (j in 0 until nvp) {
-                    if (params.polys[p + j] == MESH_NULL_IDX) break
+                    if (pp[p + j] == MESH_NULL_IDX) break
                     nv++
                 }
                 detailTriCount += nv - 2
@@ -326,12 +334,13 @@ object NavMeshBuilder {
 
         // Store vertices
         // Mesh vertices
+        val pv = params.vertices!!
         for (i in 0 until params.vertCount) {
             val iv = i * 3
             val v = i * 3
-            navVertices[v] = params.bmin.x + params.vertices[iv] * params.cellSize
-            navVertices[v + 1] = params.bmin.y + params.vertices[iv + 1] * params.cellHeight
-            navVertices[v + 2] = params.bmin.z + params.vertices[iv + 2] * params.cellSize
+            navVertices[v] = params.bmin.x + pv[iv] * params.cellSize
+            navVertices[v + 1] = params.bmin.y + pv[iv + 1] * params.cellHeight
+            navVertices[v + 2] = params.bmin.z + pv[iv + 2] * params.cellSize
         }
         // Off-mesh link vertices.
         var n = 0
@@ -355,20 +364,20 @@ object NavMeshBuilder {
             p.area = params.polyAreas[i]
             p.type = Poly.DT_POLYTYPE_GROUND
             for (j in 0 until nvp) {
-                if (params.polys[src + j] == MESH_NULL_IDX) break
-                p.vertices[j] = params.polys[src + j]
-                if (params.polys[src + nvp + j] and 0x8000 != 0) {
+                if (pp[src + j] == MESH_NULL_IDX) break
+                p.vertices[j] = pp[src + j]
+                if (pp[src + nvp + j] and 0x8000 != 0) {
                     // Border or portal edge.
-                    val dir = params.polys[src + nvp + j] and 0xf
-                    if (dir == 0xf) // Border
-                        p.neighborData[j] = 0 else if (dir == 0) // Portal x-
-                        p.neighborData[j] = NavMesh.DT_EXT_LINK or 4 else if (dir == 1) // Portal z+
-                        p.neighborData[j] = NavMesh.DT_EXT_LINK or 2 else if (dir == 2) // Portal x+
-                        p.neighborData[j] = NavMesh.DT_EXT_LINK else if (dir == 3) // Portal z-
-                        p.neighborData[j] = NavMesh.DT_EXT_LINK or 6
+                    when(pp[src + nvp + j] and 0xf){
+                        0 -> p.neighborData[j] = NavMesh.DT_EXT_LINK or 4 // Portal x-
+                        1 -> p.neighborData[j] = NavMesh.DT_EXT_LINK or 2 // Portal z+
+                        2 -> p.neighborData[j] = NavMesh.DT_EXT_LINK // Portal x+
+                        3 -> p.neighborData[j] = NavMesh.DT_EXT_LINK or 6 // Portal z-
+                        0xf -> p.neighborData[j] = 0 // Border
+                    }
                 } else {
                     // Normal connection
-                    p.neighborData[j] = params.polys[src + nvp + j] + 1
+                    p.neighborData[j] = pp[src + nvp + j] + 1
                 }
                 p.vertCount++
             }
@@ -396,26 +405,27 @@ object NavMeshBuilder {
         // mesh.
         // We compress the mesh data by skipping them and using the navmesh
         // coordinates.
-        if (params.detailMeshes != null) {
+        if (pm != null) {
             var vbase = 0
+            val dm = params.detailMeshes!!
             for (i in 0 until params.polyCount) {
                 val dtl = navDMeshes[i]
-                val vb = params.detailMeshes[i * 4]
-                val ndv = params.detailMeshes[i * 4 + 1]
+                val vb = dm[i * 4]
+                val ndv = dm[i * 4 + 1]
                 val nv = navPolys[i].vertCount
                 dtl.vertBase = vbase
                 dtl.vertCount = ndv - nv
-                dtl.triBase = params.detailMeshes[i * 4 + 2]
-                dtl.triCount = params.detailMeshes[i * 4 + 3]
-                // Copy vertices except the first 'nv' vertices which are equal to
+                dtl.triBase = dm[i * 4 + 2]
+                dtl.triCount = dm[i * 4 + 3]
+                // Copy vertices except the first 'nv' vertices, which are equal to
                 // nav poly vertices.
                 if (ndv - nv != 0) {
-                    System.arraycopy(params.detailVertices, (vb + nv) * 3, navDVertices, vbase * 3, 3 * (ndv - nv))
+                    System.arraycopy(params.detailVertices!!, (vb + nv) * 3, navDVertices, vbase * 3, 3 * (ndv - nv))
                     vbase += ndv - nv
                 }
             }
             // Store triangles.
-            System.arraycopy(params.detailTris, 0, navDTris, 0, 4 * params.detailTriCount)
+            System.arraycopy(params.detailTris!!, 0, navDTris, 0, 4 * params.detailTriCount)
         } else {
             // Create dummy detail mesh by triangulating polys.
             var tbase = 0

@@ -26,39 +26,34 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 class MeshSetReader {
+
     private val meshReader = MeshDataReader()
     private val paramReader = NavMeshParamReader()
-    @Throws(IOException::class)
-    fun read(`is`: InputStream, maxVertPerPoly: Int): NavMesh {
-        return read(IOUtils.toByteBuffer(`is`), maxVertPerPoly, false)
+
+    fun read(input: InputStream, maxVertPerPoly: Int): NavMesh {
+        return read(IOUtils.toByteBuffer(input), maxVertPerPoly, false)
     }
 
-    @Throws(IOException::class)
     fun read(bb: ByteBuffer, maxVertPerPoly: Int): NavMesh {
         return read(bb, maxVertPerPoly, false)
     }
 
-    @Throws(IOException::class)
-    fun read32Bit(`is`: InputStream, maxVertPerPoly: Int): NavMesh {
-        return read(IOUtils.toByteBuffer(`is`), maxVertPerPoly, true)
+    fun read32Bit(input: InputStream, maxVertPerPoly: Int): NavMesh {
+        return read(IOUtils.toByteBuffer(input), maxVertPerPoly, true)
     }
 
-    @Throws(IOException::class)
     fun read32Bit(bb: ByteBuffer, maxVertPerPoly: Int): NavMesh {
         return read(bb, maxVertPerPoly, true)
     }
 
-    @Throws(IOException::class)
-    fun read(`is`: InputStream): NavMesh {
-        return read(IOUtils.toByteBuffer(`is`))
+    fun read(input: InputStream): NavMesh {
+        return read(IOUtils.toByteBuffer(input))
     }
 
-    @Throws(IOException::class)
     fun read(bb: ByteBuffer): NavMesh {
         return read(bb, -1, false)
     }
 
-    @Throws(IOException::class)
     fun read(bb: ByteBuffer, maxVertPerPoly: Int, is32Bit: Boolean): NavMesh {
         val header = readHeader(bb, maxVertPerPoly)
         if (header.maxVerticesPerPoly <= 0) {
@@ -70,7 +65,6 @@ class MeshSetReader {
         return mesh
     }
 
-    @Throws(IOException::class)
     private fun readHeader(bb: ByteBuffer, maxVerticesPerPoly: Int): NavMeshSetHeader {
         val header = NavMeshSetHeader()
         header.magic = bb.int
@@ -94,7 +88,6 @@ class MeshSetReader {
         return header
     }
 
-    @Throws(IOException::class)
     private fun readTiles(
         bb: ByteBuffer,
         is32Bit: Boolean,
