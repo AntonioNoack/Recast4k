@@ -23,9 +23,8 @@ import java.io.OutputStream
 import java.nio.ByteOrder
 
 class VoxelFileWriter : DetourWriter() {
-    @JvmOverloads
-    @Throws(IOException::class)
-    fun write(stream: OutputStream, f: VoxelFile, byteOrder: ByteOrder? = VoxelFile.PREFERRED_BYTE_ORDER) {
+
+    fun write(stream: OutputStream, f: VoxelFile, byteOrder: ByteOrder = VoxelFile.PREFERRED_BYTE_ORDER) {
         write(stream, VoxelFile.MAGIC, byteOrder)
         write(stream, VoxelFile.VERSION_EXPORTER_RECAST4J, byteOrder)
         write(stream, f.walkableRadius, byteOrder)
@@ -57,8 +56,7 @@ class VoxelFileWriter : DetourWriter() {
         }
     }
 
-    @Throws(IOException::class)
-    fun writeTile(stream: OutputStream, tile: VoxelTile, byteOrder: ByteOrder?) {
+    fun writeTile(stream: OutputStream, tile: VoxelTile, byteOrder: ByteOrder) {
         write(stream, tile.tileX, byteOrder)
         write(stream, tile.tileZ, byteOrder)
         write(stream, tile.width, byteOrder)

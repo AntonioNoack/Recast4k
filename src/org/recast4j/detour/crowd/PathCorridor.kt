@@ -388,10 +388,10 @@ class PathCorridor {
         // Move along navmesh and update new position.
         val masResult = navquery.moveAlongSurface(path[0], pos, npos, filter, tinyNodePool, tmpVertices, neis, visited)
         return if (masResult != null) {
-            mergeCorridorStartMoved(masResult.visited)
+            mergeCorridorStartMoved(masResult.second)
             // Adjust the position to stay on top of the navmesh.
-            pos.set(masResult.resultPos)
-            val hr = navquery.getPolyHeight(path[0], masResult.resultPos)
+            pos.set(masResult.first)
+            val hr = navquery.getPolyHeight(path[0], masResult.first)
             if (hr.isFinite()) pos.y = hr
             true
         } else false
@@ -426,8 +426,8 @@ class PathCorridor {
             tinyNodePool, tmpVertices, neis, visited
         )
         if (masResult != null) {
-            path = mergeCorridorEndMoved(path, masResult.visited)
-            val resultPos = masResult.resultPos
+            path = mergeCorridorEndMoved(path, masResult.second)
+            val resultPos = masResult.first
             if (adjustPositionToTopOfNavMesh) {
                 val h = target.y
                 navquery.getPolyHeight(path[path.size - 1], npos)

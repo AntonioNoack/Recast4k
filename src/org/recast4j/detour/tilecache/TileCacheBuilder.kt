@@ -1496,7 +1496,7 @@ class TileCacheBuilder {
         }
     }
 
-    fun compressTileCacheLayer(layer: TileCacheLayer, order: ByteOrder?, cCompatibility: Boolean): ByteArray {
+    fun compressTileCacheLayer(layer: TileCacheLayer, order: ByteOrder, cCompatibility: Boolean): ByteArray {
         val baos = ByteArrayOutputStream()
         val hw = TileCacheLayerHeaderWriter()
         return try {
@@ -1517,7 +1517,7 @@ class TileCacheBuilder {
 
     fun compressTileCacheLayer(
         header: TileCacheLayerHeader, heights: IntArray, areas: IntArray, cons: IntArray,
-        order: ByteOrder?, cCompatibility: Boolean
+        order: ByteOrder, cCompatibility: Boolean
     ): ByteArray {
         val baos = ByteArrayOutputStream()
         val hw = TileCacheLayerHeaderWriter()

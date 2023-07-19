@@ -25,7 +25,7 @@ import java.io.OutputStream
 import java.nio.ByteOrder
 
 class TileCacheLayerHeaderWriter : DetourWriter() {
-    fun write(stream: OutputStream, header: TileCacheLayerHeader, order: ByteOrder?, cCompatibility: Boolean) {
+    fun write(stream: OutputStream, header: TileCacheLayerHeader, order: ByteOrder, cCompatibility: Boolean) {
         write(stream, header.magic, order)
         write(stream, header.version, order)
         write(stream, header.tx, order)

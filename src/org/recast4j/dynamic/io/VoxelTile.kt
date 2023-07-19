@@ -30,6 +30,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 class VoxelTile {
+
     val tileX: Int
     val tileZ: Int
     val borderSize: Int
