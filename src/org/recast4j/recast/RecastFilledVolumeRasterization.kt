@@ -90,13 +90,13 @@ object RecastFilledVolumeRasterization {
     ) {
         ctx?.startTimer("RASTERIZE_BOX")
         val normals = arrayOf(
-            floatArrayOf(halfEdges[0][0], halfEdges[0][1], halfEdges[0][2]),
-            floatArrayOf(halfEdges[1][0], halfEdges[1][1], halfEdges[1][2]),
-            floatArrayOf(halfEdges[2][0], halfEdges[2][1], halfEdges[2][2])
+            Vector3f(halfEdges[0]),
+            Vector3f(halfEdges[1]),
+            Vector3f(halfEdges[2]),
         )
-        Vectors.normalize(normals[0])
-        Vectors.normalize(normals[1])
-        Vectors.normalize(normals[2])
+        normals[0].normalize()
+        normals[1].normalize()
+        normals[2].normalize()
         val vertices = FloatArray(8 * 3)
         val bounds = floatArrayOf(
             Float.POSITIVE_INFINITY,
@@ -131,9 +131,9 @@ object RecastFilledVolumeRasterization {
             val i3 = if (i > 3) i - 3 else i
             val plane = planes[i]
             val normal = normals[i3]
-            plane[0] = m * normal[0]
-            plane[1] = m * normal[1]
-            plane[2] = m * normal[2]
+            plane[0] = m * normal.x
+            plane[1] = m * normal.y
+            plane[2] = m * normal.z
             val vi3 = vi * 3
             plane[3] = vertices[vi3] * plane[0] + vertices[vi3 + 1] * plane[1] + vertices[vi3 + 2] * plane[2]
         }

@@ -21,7 +21,6 @@ package org.recast4j
 import org.joml.Vector3f
 import org.joml.Vector3i
 import org.recast4j.detour.BVNode
-import org.recast4j.detour.VectorPtr
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -91,21 +90,6 @@ object Vectors {
 
     var EPS = 1e-4f
 
-    /**
-     * a + b * s
-     */
-    fun mad(a: Vector3f, b: Vector3f, f: Float, dst: Vector3f) {
-        dst.set(b).mul(f).add(a)
-    }
-
-    /**
-     * a += b * s
-     */
-    fun mad2(a: Vector3f, b: Vector3f, f: Float) {
-        b.mulAdd(f, a, a)
-        a.add(b.x * f, b.y * f, b.z * f)
-    }
-
     fun lerp(vertices: FloatArray, v1: Int, v2: Int, t: Float, dst: Vector3f) {
         dst.x = vertices[v1] + (vertices[v2] - vertices[v1]) * t
         dst.y = vertices[v1 + 1] + (vertices[v2 + 1] - vertices[v1 + 1]) * t
@@ -120,22 +104,12 @@ object Vectors {
 
     @Deprecated("Don't allocate!")
     fun lerp(v1: Vector3f, v2: Vector3f, t: Float): Vector3f {
-        return Vector3f(v1).lerp(v2, t)
-    }
-
-    @Deprecated("Don't allocate!")
-    fun sub(v1: VectorPtr, v2: VectorPtr): Vector3f {
-        return Vector3f(v1[0] - v2[0], v1[1] - v2[1], v1[2] - v2[2])
-    }
-
-    @Deprecated("Don't allocate!")
-    fun sub(v1: Vector3f, v2: VectorPtr): Vector3f {
-        return Vector3f(v1[0] - v2[0], v1[1] - v2[1], v1[2] - v2[2])
+        return v1.lerp(v2, t, Vector3f())
     }
 
     @Deprecated("Don't allocate!")
     fun sub(v1: Vector3f, v2: Vector3f): Vector3f {
-        return Vector3f(v1).sub(v2)
+        return v1.sub(v2, Vector3f())
     }
 
     fun copy(dst: Vector3f, src: IntArray, srcI: Int) {
@@ -193,6 +167,13 @@ object Vectors {
     }
 
     /**
+     * Derives the dot product of two vectors on the xz-plane.
+     * */
+    fun dot2D(u: Vector3f, x: Float, z: Float): Float {
+        return u.x * x + u.z * z
+    }
+
+    /**
      * Derives the signed xz-plane area of the triangle ABC, or the relationship of line AB to point C.
      * */
     fun triArea2D(vertices: FloatArray, a: Int, b: Int, c: Int): Float {
@@ -209,6 +190,10 @@ object Vectors {
         val acx = c.x - a.x
         val acz = c.z - a.z
         return acx * abz - abx * acz
+    }
+
+    fun awkwardCrossProduct2D(a: Vector3f, bx: Float, bz: Float): Float {
+        return bx * a.x - a.z * bz
     }
 
     /**
@@ -477,7 +462,8 @@ object Vectors {
     fun intersectSegmentPoly2D(p0: Vector3f, p1: Vector3f, vertices: FloatArray, nvertices: Int): IntersectResult {
         val result = IntersectResult()
         val EPS = 0.00000001f
-        val dir = sub(p1, p0)
+        val dirX = p1.x - p0.x
+        val dirZ = p1.z - p0.z
         var i = 0
         var j = nvertices - 1
         while (i < nvertices) {
@@ -490,7 +476,7 @@ object Vectors {
             val dx = p0.x - vertices[v]
             val dz = p0.z - vertices[v + 2]
             val normal = ez * dx - ex * dz
-            val dist = dir.z * ex - dir.x * ez
+            val dist = dirZ * ex - dirX * ez
             if (abs(dist) < EPS) {
                 // S is nearly parallel to this edge
                 if (normal < 0) {
@@ -601,11 +587,6 @@ object Vectors {
 
     fun oppositeTile(side: Int): Int {
         return side + 4 and 0x7
-    }
-
-    @Deprecated("Can be replaced", replaceWith = ReplaceWith("a.x*b.z-a.z*b.x"))
-    fun crossXZ(a: Vector3f, b: Vector3f): Float {
-        return a.x * b.z - a.z * b.x
     }
 
     fun intersectSegSeg2D(a0: Vector3f, a1: Vector3f, b0: Vector3f, b1: Vector3f): FloatPair? {

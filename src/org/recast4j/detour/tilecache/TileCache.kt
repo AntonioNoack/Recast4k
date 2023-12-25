@@ -36,26 +36,19 @@ class TileCache(
     val params: TileCacheParams, private val storageParams: TileCacheStorageParams, val navMesh: NavMesh,
     private val tmProcess: TileCacheMeshProcess?
 ) {
-    /** Tile hash lookup size (must be pot).  */
-    var tileLutSize: Int
+    /** > 0 */
+    var tileHashLookupSize: Int
+    var tileHashLookupMask: Int
 
-    /**  Tile hash lookup mask.  */
-    var tileLutMask: Int
-
-    /** Tile hash lookup.  */
-    private val posLookup: Array<CompressedTile?>
+    private val tileHashLookup: Array<CompressedTile?>
 
     /** Freelist of tiles.  */
     private var nextFreeTile: CompressedTile? = null
 
-    /** List of tiles. // TODO: (PP) replace with list  */
     private val tiles: Array<CompressedTile?>
 
-    /** Number of salt bits in the tile ID.  */
-    private val m_saltBits: Int
-
-    /** Number of tile bits in the tile ID.  */
-    private val m_tileBits: Int
+    private val numSaltBitsInTileID: Int
+    private val numTileBitsInTileID: Int
     private val obstacles: MutableList<TileCacheObstacle> = ArrayList()
     private var nextFreeObstacle: TileCacheObstacle? = null
     private val requests: MutableList<ObstacleRequest> = ArrayList()
@@ -68,18 +61,18 @@ class TileCache(
 
     /// Encodes a tile id.
     private fun encodeTileId(salt: Int, it: Int): Long {
-        return salt.toLong() shl m_tileBits or it.toLong()
+        return salt.toLong() shl numTileBitsInTileID or it.toLong()
     }
 
     /// Decodes a tile salt.
     private fun decodeTileIdSalt(ref: Long): Int {
-        val saltMask = (1L shl m_saltBits) - 1
-        return (ref shr m_tileBits and saltMask).toInt()
+        val saltMask = (1L shl numSaltBitsInTileID) - 1
+        return (ref shr numTileBitsInTileID and saltMask).toInt()
     }
 
     /// Decodes a tile id.
     private fun decodeTileIdTile(ref: Long): Int {
-        val tileMask = (1L shl m_tileBits) - 1
+        val tileMask = (1L shl numTileBitsInTileID) - 1
         return (ref and tileMask).toInt()
     }
 
@@ -101,22 +94,22 @@ class TileCache(
     }
 
     init {
-        tileLutSize = nextPow2(params.maxTiles / 4)
-        if (tileLutSize == 0) {
-            tileLutSize = 1
+        tileHashLookupSize = nextPow2(params.maxTiles / 4)
+        if (tileHashLookupSize == 0) {
+            tileHashLookupSize = 1
         }
-        tileLutMask = tileLutSize - 1
+        tileHashLookupMask = tileHashLookupSize - 1
         tiles = arrayOfNulls(params.maxTiles)
-        posLookup = arrayOfNulls(tileLutSize)
+        tileHashLookup = arrayOfNulls(tileHashLookupSize)
         for (i in params.maxTiles - 1 downTo 0) {
             tiles[i] = CompressedTile(i)
             tiles[i]!!.next = nextFreeTile
             nextFreeTile = tiles[i]
         }
-        m_tileBits = ilog2(nextPow2(params.maxTiles))
-        m_saltBits = min(31, 32 - m_tileBits)
-        if (m_saltBits < 10) {
-            throw RuntimeException("Too few salt bits: $m_saltBits")
+        numTileBitsInTileID = ilog2(nextPow2(params.maxTiles))
+        numSaltBitsInTileID = min(31, 32 - numTileBitsInTileID)
+        if (numSaltBitsInTileID < 10) {
+            throw RuntimeException("Too few salt bits: $numSaltBitsInTileID")
         }
     }
 
@@ -133,8 +126,8 @@ class TileCache(
         val tiles = LongArrayList()
 
         // Find tile based on hash.
-        val h = NavMesh.computeTileHash(tx, ty, tileLutMask)
-        var tile = posLookup[h]
+        val h = NavMesh.computeTileHash(tx, ty, tileHashLookupMask)
+        var tile = tileHashLookup[h]
         while (tile != null) {
             if (tile.header != null && tile.header!!.tx == tx && tile.header!!.ty == ty) {
                 tiles.add(getTileRef(tile))
@@ -146,8 +139,8 @@ class TileCache(
 
     fun getTileAt(tx: Int, ty: Int, tlayer: Int): CompressedTile? {
         // Find tile based on hash.
-        val h = NavMesh.computeTileHash(tx, ty, tileLutMask)
-        var tile = posLookup[h]
+        val h = NavMesh.computeTileHash(tx, ty, tileHashLookupMask)
+        var tile = tileHashLookup[h]
         while (tile != null) {
             if (tile.header != null && tile.header!!.tx == tx && tile.header!!.ty == ty && tile.header!!.tlayer == tlayer) {
                 return tile
@@ -204,9 +197,9 @@ class TileCache(
         }
 
         // Insert tile into the position lut.
-        val h = NavMesh.computeTileHash(header.tx, header.ty, tileLutMask)
-        tile.next = posLookup[h]
-        posLookup[h] = tile
+        val h = NavMesh.computeTileHash(header.tx, header.ty, tileHashLookupMask)
+        tile.next = tileHashLookup[h]
+        tileHashLookup[h] = tile
 
         // Init tile.
         tile.header = header
@@ -235,15 +228,15 @@ class TileCache(
         }
 
         // Remove tile from hash lookup.
-        val h = NavMesh.computeTileHash(tile.header!!.tx, tile.header!!.ty, tileLutMask)
+        val h = NavMesh.computeTileHash(tile.header!!.tx, tile.header!!.ty, tileHashLookupMask)
         var prev: CompressedTile? = null
-        var cur = posLookup[h]
+        var cur = tileHashLookup[h]
         while (cur != null) {
             if (cur === tile) {
                 if (prev != null) {
                     prev.next = cur.next
                 } else {
-                    posLookup[h] = cur.next
+                    tileHashLookup[h] = cur.next
                 }
                 break
             }
@@ -256,7 +249,7 @@ class TileCache(
         tile.flags = 0
 
         // Update salt, salt should never be zero.
-        tile.salt = tile.salt + 1 and (1 shl m_saltBits) - 1
+        tile.salt = tile.salt + 1 and (1 shl numSaltBitsInTileID) - 1
         if (tile.salt == 0) {
             tile.salt++
         }
@@ -481,36 +474,41 @@ class TileCache(
                 continue
             }
             if (contains(ob.touched, ref)) {
-                if (ob.type == TileCacheObstacleType.CYLINDER) {
-                    builder.markCylinderArea(
-                        layer, tile.header!!.bmin, params.cellSize, params.cellHeight, ob.pos, ob.radius,
-                        ob.height, 0
-                    )
-                } else if (ob.type == TileCacheObstacleType.BOX) {
-                    builder.markBoxArea(
-                        layer,
-                        tile.header!!.bmin,
-                        params.cellSize,
-                        params.cellHeight,
-                        ob.bmin,
-                        ob.bmax,
-                        0
-                    )
-                } else if (ob.type == TileCacheObstacleType.ORIENTED_BOX) {
-                    builder.markBoxArea(
-                        layer, tile.header!!.bmin, params.cellSize, params.cellHeight, ob.center, ob.extents,
-                        ob.rotAux, 0
-                    )
+                when(ob.type){
+                    TileCacheObstacleType.CYLINDER -> {
+                        builder.markCylinderArea(
+                            layer, tile.header!!.bmin, params.cellSize, params.cellHeight, ob.pos, ob.radius,
+                            ob.height, 0
+                        )
+                    }
+                    TileCacheObstacleType.BOX -> {
+                        builder.markBoxArea(
+                            layer,
+                            tile.header!!.bmin,
+                            params.cellSize,
+                            params.cellHeight,
+                            ob.bmin,
+                            ob.bmax,
+                            0
+                        )
+                    }
+                    TileCacheObstacleType.ORIENTED_BOX -> {
+                        builder.markBoxArea(
+                            layer, tile.header!!.bmin, params.cellSize, params.cellHeight, ob.center, ob.extents,
+                            ob.rotAux, 0
+                        )
+                    }
+                    else -> {}
                 }
             }
         }
         // Build navmesh
         builder.buildTileCacheRegions(layer, walkableClimbVx)
-        val lcset = builder.buildTileCacheContours(
+        val contours = builder.buildTileCacheContours(
             layer, walkableClimbVx,
             params.maxSimplificationError
         )
-        val polyMesh = builder.buildTileCachePolyMesh(lcset, navMesh.maxVerticesPerPoly)
+        val polyMesh = builder.buildTileCachePolyMesh(contours, navMesh.maxVerticesPerPoly)
         // Early out if the mesh tile is empty.
         if (polyMesh.numPolygons == 0) {
             navMesh.removeTile(navMesh.getTileRefAt(tile.header!!.tx, tile.header!!.ty, tile.header!!.tlayer))
@@ -563,24 +561,29 @@ class TileCache(
     }
 
     fun getObstacleBounds(ob: TileCacheObstacle, bmin: Vector3f, bmax: Vector3f) {
-        if (ob.type == TileCacheObstacleType.CYLINDER) {
-            bmin.x = ob.pos.x - ob.radius
-            bmin.y = ob.pos.y
-            bmin.z = ob.pos.z - ob.radius
-            bmax.x = ob.pos.x + ob.radius
-            bmax.y = ob.pos.y + ob.height
-            bmax.z = ob.pos.z + ob.radius
-        } else if (ob.type == TileCacheObstacleType.BOX) {
-            bmin.set(ob.bmin)
-            bmax.set(ob.bmax)
-        } else if (ob.type == TileCacheObstacleType.ORIENTED_BOX) {
-            val maxRadius = 1.41f * max(ob.extents.x, ob.extents.z)
-            bmin.x = ob.center.x - maxRadius
-            bmax.x = ob.center.x + maxRadius
-            bmin.y = ob.center.y - ob.extents.y
-            bmax.y = ob.center.y + ob.extents.y
-            bmin.z = ob.center.z - maxRadius
-            bmax.z = ob.center.z + maxRadius
+        when (ob.type) {
+            TileCacheObstacleType.CYLINDER -> {
+                bmin.x = ob.pos.x - ob.radius
+                bmin.y = ob.pos.y
+                bmin.z = ob.pos.z - ob.radius
+                bmax.x = ob.pos.x + ob.radius
+                bmax.y = ob.pos.y + ob.height
+                bmax.z = ob.pos.z + ob.radius
+            }
+            TileCacheObstacleType.BOX -> {
+                bmin.set(ob.bmin)
+                bmax.set(ob.bmax)
+            }
+            TileCacheObstacleType.ORIENTED_BOX -> {
+                val maxRadius = 1.41f * max(ob.extents.x, ob.extents.z)
+                bmin.x = ob.center.x - maxRadius
+                bmax.x = ob.center.x + maxRadius
+                bmin.y = ob.center.y - ob.extents.y
+                bmax.y = ob.center.y + ob.extents.y
+                bmin.z = ob.center.z - maxRadius
+                bmax.z = ob.center.z + maxRadius
+            }
+            else -> {}
         }
     }
 

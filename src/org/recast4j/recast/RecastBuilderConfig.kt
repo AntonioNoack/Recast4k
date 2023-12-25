@@ -79,15 +79,18 @@ class RecastBuilderConfig
             // you will need to pass in data from neighbour terrain tiles too! In a simple case, just pass in all the 8
             // neighbours,
             // or use the bounding box below to only pass in a sliver of each of the 8 neighbours.
-            this.bmin.x -= cfg.borderSize * cfg.cellSize
-            this.bmin.z -= cfg.borderSize * cfg.cellSize
-            this.bmax.x += cfg.borderSize * cfg.cellSize
-            this.bmax.z += cfg.borderSize * cfg.cellSize
+            val ds = cfg.borderSize * cfg.cellSize
+            this.bmin.x -= ds
+            this.bmin.z -= ds
+            this.bmax.x += ds
+            this.bmax.z += ds
             width = cfg.tileSizeX + cfg.borderSize * 2
             height = cfg.tileSizeZ + cfg.borderSize * 2
         } else {
             width = Recast.calcGridSizeX(this.bmin, this.bmax, cfg.cellSize)
             height = Recast.calcGridSizeY(this.bmin, this.bmax, cfg.cellSize)
         }
+
+        println("Building $width x $height, $bmin-$bmax x ${cfg.cellSize}")
     }
 }

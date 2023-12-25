@@ -104,9 +104,7 @@ object RecastMesh {
     }
 
     private fun addVertex(
-        x: Int,
-        y: Int,
-        z: Int,
+        x: Int, y: Int, z: Int,
         vertices: IntArray,
         firstVert: IntArray,
         nextVert: IntArray,
@@ -165,26 +163,17 @@ object RecastMesh {
     // intersection is ensured by using strict leftness.
     private fun intersectProp(vertices: IntArray?, a: Int, b: Int, c: Int, d: Int): Boolean {
         // Eliminate improper cases.
-        return if (collinear(vertices, a, b, c) || collinear(vertices, a, b, d) || collinear(
-                vertices,
-                c,
-                d,
-                a
-            )
-            || collinear(vertices, c, d, b)
-        ) false else left(vertices, a, b, c) xor left(
-            vertices,
-            a,
-            b,
-            d
-        ) && left(vertices, c, d, a) xor left(vertices, c, d, b)
+        return if (collinear(vertices, a, b, c) || collinear(vertices, a, b, d) ||
+            collinear(vertices, c, d, a) || collinear(vertices, c, d, b)
+        ) false else left(vertices, a, b, c) xor left(vertices, a, b, d) &&
+                left(vertices, c, d, a) xor left(vertices, c, d, b)
     }
 
     // Returns T iff (a,b,c) are collinear and point c lies
-    // on the closed segement ab.
+    // on the closed segment ab.
     private fun between(vertices: IntArray, a: Int, b: Int, c: Int): Boolean {
         if (!collinear(vertices, a, b, c)) return false
-        // If ab not vertical, check betweenness on x; else on y.
+        // If ab not vertical, check between-ness on x; else on y.
         return if (vertices[a] != vertices[b])
                 (vertices[a] <= vertices[c] && vertices[c] <= vertices[b] || vertices[a] >= vertices[c] && vertices[c] >= vertices[b])
         else
@@ -238,12 +227,7 @@ object RecastMesh {
         // If P[i] is a convex vertex [ i+1 left or on (i-1,i) ].
         return if (leftOn(vertices, pin1, pi, pi1)) {
             left(vertices, pi, pj, pin1) && left(vertices, pj, pi, pi1)
-        } else !(leftOn(
-            vertices,
-            pi,
-            pj,
-            pi1
-        ) && leftOn(vertices, pj, pi, pin1))
+        } else !(leftOn(vertices, pi, pj, pi1) && leftOn(vertices, pj, pi, pin1))
         // Assume (i-1,i,i+1) not collinear.
         // else P[i] is reflex.
     }
@@ -284,17 +268,9 @@ object RecastMesh {
         val pin1 = (indices[prev(i, n)] and 0x0fffffff) * 4
 
         // If P[i] is a convex vertex [ i+1 left or on (i-1,i) ].
-        return if (leftOn(vertices, pin1, pi, pi1)) leftOn(
-            vertices,
-            pi,
-            pj,
-            pin1
-        ) && leftOn(vertices, pj, pi, pi1) else !(leftOn(
-            vertices,
-            pi,
-            pj,
-            pi1
-        ) && leftOn(vertices, pj, pi, pin1))
+        return if (leftOn(vertices, pin1, pi, pi1)) leftOn(vertices, pi, pj, pin1) &&
+                leftOn(vertices, pj, pi, pi1) else !(leftOn(vertices, pi, pj, pi1) &&
+                leftOn(vertices, pj, pi, pin1))
         // Assume (i-1,i,i+1) not collinear.
         // else P[i] is reflex.
     }
@@ -437,12 +413,9 @@ object RecastMesh {
         if (ea == -1 || eb == -1) return intArrayOf(-1, ea, eb)
 
         // Check to see if the merged polygon would be convex.
-        var va: Int
-        var vb: Int
-        var vc: Int
-        va = polys[pa + (ea + na - 1) % na]
-        vb = polys[pa + ea]
-        vc = polys[pb + (eb + 2) % nb]
+        var va = polys[pa + (ea + na - 1) % na]
+        var vb = polys[pa + ea]
+        var vc = polys[pb + (eb + 2) % nb]
         if (!uleft(vertices, va * 3, vb * 3, vc * 3)) return intArrayOf(-1, ea, eb)
         va = polys[pb + (eb + nb - 1) % nb]
         vb = polys[pb + eb]
@@ -1071,8 +1044,7 @@ object RecastMesh {
                 if (isOnBorder) {
                     for (k in mesh.maxVerticesPerPolygon until mesh.maxVerticesPerPolygon * 2) {
                         if (pmesh.polygons[src + k] and 0x8000 != 0 && pmesh.polygons[src + k] != 0xffff) {
-                            val dir = pmesh.polygons[src + k] and 0xf
-                            when (dir) {
+                            when (pmesh.polygons[src + k] and 0xf) {
                                 0 -> if (isMinX) mesh.polygons[tgt + k] = pmesh.polygons[src + k]
                                 1 -> if (isMaxZ) mesh.polygons[tgt + k] = pmesh.polygons[src + k]
                                 2 -> if (isMaxX) mesh.polygons[tgt + k] = pmesh.polygons[src + k]

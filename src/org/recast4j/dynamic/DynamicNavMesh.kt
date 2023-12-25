@@ -93,8 +93,7 @@ class DynamicNavMesh(voxelFile: VoxelFile) {
     }
 
     private fun lookupHeightfield(x: Int, z: Int): Heightfield? {
-        return Optional.ofNullable(getTileAt(x, z)).map { t: DynamicTile -> t.checkpoint }
-            .map { it?.heightfield }.run { if (isPresent) get() else null }
+        return getTileAt(x, z)?.checkpoint?.heightfield
     }
 
     fun addCollider(collider: Collider): Long {
@@ -145,7 +144,9 @@ class DynamicNavMesh(voxelFile: VoxelFile) {
     }
 
     private fun process(item: UpdateQueueItem) {
-        item.affectedTiles().forEach(Consumer { tile -> item.process(tile) })
+        for (tile in item.affectedTiles()) {
+            item.process(tile)
+        }
     }
 
     /**

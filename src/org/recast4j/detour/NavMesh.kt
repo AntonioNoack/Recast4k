@@ -967,10 +967,8 @@ class NavMesh(
         // Off-mesh connections don't have detail polygons.
         if (poly.type == Poly.DT_POLYTYPE_OFFMESH_CONNECTION) {
             val v = tile.data!!.vertices
-            val v0 = Vector3f()
-            val v1 = Vector3f()
-            v0.set(v, poly.vertices[0] * 3)
-            v1.set(v, poly.vertices[1] * 3)
+            val v0 = Vector3f().set(v, poly.vertices[0] * 3)
+            val v1 = Vector3f().set(v, poly.vertices[1] * 3)
             val (_, second) = Vectors.distancePtSegSqr2D(pos, v0, v1)
             return ClosestPointOnPolyResult(false, v0.lerp(v1, second))
         }
@@ -1001,12 +999,11 @@ class NavMesh(
 
             // If a point is directly over a polygon and closer than
             // climb height, favor that instead of straight line nearest point.
-            val diff = Vectors.sub(center, closestPtPoly)
             if (posOverPoly) {
-                d = abs(diff.y) - tile.data!!.header!!.walkableClimb
+                d = abs(center.y - closestPtPoly.y) - tile.data!!.header!!.walkableClimb
                 d = if (d > 0) d * d else 0f
             } else {
-                d = diff.lengthSquared()
+                d = center.distanceSquared(closestPtPoly)
             }
             if (d < nearestDistanceSqr) {
                 nearestPt = closestPtPoly
@@ -1038,16 +1035,19 @@ class NavMesh(
                 nx++
                 ny++
             }
+
             2 -> ny++
             3 -> {
                 nx--
                 ny++
             }
+
             4 -> nx--
             5 -> {
                 nx--
                 ny--
             }
+
             6 -> ny--
             7 -> {
                 nx++

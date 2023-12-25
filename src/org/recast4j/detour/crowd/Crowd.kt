@@ -129,26 +129,26 @@ class Crowd @JvmOverloads constructor(
     private val agentId = AtomicInteger()
     private val activeAgents: MutableSet<CrowdAgent>
     val pathQueue: PathQueue
-    private val m_obstacleQueryParams = arrayOfNulls<ObstacleAvoidanceParams>(CROWD_MAX_OBSTAVOIDANCE_PARAMS)
+    private val obstacleQueryParams = arrayOfNulls<ObstacleAvoidanceParams>(CROWD_MAX_OBSTAVOIDANCE_PARAMS)
     private val obstacleAvoidanceQuery: ObstacleAvoidanceQuery
     val grid = ProximityGrid(config.maxAgentRadius * 3)
     val queryExtends = Vector3f()
-    private val m_filters = arrayOfNulls<QueryFilter>(CROWD_MAX_QUERY_FILTER_TYPE)
+    private val filters = arrayOfNulls<QueryFilter>(CROWD_MAX_QUERY_FILTER_TYPE)
     private var navQuery: NavMeshQuery
     private var navMesh: NavMesh
     val telemetry = CrowdTelemetry()
-    var m_velocitySampleCount = 0
+    var velocitySampleCount = 0
 
     init {
         queryExtends.set(config.maxAgentRadius * 2f, config.maxAgentRadius * 1.5f, config.maxAgentRadius * 2f)
         obstacleAvoidanceQuery =
             ObstacleAvoidanceQuery(config.maxObstacleAvoidanceCircles, config.maxObstacleAvoidanceSegments)
         for (i in 0 until CROWD_MAX_QUERY_FILTER_TYPE) {
-            m_filters[i] = queryFilterFactory.apply(i)
+            filters[i] = queryFilterFactory.apply(i)
         }
         // Init obstacle query params.
         for (i in 0 until CROWD_MAX_OBSTAVOIDANCE_PARAMS) {
-            m_obstacleQueryParams[i] = ObstacleAvoidanceParams()
+            obstacleQueryParams[i] = ObstacleAvoidanceParams()
         }
 
         // Allocate temp buffer for merging paths.
@@ -170,7 +170,7 @@ class Crowd @JvmOverloads constructor(
      */
     fun setObstacleAvoidanceParams(idx: Int, params: ObstacleAvoidanceParams) {
         if (idx in 0 until CROWD_MAX_OBSTAVOIDANCE_PARAMS) {
-            m_obstacleQueryParams[idx] = ObstacleAvoidanceParams(params)
+            obstacleQueryParams[idx] = ObstacleAvoidanceParams(params)
         }
     }
 
@@ -178,7 +178,7 @@ class Crowd @JvmOverloads constructor(
      * Gets the shared avoidance configuration for the specified index.
      */
     fun getObstacleAvoidanceParams(idx: Int): ObstacleAvoidanceParams? {
-        return if (idx in 0 until CROWD_MAX_OBSTAVOIDANCE_PARAMS) m_obstacleQueryParams[idx]
+        return if (idx in 0 until CROWD_MAX_OBSTAVOIDANCE_PARAMS) obstacleQueryParams[idx]
         else null
     }
 
@@ -202,7 +202,7 @@ class Crowd @JvmOverloads constructor(
         updateAgentParameters(ag, params)
 
         // Find nearest position on navmesh and place the agent there.
-        val nearestPoly = navQuery.findNearestPoly(pos, queryExtends, m_filters[ag.params.queryFilterType]!!)
+        val nearestPoly = navQuery.findNearestPoly(pos, queryExtends, filters[ag.params.queryFilterType]!!)
         val nearest = if (nearestPoly.succeeded()) nearestPoly.result!!.nearestPos else pos
         val ref = if (nearestPoly.succeeded()) nearestPoly.result!!.nearestRef else 0L
         ag.corridor.reset(ref, nearest!!)
@@ -296,18 +296,18 @@ class Crowd @JvmOverloads constructor(
     }
 
     fun getFilter(i: Int): QueryFilter? {
-        return if (i in 0 until CROWD_MAX_QUERY_FILTER_TYPE) m_filters[i] else null
+        return if (i in 0 until CROWD_MAX_QUERY_FILTER_TYPE) filters[i] else null
     }
 
     fun update(dt: Float, debug: CrowdAgentDebugInfo?): CrowdTelemetry {
-        m_velocitySampleCount = 0
+        velocitySampleCount = 0
         telemetry.start()
         val agents = getActiveAgents()
 
         // Check that all agents still have valid paths.
         checkPathValidity(agents, dt)
 
-        // Update async move request and path finder.
+        // Update async move request and pathfinder.
         updateMoveRequest(agents, dt)
 
         // Optimize path topology.
@@ -356,12 +356,12 @@ class Crowd @JvmOverloads constructor(
             // First check, that the current location is valid.
             var agentRef = ag.corridor.firstPoly
             agentPos.set(ag.currentPosition)
-            if (!navQuery.isValidPolyRef(agentRef, m_filters[ag.params.queryFilterType]!!)) {
+            if (!navQuery.isValidPolyRef(agentRef, filters[ag.params.queryFilterType]!!)) {
                 // Current location is not valid, try to reposition.
                 // TODO: this can snap agents, how to handle that?
                 val nearestPoly = navQuery.findNearestPoly(
                     ag.currentPosition, queryExtends,
-                    m_filters[ag.params.queryFilterType]!!
+                    filters[ag.params.queryFilterType]!!
                 )
                 agentRef = if (nearestPoly.succeeded()) nearestPoly.result!!.nearestRef else 0L
                 if (nearestPoly.succeeded()) {
@@ -395,11 +395,11 @@ class Crowd @JvmOverloads constructor(
 
             // Try to recover move request position.
             if (ag.targetState != MoveRequestState.FAILED) {
-                if (!navQuery.isValidPolyRef(ag.targetRef, m_filters[ag.params.queryFilterType]!!)) {
+                if (!navQuery.isValidPolyRef(ag.targetRef, filters[ag.params.queryFilterType]!!)) {
                     // Current target is not valid, try to reposition.
                     val fnp = navQuery.findNearestPoly(
                         ag.targetPos, queryExtends,
-                        m_filters[ag.params.queryFilterType]!!
+                        filters[ag.params.queryFilterType]!!
                     )
                     ag.targetRef = if (fnp.succeeded()) fnp.result!!.nearestRef else 0L
                     if (fnp.succeeded()) {
@@ -416,7 +416,7 @@ class Crowd @JvmOverloads constructor(
             }
 
             // If nearby corridor is not valid, replan.
-            if (!ag.corridor.isValid(config.checkLookAhead, navQuery, m_filters[ag.params.queryFilterType]!!)) {
+            if (!ag.corridor.isValid(config.checkLookAhead, navQuery, filters[ag.params.queryFilterType]!!)) {
                 // Fix current path.
                 // ag.corridor.trimInvalidPath(agentRef, agentPos, m_navquery,
                 // &m_filter);
@@ -464,7 +464,7 @@ class Crowd @JvmOverloads constructor(
                 // Quick search towards the goal.
                 navQuery.initSlicedFindPath(
                     path[0], ag.targetRef, ag.currentPosition, ag.targetPos,
-                    m_filters[ag.params.queryFilterType]!!, 0
+                    filters[ag.params.queryFilterType]!!, 0
                 )
                 navQuery.updateSlicedFindPath(config.maxTargetFindPathIterations)
                 val pathFound = if (ag.targetReplan) { // && npath > 10)
@@ -521,7 +521,7 @@ class Crowd @JvmOverloads constructor(
             val ag = queue.poll()
             ag.targetPathQueryResult = pathQueue.request(
                 ag.corridor.lastPoly, ag.targetRef, ag.corridor.target,
-                ag.targetPos, m_filters[ag.params.queryFilterType]
+                ag.targetPos, filters[ag.params.queryFilterType]
             )
             if (ag.targetPathQueryResult != null) {
                 ag.targetState = MoveRequestState.WAITING_FOR_PATH
@@ -662,7 +662,7 @@ class Crowd @JvmOverloads constructor(
             val ag = queue.poll()
             ag.corridor.optimizePathTopology(
                 navQuery,
-                m_filters[ag.params.queryFilterType],
+                filters[ag.params.queryFilterType],
                 config.maxTopologyOptimizationIterations
             )
             ag.topologyOptTime = 0f
@@ -698,11 +698,11 @@ class Crowd @JvmOverloads constructor(
             // if it has become invalid.
             val updateThr = ag.params.collisionQueryRange * 0.25f
             if (Vectors.dist2DSqr(ag.currentPosition, ag.boundary.center) > updateThr * updateThr
-                || !ag.boundary.isValid(navQuery, m_filters[ag.params.queryFilterType]!!)
+                || !ag.boundary.isValid(navQuery, filters[ag.params.queryFilterType]!!)
             ) {
                 ag.boundary.update(
                     ag.corridor.firstPoly, ag.currentPosition, ag.params.collisionQueryRange, navQuery,
-                    m_filters[ag.params.queryFilterType]!!, tinyNodePool, tmpVertices, tmpVertices2,
+                    filters[ag.params.queryFilterType]!!, tinyNodePool, tmpVertices, tmpVertices2,
                     tmpSegments, tmpInts, tmpPortal, tmpN, tmpStack
                 )
             }
@@ -773,7 +773,7 @@ class Crowd @JvmOverloads constructor(
                 val target = ag.corners[min(1, ag.corners.size - 1)].pos
                 ag.corridor.optimizePathVisibility(
                     target, ag.params.pathOptimizationRange, navQuery,
-                    m_filters[ag.params.queryFilterType]
+                    filters[ag.params.queryFilterType]
                 )
 
                 // Copy data for debug purposes.
@@ -936,7 +936,7 @@ class Crowd @JvmOverloads constructor(
                 }
 
                 // Sample new safe velocity.
-                val params = m_obstacleQueryParams[ag.params.obstacleAvoidanceType]
+                val params = obstacleQueryParams[ag.params.obstacleAvoidanceType]!!
                 val (first, second) = obstacleAvoidanceQuery.sampleVelocityAdaptive(
                     ag.currentPosition,
                     ag.params.radius,
@@ -947,7 +947,7 @@ class Crowd @JvmOverloads constructor(
                     vod
                 )
                 ag.desiredVelAdjusted.set(second)
-                m_velocitySampleCount += first
+                velocitySampleCount += first
             } else {
                 // If not using velocity planning, new velocity is directly the desired velocity.
                 ag.desiredVelAdjusted.set(ag.desiredVelocity)
@@ -1037,7 +1037,7 @@ class Crowd @JvmOverloads constructor(
 
             // Move along navmesh.
             ag.corridor.movePosition(
-                ag.currentPosition, navQuery, m_filters[ag.params.queryFilterType]!!,
+                ag.currentPosition, navQuery, filters[ag.params.queryFilterType]!!,
                 tinyNodePool, tmpVertices, tmpNeis, tmpVisited
             )
             // Get valid constrained position back.

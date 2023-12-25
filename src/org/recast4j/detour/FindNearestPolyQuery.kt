@@ -24,12 +24,11 @@ class FindNearestPolyQuery(private val query: NavMeshQuery, private val center: 
         // If a point is directly over a polygon and closer than
         // climb height, favor that instead of straight line nearest point.
         var d: Float
-        val diff = Vectors.sub(center, closestPtPoly)
         if (posOverPoly) {
-            d = abs(diff.y) - tile.data!!.header!!.walkableClimb
+            d = abs(center.y - closestPtPoly.y) - tile.data!!.header!!.walkableClimb
             d = if (d > 0) d * d else 0f
         } else {
-            d = diff.lengthSquared()
+            d = center.distanceSquared(closestPtPoly)
         }
         if (d < nearestDistanceSqr) {
             nearestPt = closestPtPoly
