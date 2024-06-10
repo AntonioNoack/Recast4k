@@ -1954,7 +1954,7 @@ open class NavMeshQuery(
                 // compute the intersection point at the furthest end of the polygon
                 // and correct the height (since the raycast moves in 2d)
                 lastPos.set(curPos)
-                dir.mulAdd(hit.t, startPos, curPos)
+                Vectors.mad(startPos, dir, hit.t, curPos)
                 val v1 = iresult.segMax * 3
                 val v2 = (iresult.segMax + 1) % nv * 3
                 val ex = vertices[v2] - vertices[v1]

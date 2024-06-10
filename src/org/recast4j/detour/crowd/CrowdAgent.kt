@@ -128,9 +128,11 @@ class CrowdAgent(idx: Int) {
         }
 
         // Integrate
-        if (actualVelocity.length() > 0.0001f) {
-            currentPosition.mulAdd(dt, currentPosition, currentPosition)
-        } else actualVelocity.set(0f)
+        if (actualVelocity.length() > 0.0001f) Vectors.mad2(
+            currentPosition,
+            actualVelocity,
+            dt
+        ) else actualVelocity.set(0f)
     }
 
     fun overOffmeshConnection(radius: Float): Boolean {

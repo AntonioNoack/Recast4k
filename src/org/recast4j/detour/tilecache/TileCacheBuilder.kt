@@ -773,11 +773,13 @@ class TileCacheBuilder {
     // intersection is ensured by using strict leftness.
     private fun intersectProp(vertices: IntArray, a: Int, b: Int, c: Int, d: Int): Boolean {
         // Eliminate improper cases.
-        return if (collinear(vertices, a, b, c) || collinear(vertices, a, b, d) || collinear(vertices, c, d, a)
-            || collinear(vertices, c, d, b)
-        ) false else left(vertices, a, b, c) xor left(vertices, a, b, d) && left(vertices, c, d, a) xor left(
-            vertices, c, d, b
-        )
+        return if (
+            collinear(vertices, a, b, c) ||
+            collinear(vertices, a, b, d) ||
+            collinear(vertices, c, d, a) ||
+            collinear(vertices, c, d, b)
+        ) false else (left(vertices, a, b, c) xor left(vertices, a, b, d)) &&
+                (left(vertices, c, d, a) xor left(vertices, c, d, b))
     }
 
     // Returns T iff (a,b,c) are collinear and point c lies
@@ -1037,7 +1039,7 @@ class TileCacheBuilder {
         if (numRemainingEdges <= 2) return false
 
         // Find edges which share the removed vertex.
-        val edges= IntArrayList()
+        val edges = IntArrayList()
         var nedges = 0
         for (i in 0 until mesh.numPolygons) {
             val p = i * mesh.nvp * 2
@@ -1093,10 +1095,10 @@ class TileCacheBuilder {
         // Count number of polygons to remove.
         val maxVerticesPerPoly = mesh.nvp
         var nedges = 0
-        val edges= IntArrayList()
+        val edges = IntArrayList()
         var nhole: Int
-        val hole= IntArrayList()
-        val harea= IntArrayList()
+        val hole = IntArrayList()
+        val harea = IntArrayList()
         run {
             var i = 0
             while (i < mesh.numPolygons) {

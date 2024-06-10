@@ -165,19 +165,19 @@ object RecastMesh {
         // Eliminate improper cases.
         return if (collinear(vertices, a, b, c) || collinear(vertices, a, b, d) ||
             collinear(vertices, c, d, a) || collinear(vertices, c, d, b)
-        ) false else left(vertices, a, b, c) xor left(vertices, a, b, d) &&
-                left(vertices, c, d, a) xor left(vertices, c, d, b)
+        ) false else ((left(vertices, a, b, c) xor left(vertices, a, b, d)) &&
+                (left(vertices, c, d, a) xor left(vertices, c, d, b)))
     }
 
     // Returns T iff (a,b,c) are collinear and point c lies
     // on the closed segment ab.
     private fun between(vertices: IntArray, a: Int, b: Int, c: Int): Boolean {
         if (!collinear(vertices, a, b, c)) return false
-        // If ab not vertical, check between-ness on x; else on y.
+        // If ab not vertical, check betweenness on x; else on y.
         return if (vertices[a] != vertices[b])
-                (vertices[a] <= vertices[c] && vertices[c] <= vertices[b] || vertices[a] >= vertices[c] && vertices[c] >= vertices[b])
+            (vertices[a] <= vertices[c] && vertices[c] <= vertices[b] || vertices[a] >= vertices[c] && vertices[c] >= vertices[b])
         else
-                (vertices[a + 2] <= vertices[c + 2] && vertices[c + 2] <= vertices[b + 2] || vertices[a + 2] >= vertices[c + 2] && vertices[c + 2] >= vertices[b + 2])
+            (vertices[a + 2] <= vertices[c + 2] && vertices[c + 2] <= vertices[b + 2] || vertices[a + 2] >= vertices[c + 2] && vertices[c + 2] >= vertices[b + 2])
     }
 
     // Returns true iff segments ab and cd intersect, properly or improperly.
@@ -227,7 +227,12 @@ object RecastMesh {
         // If P[i] is a convex vertex [ i+1 left or on (i-1,i) ].
         return if (leftOn(vertices, pin1, pi, pi1)) {
             left(vertices, pi, pj, pin1) && left(vertices, pj, pi, pi1)
-        } else !(leftOn(vertices, pi, pj, pi1) && leftOn(vertices, pj, pi, pin1))
+        } else !(leftOn(
+            vertices,
+            pi,
+            pj,
+            pi1
+        ) && leftOn(vertices, pj, pi, pin1))
         // Assume (i-1,i,i+1) not collinear.
         // else P[i] is reflex.
     }
@@ -268,9 +273,11 @@ object RecastMesh {
         val pin1 = (indices[prev(i, n)] and 0x0fffffff) * 4
 
         // If P[i] is a convex vertex [ i+1 left or on (i-1,i) ].
-        return if (leftOn(vertices, pin1, pi, pi1)) leftOn(vertices, pi, pj, pin1) &&
-                leftOn(vertices, pj, pi, pi1) else !(leftOn(vertices, pi, pj, pi1) &&
-                leftOn(vertices, pj, pi, pin1))
+        return if (leftOn(vertices, pin1, pi, pi1)) {
+            leftOn(vertices, pi, pj, pin1) && leftOn(vertices, pj, pi, pi1)
+        } else {
+            !(leftOn(vertices, pi, pj, pi1) && leftOn(vertices, pj, pi, pin1))
+        }
         // Assume (i-1,i,i+1) not collinear.
         // else P[i] is reflex.
     }
@@ -372,7 +379,7 @@ object RecastMesh {
     }
 
     private fun uleft(vertices: IntArray, a: Int, b: Int, c: Int): Boolean {
-        return (vertices[b] - vertices[a]) * (vertices[c + 2] - vertices[a + 2])-(vertices[c] - vertices[a]) * (vertices[b + 2] - vertices[a + 2]) < 0
+        return (vertices[b] - vertices[a]) * (vertices[c + 2] - vertices[a + 2]) - (vertices[c] - vertices[a]) * (vertices[b + 2] - vertices[a + 2]) < 0
     }
 
     private fun getPolyMergeValue(polys: IntArray, pa: Int, pb: Int, vertices: IntArray, nvp: Int): IntArray {

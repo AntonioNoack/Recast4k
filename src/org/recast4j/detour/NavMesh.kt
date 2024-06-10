@@ -999,11 +999,12 @@ class NavMesh(
 
             // If a point is directly over a polygon and closer than
             // climb height, favor that instead of straight line nearest point.
+            val diff = Vectors.sub(center, closestPtPoly)
             if (posOverPoly) {
-                d = abs(center.y - closestPtPoly.y) - tile.data!!.header!!.walkableClimb
+                d = abs(diff.y) - tile.data!!.header!!.walkableClimb
                 d = if (d > 0) d * d else 0f
             } else {
-                d = center.distanceSquared(closestPtPoly)
+                d = diff.lengthSquared()
             }
             if (d < nearestDistanceSqr) {
                 nearestPt = closestPtPoly
@@ -1035,19 +1036,16 @@ class NavMesh(
                 nx++
                 ny++
             }
-
             2 -> ny++
             3 -> {
                 nx--
                 ny++
             }
-
             4 -> nx--
             5 -> {
                 nx--
                 ny--
             }
-
             6 -> ny--
             7 -> {
                 nx++
