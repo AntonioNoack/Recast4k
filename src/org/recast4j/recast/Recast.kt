@@ -21,25 +21,26 @@ package org.recast4j.recast
 import org.joml.Vector3f
 import org.recast4j.Vectors
 import kotlin.math.cos
+import kotlin.math.max
 
 object Recast {
 
     fun calcGridSizeX(bmin: Vector3f, bmax: Vector3f, cellSize: Float): Int {
-        return ((bmax.x - bmin.x) / cellSize + 0.5f).toInt()
+        return max(1, ((bmax.x - bmin.x) / cellSize + 0.5f).toInt())
     }
 
     fun calcGridSizeY(bmin: Vector3f, bmax: Vector3f, cellSize: Float): Int {
-        return ((bmax.z - bmin.z) / cellSize + 0.5f).toInt()
+        return max(1, ((bmax.z - bmin.z) / cellSize + 0.5f).toInt())
     }
 
     fun calcTileCountX(bmin: Vector3f, bmax: Vector3f, cellSize: Float, tileSizeX: Int): Int {
         val gwd = calcGridSizeX(bmin, bmax, cellSize)
-        return (gwd + tileSizeX - 1) / tileSizeX
+        return max(1, (gwd + tileSizeX - 1) / tileSizeX)
     }
 
     fun calcTileCountY(bmin: Vector3f, bmax: Vector3f, cellSize: Float, tileSizeZ: Int): Int {
         val gwd = calcGridSizeY(bmin, bmax, cellSize)
-        return (gwd + tileSizeZ - 1) / tileSizeZ
+        return max(1, (gwd + tileSizeZ - 1) / tileSizeZ)
     }
 
     /**
