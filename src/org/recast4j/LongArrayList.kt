@@ -54,7 +54,7 @@ class LongArrayList(var values: LongArray) {
     fun reverse() {
         var j = size - 1
         val values = values
-        for (i in 0 until size / 2) {
+        for (i in 0 until size.shr(1)) {
             val t = values[i]
             values[i] = values[j]
             values[j] = t
@@ -63,22 +63,14 @@ class LongArrayList(var values: LongArray) {
     }
 
     fun addAll(list: LongArrayList) {
-        if (size + list.size >= values.size) {
-            val data = LongArray(max(values.size + max(values.size, list.size), 16))
-            System.arraycopy(values, 0, data, 0, size)
-            this.values = data
-        }
+        ensureExtra(list.size)
         System.arraycopy(list.values, 0, values, size, list.size)
         size += list.size
     }
 
     fun addAll(list: LongArrayList, startIndex: Int, endIndex: Int) {
         val listSize = endIndex - startIndex
-        if (size + listSize >= values.size) {
-            val data = LongArray(max(values.size + max(values.size, listSize), 16))
-            System.arraycopy(values, 0, data, 0, size)
-            this.values = data
-        }
+        ensureExtra(listSize)
         System.arraycopy(list.values, startIndex, values, size, listSize)
         size += listSize
     }

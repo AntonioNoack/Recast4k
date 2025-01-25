@@ -27,8 +27,8 @@ class PolyMeshDetail(
     var subMeshes: IntArray,
     /** The mesh vertices. [Size: 3*numVertices]  */
     var vertices: FloatArray,
-    /** The mesh triangles. [Size: 4*numTriangles]  */
-    var triangles: IntArray
+    /** The mesh triangles; unsigned integers; [A,B,C,flags] x numTriangles. [Size: 4*numTriangles]  */
+    var triangles: ByteArray
 ) {
 
     /** The number of sub-meshes defined by #meshes.  */

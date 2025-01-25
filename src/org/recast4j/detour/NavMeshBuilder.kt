@@ -303,7 +303,7 @@ object NavMeshBuilder {
         val navPolys = Array(totPolyCount) { Poly(it, nvp) }
         val navDMeshes = Array(params.polyCount) { PolyDetail() }
         val navDVertices = FloatArray(3 * uniqueDetailVertCount)
-        val navDTris = IntArray(4 * detailTriCount)
+        val navDTris = ByteArray(4 * detailTriCount)
         val navBvtree = Array(bvTreeSize) { BVNode() }
         val offMeshCons = Array(storedOffMeshConCount) { OffMeshConnection() }
 
@@ -440,12 +440,12 @@ object NavMeshBuilder {
                 for (j in 2 until nv) {
                     val t = tbase * 4
                     navDTris[t] = 0
-                    navDTris[t + 1] = j - 1
-                    navDTris[t + 2] = j
+                    navDTris[t + 1] = (j - 1).toByte()
+                    navDTris[t + 2] = j.toByte()
                     // Bit for each edge that belongs to poly boundary.
-                    navDTris[t + 3] = 1 shl 2
-                    if (j == 2) navDTris[t + 3] = navDTris[t + 3] or 1
-                    if (j == nv - 1) navDTris[t + 3] = navDTris[t + 3] or (1 shl 4)
+                    navDTris[t + 3] = (1 shl 2).toByte()
+                    if (j == 2) navDTris[t + 3] = (navDTris[t + 3].toInt() or 1).toByte()
+                    if (j == nv - 1) navDTris[t + 3] = (navDTris[t + 3].toInt() or (1 shl 4)).toByte()
                     tbase++
                 }
             }

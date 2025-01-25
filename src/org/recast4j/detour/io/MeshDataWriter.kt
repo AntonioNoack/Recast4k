@@ -17,8 +17,10 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.io
 
+import org.recast4j.detour.BVNode
 import org.recast4j.detour.MeshData
 import org.recast4j.detour.MeshHeader
+import org.recast4j.detour.OffMeshConnection
 import java.io.OutputStream
 import java.nio.ByteOrder
 
@@ -86,32 +88,40 @@ object MeshDataWriter : DetourWriter() {
     }
 
     private fun writeDTris(stream: OutputStream, data: MeshData) {
-        for (i in 0 until data.detailTriCount * 4) {
-            stream.write(data.detailTriangles[i])
-        }
+        stream.write(data.detailTriangles, 0, data.detailTriCount * 4)
     }
 
     private fun writeBVTree(stream: OutputStream, data: MeshData, order: ByteOrder) {
+        val tree = data.bvTree ?: return
         for (i in 0 until data.bvNodeCount) {
-            write(stream, data.bvTree!![i].minX, order)
-            write(stream, data.bvTree!![i].minY, order)
-            write(stream, data.bvTree!![i].minZ, order)
-            write(stream, data.bvTree!![i].maxX, order)
-            write(stream, data.bvTree!![i].maxY, order)
-            write(stream, data.bvTree!![i].maxZ, order)
-            write(stream, data.bvTree!![i].index, order)
+            val node = tree[i]
+            writeBVNode(stream, node, order)
         }
+    }
+
+    private fun writeBVNode(stream: OutputStream, node: BVNode, order: ByteOrder) {
+        write(stream, node.minX, order)
+        write(stream, node.minY, order)
+        write(stream, node.minZ, order)
+        write(stream, node.maxX, order)
+        write(stream, node.maxY, order)
+        write(stream, node.maxZ, order)
+        write(stream, node.index, order)
     }
 
     private fun writeOffMeshCons(stream: OutputStream, data: MeshData, order: ByteOrder) {
         for (i in 0 until data.offMeshConCount) {
-            write(stream, data.offMeshCons[i].posA, order)
-            write(stream, data.offMeshCons[i].posB, order)
-            write(stream, data.offMeshCons[i].rad, order)
-            write(stream, data.offMeshCons[i].poly.toShort(), order)
-            stream.write(data.offMeshCons[i].flags)
-            stream.write(data.offMeshCons[i].side)
-            write(stream, data.offMeshCons[i].userId, order)
+            writeOffMeshCon(stream, data.offMeshCons[i], order)
         }
+    }
+
+    private fun writeOffMeshCon(stream: OutputStream, con: OffMeshConnection, order: ByteOrder) {
+        write(stream, con.posA, order)
+        write(stream, con.posB, order)
+        write(stream, con.rad, order)
+        write(stream, con.poly.toShort(), order)
+        stream.write(con.flags)
+        stream.write(con.side)
+        write(stream, con.userId, order)
     }
 }

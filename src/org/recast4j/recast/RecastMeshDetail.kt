@@ -26,7 +26,12 @@ object RecastMeshDetail {
     }
 
     var MAX_VERTS = 127
-    var MAX_TRIS = 255 // Max tris for delaunay is 2n-2-k (n=num vertices, k=num hull vertices).
+
+    /**
+     * Max tris for delaunay is 2n-2-k (n=num vertices, k=num hull vertices);
+     * must not be more than 256, because we have to fix the data into a byte
+     * */
+    var MAX_TRIS = 255
 
     var MAX_VERTS_PER_EDGE = 32
 
@@ -602,7 +607,7 @@ object RecastMeshDetail {
         val hp = HeightPatch(IntArray(maxhw * maxhh))
         var vcap = nPolyVerts + nPolyVerts / 2
         var tcap = vcap * 2
-        val dmesh = PolyMeshDetail(IntArray(mesh.numPolygons * 4), FloatArray(vcap * 3), IntArray(tcap * 4))
+        val dmesh = PolyMeshDetail(IntArray(mesh.numPolygons * 4), FloatArray(vcap * 3), ByteArray(tcap * 4))
         dmesh.numSubMeshes = mesh.numPolygons
         val meshPolygons = mesh.polygons
         for (i in 0 until mesh.numPolygons) {
@@ -678,9 +683,9 @@ object RecastMeshDetail {
             // Store triangles, allocate more memory if necessary.
             if (dmesh.numTriangles + ntris > tcap) {
                 tcap += max(dmesh.numTriangles + ntris - tcap + 255 shr 8, 0) shl 8
-                val newt = IntArray(tcap * 4)
+                val newt = ByteArray(tcap * 4)
                 if (dmesh.numTriangles != 0) {
-                    System.arraycopy(dmesh.triangles, 0, newt, 0, 4 * dmesh.numTriangles)
+                    dmesh.triangles.copyInto(newt, 0, 0, 4 * dmesh.numTriangles)
                 }
                 dmesh.triangles = newt
             }
@@ -688,10 +693,11 @@ object RecastMeshDetail {
             var l = dmesh.numTriangles shl 2
             for (j in 0 until ntris) {
                 val t = j * 4
-                dmeshTris[l++] = tris[t]
-                dmeshTris[l++] = tris[t + 1]
-                dmeshTris[l++] = tris[t + 2]
-                dmeshTris[l++] = getTriFlags(vertices, tris[t] * 3, tris[t + 1] * 3, tris[t + 2] * 3, poly, npoly)
+                dmeshTris[l++] = tris[t].toByte()
+                dmeshTris[l++] = tris[t + 1].toByte()
+                dmeshTris[l++] = tris[t + 2].toByte()
+                dmeshTris[l++] =
+                    getTriFlags(vertices, tris[t] * 3, tris[t + 1] * 3, tris[t + 2] * 3, poly, npoly).toByte()
             }
             dmesh.numTriangles = l shr 2
         }
@@ -1291,13 +1297,9 @@ object RecastMeshDetail {
         }
         val ntris = tris.size shr 2
         if (ntris > MAX_TRIS) {
-            val subList = tris.subList(0, MAX_TRIS * 4)
-            tris.clear()
-            tris.addAll(subList)
+            tris.size = MAX_TRIS * 4
             throw RuntimeException("buildPolyMeshDetail: Shrinking triangle count from $ntris to max $MAX_TRIS")
         }
         return nverts
     }
-
-
 }

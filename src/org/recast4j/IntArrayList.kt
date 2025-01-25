@@ -19,34 +19,13 @@ class IntArrayList(var values: IntArray) {
 
     fun add(index: Int, value: Int) {
         add(value)
-        System.arraycopy(values, index, values, index + 1, size - index)
+        System.arraycopy(values, index, values, index + 1, size - 1 - index)
         values[index] = value
     }
 
     operator fun get(index: Int) = values[index]
     operator fun set(index: Int, value: Int) {
         values[index] = value
-    }
-
-    fun addAll(list: IntArrayList) {
-        if (size + list.size >= values.size) {
-            val data = IntArray(max(values.size + max(values.size, list.size), 16))
-            System.arraycopy(values, 0, data, 0, size)
-            this.values = data
-        }
-        System.arraycopy(list.values, 0, values, size, list.size)
-        size += list.size
-    }
-
-    fun addAll(list: IntArrayList, startIndex: Int, endIndex: Int) {
-        val listSize = endIndex - startIndex
-        if (size + listSize >= values.size) {
-            val data = IntArray(max(values.size + max(values.size, listSize), 16))
-            System.arraycopy(values, 0, data, 0, size)
-            this.values = data
-        }
-        System.arraycopy(list.values, startIndex, values, size, listSize)
-        size += listSize
     }
 
     fun remove(index: Int): Int {
@@ -77,7 +56,7 @@ class IntArrayList(var values: IntArray) {
     }
 
     private fun ensureCapacity(size: Int) {
-        if (values.size < size) {
+        if (size > values.size) {
             values = values.copyOf(max(values.size * 2, max(size, 16)))
         }
     }
@@ -91,5 +70,4 @@ class IntArrayList(var values: IntArray) {
     companion object {
         val empty = IntArrayList(0)
     }
-
 }

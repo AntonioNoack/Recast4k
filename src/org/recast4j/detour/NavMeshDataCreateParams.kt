@@ -93,10 +93,10 @@ class NavMeshDataCreateParams {
     var detailVerticesCount = 0
 
     /**
-     * The detail mesh triangles. [Size: 4 * #detailTriCount]
+     * The detail mesh triangles; unsigned integers. [Size: 4 * #detailTriCount]
      */
     @Nullable
-    var detailTris: IntArray? = null
+    var detailTris: ByteArray? = null
 
     /**
      * The number of triangles in the detail mesh.

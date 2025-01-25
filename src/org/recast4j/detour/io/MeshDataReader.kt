@@ -124,42 +124,46 @@ object MeshDataReader {
         return polys
     }
 
-    private fun readDTris(buf: ByteBuffer, header: MeshHeader): IntArray {
-        val tris = IntArray(4 * header.detailTriCount)
-        for (i in tris.indices) {
-            tris[i] = buf.uint8()
-        }
-        return tris
+    private fun readDTris(buf: ByteBuffer, header: MeshHeader): ByteArray {
+        val bytes = ByteArray(4 * header.detailTriCount)
+        buf.get(bytes)
+        return bytes
     }
 
     private fun readBVTree(buf: ByteBuffer, header: MeshHeader): Array<BVNode> {
         val nodes = Array(header.bvNodeCount) { BVNode() }
         for (i in nodes.indices) {
-            val n = nodes[i]
-            n.minX = buf.getInt()
-            n.minY = buf.getInt()
-            n.minZ = buf.getInt()
-            n.maxX = buf.getInt()
-            n.maxY = buf.getInt()
-            n.maxZ = buf.getInt()
-            n.index = buf.getInt()
+            readBVNode(buf, nodes[i])
         }
         return nodes
+    }
+
+    private fun readBVNode(buf: ByteBuffer, n: BVNode) {
+        n.minX = buf.getInt()
+        n.minY = buf.getInt()
+        n.minZ = buf.getInt()
+        n.maxX = buf.getInt()
+        n.maxY = buf.getInt()
+        n.maxZ = buf.getInt()
+        n.index = buf.getInt()
     }
 
     private fun readOffMeshCons(buf: ByteBuffer, header: MeshHeader): Array<OffMeshConnection> {
         val cons = Array(header.offMeshConCount) { OffMeshConnection() }
         for (i in cons.indices) {
-            val con = cons[i]
-            con.posA.set(buf.getFloat(), buf.getFloat(), buf.getFloat())
-            con.posB.set(buf.getFloat(), buf.getFloat(), buf.getFloat())
-            con.rad = buf.getFloat()
-            con.poly = buf.getShort().toInt() and 0xffff
-            con.flags = buf.uint8()
-            con.side = buf.uint8()
-            con.userId = buf.getInt()
+            readOffMeshCon(buf, cons[i])
         }
         return cons
+    }
+
+    private fun readOffMeshCon(buf: ByteBuffer, con: OffMeshConnection) {
+        con.posA.set(buf.getFloat(), buf.getFloat(), buf.getFloat())
+        con.posB.set(buf.getFloat(), buf.getFloat(), buf.getFloat())
+        con.rad = buf.getFloat()
+        con.poly = buf.getShort().toInt() and 0xffff
+        con.flags = buf.uint8()
+        con.side = buf.uint8()
+        con.userId = buf.getInt()
     }
 
     const val LINK_SIZEOF = 16

@@ -50,9 +50,9 @@ class MeshData : MeshHeader() {
 
     /**
      * The detail mesh's triangles. [(vertA, vertB, vertC) * MeshHeader::detailTriCount] See DetailTriEdgeFlags and
-     * NavMesh::getDetailTriEdgeFlags.
+     * NavMesh::getDetailTriEdgeFlags. Unsigned bytes; 4 per each detail triangle (???)
      */
-    lateinit var detailTriangles: IntArray
+    lateinit var detailTriangles: ByteArray
 
     /**
      * The tile bounding volume nodes. [Size: MeshHeader::bvNodeCount] (Will be null if bounding volumes are disabled.)

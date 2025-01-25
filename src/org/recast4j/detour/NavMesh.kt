@@ -790,7 +790,7 @@ class NavMesh(
             for (i in 0 until pd.triCount) {
                 val ti = (pd.triBase + i) * 4
                 val tris = tile.data!!.detailTriangles
-                if (onlyBoundary && tris[ti + 3] and flagAnyBoundaryEdge == 0) {
+                if (onlyBoundary && tris[ti + 3].toInt() and flagAnyBoundaryEdge == 0) {
                     continue
                 }
                 val v = tripletVec3f.get()
@@ -800,8 +800,8 @@ class NavMesh(
                 var k = 0
                 var j = 2
                 while (k < 3) {
-                    if (getDetailTriEdgeFlags(tris[ti + 3], j) and DT_DETAIL_EDGE_BOUNDARY == 0
-                        && (onlyBoundary || tris[ti + j] < tris[ti + k])
+                    if (getDetailTriEdgeFlags(tris[ti + 3].toInt().and(0xff), j) and DT_DETAIL_EDGE_BOUNDARY == 0
+                        && (onlyBoundary || tris[ti + j].toInt().and(0xff) < tris[ti + k].toInt().and(0xff))
                     ) {
                         // Only looking at boundary edges and this is internal, or
                         // this is an inner edge, that we will see again or have already seen.
@@ -853,7 +853,7 @@ class NavMesh(
             for (i in 0 until pd.triCount) {
                 val ti = (pd.triBase + i) * 4
                 val tris = tile.data!!.detailTriangles
-                if (onlyBoundary && tris[ti + 3] and flagAnyBoundaryEdge == 0) {
+                if (onlyBoundary && tris[ti + 3].toInt() and flagAnyBoundaryEdge == 0) {
                     continue
                 }
                 val v = tripletVec3f.get()
@@ -863,8 +863,8 @@ class NavMesh(
                 var k = 0
                 var j = 2
                 while (k < 3) {
-                    if (getDetailTriEdgeFlags(tris[ti + 3], j) and DT_DETAIL_EDGE_BOUNDARY == 0
-                        && (onlyBoundary || tris[ti + j] < tris[ti + k])
+                    if (getDetailTriEdgeFlags(tris[ti + 3].toInt().and(0xff), j) and DT_DETAIL_EDGE_BOUNDARY == 0
+                        && (onlyBoundary || tris[ti + j].toInt().and(0xff) < tris[ti + k].toInt().and(0xff))
                     ) {
                         // Only looking at boundary edges and this is internal, or
                         // this is an inner edge, that we will see again or have already seen.
@@ -900,11 +900,11 @@ class NavMesh(
     private fun fill(tileData: MeshData, tk: Int, poly: Poly, vk: Vector3f, pd: PolyDetail) {
         val index: Int
         val data: FloatArray
-        if (tileData.detailTriangles[tk] < poly.vertCount) {
-            index = poly.vertices[tileData.detailTriangles[tk]]
+        if (tileData.detailTriangles[tk].toInt().and(0xff) < poly.vertCount) {
+            index = poly.vertices[tileData.detailTriangles[tk].toInt().and(0xff)]
             data = tileData.vertices
         } else {
-            index = (pd.vertBase + (tileData.detailTriangles[tk] - poly.vertCount))
+            index = (pd.vertBase + (tileData.detailTriangles[tk].toInt().and(0xff) - poly.vertCount))
             data = tileData.detailVertices
         }
         vk.set(data, index * 3)
