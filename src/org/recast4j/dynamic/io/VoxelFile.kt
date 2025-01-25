@@ -19,11 +19,14 @@ package org.recast4j.dynamic.io
 
 import org.joml.Vector3f
 import org.recast4j.dynamic.DynamicNavMesh
+import org.recast4j.dynamic.collider.CompositeCollider.Companion.emptyBounds
 import org.recast4j.recast.AreaModification
+import org.recast4j.recast.PartitionType
 import org.recast4j.recast.RecastBuilder.RecastBuilderResult
 import org.recast4j.recast.RecastConfig
-import org.recast4j.recast.PartitionType
 import java.nio.ByteOrder
+import kotlin.math.max
+import kotlin.math.min
 
 class VoxelFile {
     var version = 0
@@ -121,14 +124,7 @@ class VoxelFile {
             f.useTiles = config.useTiles
             f.tileSizeX = config.tileSizeX
             f.tileSizeZ = config.tileSizeZ
-            f.bounds = floatArrayOf(
-                Float.POSITIVE_INFINITY,
-                Float.POSITIVE_INFINITY,
-                Float.POSITIVE_INFINITY,
-                Float.NEGATIVE_INFINITY,
-                Float.NEGATIVE_INFINITY,
-                Float.NEGATIVE_INFINITY
-            )
+            f.bounds = emptyBounds()
             for (r in results) {
                 f.tiles.add(VoxelTile(r.tileX, r.tileZ, r.solidHeightField))
                 val bmin = r.solidHeightField.bmin
@@ -167,23 +163,16 @@ class VoxelFile {
             f.useTiles = config.useTiles
             f.tileSizeX = config.tileSizeX
             f.tileSizeZ = config.tileSizeZ
-            f.bounds = floatArrayOf(
-                Float.POSITIVE_INFINITY,
-                Float.POSITIVE_INFINITY,
-                Float.POSITIVE_INFINITY,
-                Float.NEGATIVE_INFINITY,
-                Float.NEGATIVE_INFINITY,
-                Float.NEGATIVE_INFINITY
-            )
+            f.bounds = emptyBounds()
             for (vt in mesh.voxelTiles()) {
                 val heightfield = vt.heightfield()
                 f.tiles.add(VoxelTile(vt.tileX, vt.tileZ, heightfield))
-                f.bounds[0] = Math.min(f.bounds[0], vt.boundsMin.x)
-                f.bounds[1] = Math.min(f.bounds[1], vt.boundsMin.y)
-                f.bounds[2] = Math.min(f.bounds[2], vt.boundsMin.z)
-                f.bounds[3] = Math.max(f.bounds[3], vt.boundsMax.x)
-                f.bounds[4] = Math.max(f.bounds[4], vt.boundsMax.y)
-                f.bounds[5] = Math.max(f.bounds[5], vt.boundsMax.z)
+                f.bounds[0] = min(f.bounds[0], vt.boundsMin.x)
+                f.bounds[1] = min(f.bounds[1], vt.boundsMin.y)
+                f.bounds[2] = min(f.bounds[2], vt.boundsMin.z)
+                f.bounds[3] = max(f.bounds[3], vt.boundsMax.x)
+                f.bounds[4] = max(f.bounds[4], vt.boundsMax.y)
+                f.bounds[5] = max(f.bounds[5], vt.boundsMax.z)
             }
             return f
         }

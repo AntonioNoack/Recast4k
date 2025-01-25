@@ -22,7 +22,7 @@ import java.io.IOException
 import java.io.OutputStream
 import java.nio.ByteOrder
 
-class VoxelFileWriter : DetourWriter() {
+object VoxelFileWriter : DetourWriter() {
 
     fun write(stream: OutputStream, f: VoxelFile, byteOrder: ByteOrder = VoxelFile.PREFERRED_BYTE_ORDER) {
         write(stream, VoxelFile.MAGIC, byteOrder)

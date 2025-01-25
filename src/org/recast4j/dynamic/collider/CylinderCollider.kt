@@ -31,11 +31,7 @@ class CylinderCollider(
     private val radius: Float,
     area: Int,
     flagMergeThreshold: Float
-) : AbstractCollider(
-    area, flagMergeThreshold, bounds(
-        start, end, radius
-    )
-) {
+) : AbstractCollider(area, flagMergeThreshold, bounds(start, end, radius)) {
     override fun rasterize(hf: Heightfield, telemetry: Telemetry?) {
         rasterizeCylinder(
             hf, start, end, radius, area, floor((flagMergeThreshold / hf.cellHeight)).toInt(),

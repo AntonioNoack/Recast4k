@@ -24,7 +24,7 @@ import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-class VoxelFileReader {
+object VoxelFileReader {
 
     fun read(stream: InputStream): VoxelFile {
         val buf = IOUtils.toByteBuffer(stream)

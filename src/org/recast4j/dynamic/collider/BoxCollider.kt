@@ -18,6 +18,7 @@ freely, subject to the following restrictions:
 package org.recast4j.dynamic.collider
 
 import org.joml.Vector3f
+import org.recast4j.dynamic.collider.CompositeCollider.Companion.emptyBounds
 import org.recast4j.recast.Heightfield
 import org.recast4j.recast.RecastFilledVolumeRasterization.rasterizeBox
 import org.recast4j.recast.Telemetry
@@ -30,11 +31,7 @@ class BoxCollider(
     private val halfEdges: Array<FloatArray>,
     area: Int,
     flagMergeThreshold: Float
-) : AbstractCollider(
-    area, flagMergeThreshold, bounds(
-        center, halfEdges
-    )
-) {
+) : AbstractCollider(area, flagMergeThreshold, bounds(center, halfEdges)) {
     override fun rasterize(hf: Heightfield, telemetry: Telemetry?) {
         rasterizeBox(
             hf,
@@ -48,14 +45,7 @@ class BoxCollider(
 
     companion object {
         private fun bounds(center: Vector3f, halfEdges: Array<FloatArray>): FloatArray {
-            val bounds = floatArrayOf(
-                Float.POSITIVE_INFINITY,
-                Float.POSITIVE_INFINITY,
-                Float.POSITIVE_INFINITY,
-                Float.NEGATIVE_INFINITY,
-                Float.NEGATIVE_INFINITY,
-                Float.NEGATIVE_INFINITY
-            )
+            val bounds = emptyBounds()
             for (i in 0..7) {
                 val s0 = if (i and 1 != 0) 1f else -1f
                 val s1 = if (i and 2 != 0) 1f else -1f

@@ -45,8 +45,8 @@ class CompositeCollider : Collider {
     }
 
     companion object {
-        private fun bounds(colliders: List<Collider>): FloatArray {
-            val bounds = floatArrayOf(
+        fun emptyBounds(): FloatArray {
+            return floatArrayOf(
                 Float.POSITIVE_INFINITY,
                 Float.POSITIVE_INFINITY,
                 Float.POSITIVE_INFINITY,
@@ -54,6 +54,9 @@ class CompositeCollider : Collider {
                 Float.NEGATIVE_INFINITY,
                 Float.NEGATIVE_INFINITY
             )
+        }
+        private fun bounds(colliders: List<Collider>): FloatArray {
+            val bounds = emptyBounds()
             for (collider in colliders) {
                 val b = collider.bounds()
                 bounds[0] = Math.min(bounds[0], b[0])

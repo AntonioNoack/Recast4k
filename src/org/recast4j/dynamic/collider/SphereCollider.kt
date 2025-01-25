@@ -24,11 +24,7 @@ import org.recast4j.recast.Telemetry
 import kotlin.math.floor
 
 class SphereCollider(private val center: Vector3f, private val radius: Float, area: Int, flagMergeThreshold: Float) :
-    AbstractCollider(
-        area, flagMergeThreshold, bounds(
-            center, radius
-        )
-    ) {
+    AbstractCollider(area, flagMergeThreshold, bounds(center, radius)) {
     override fun rasterize(hf: Heightfield, telemetry: Telemetry?) {
         rasterizeSphere(
             hf, center, radius, area, floor((flagMergeThreshold / hf.cellHeight)).toInt(),

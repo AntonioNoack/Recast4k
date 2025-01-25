@@ -17,6 +17,7 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.dynamic.collider
 
+import org.recast4j.dynamic.collider.CompositeCollider.Companion.emptyBounds
 import org.recast4j.recast.Heightfield
 import org.recast4j.recast.RecastRasterization.rasterizeTriangle
 import org.recast4j.recast.Telemetry
@@ -28,11 +29,8 @@ class TrimeshCollider : AbstractCollider {
     private val vertices: FloatArray
     private val triangles: IntArray
 
-    constructor(vertices: FloatArray, triangles: IntArray, area: Int, flagMergeThreshold: Float) : super(
-        area,
-        flagMergeThreshold,
-        computeBounds(vertices)
-    ) {
+    constructor(vertices: FloatArray, triangles: IntArray, area: Int, flagMergeThreshold: Float) :
+            super(area, flagMergeThreshold, computeBounds(vertices)) {
         this.vertices = vertices
         this.triangles = triangles
     }
@@ -40,25 +38,21 @@ class TrimeshCollider : AbstractCollider {
     constructor(
         vertices: FloatArray,
         triangles: IntArray,
-        bounds: FloatArray?,
+        bounds: FloatArray,
         area: Int,
         flagMergeThreshold: Float
-    ) : super(area, flagMergeThreshold, bounds!!) {
+    ) : super(area, flagMergeThreshold, bounds) {
         this.vertices = vertices
         this.triangles = triangles
     }
 
     override fun rasterize(hf: Heightfield, telemetry: Telemetry?) {
-        var i = 0
+        var i = 2
         while (i < triangles.size) {
             rasterizeTriangle(
-                hf,
-                vertices,
-                triangles[i],
-                triangles[i + 1],
-                triangles[i + 2],
-                area,
-                floor((flagMergeThreshold / hf.cellHeight)).toInt(),
+                hf, vertices,
+                triangles[i - 2], triangles[i - 1], triangles[i],
+                area, floor((flagMergeThreshold / hf.cellHeight)).toInt(),
                 telemetry
             )
             i += 3
@@ -67,15 +61,18 @@ class TrimeshCollider : AbstractCollider {
 
     companion object {
         fun computeBounds(vertices: FloatArray): FloatArray {
-            val bounds = floatArrayOf(vertices[0], vertices[1], vertices[2], vertices[0], vertices[1], vertices[2])
-            var i = 3
+            var i = 2
+            val bounds = emptyBounds()
             while (i < vertices.size) {
-                bounds[0] = min(bounds[0], vertices[i])
-                bounds[1] = min(bounds[1], vertices[i + 1])
-                bounds[2] = min(bounds[2], vertices[i + 2])
-                bounds[3] = max(bounds[3], vertices[i])
-                bounds[4] = max(bounds[4], vertices[i + 1])
-                bounds[5] = max(bounds[5], vertices[i + 2])
+                val x = vertices[i - 2]
+                val y = vertices[i - 1]
+                val z = vertices[i]
+                bounds[0] = min(bounds[0], x)
+                bounds[1] = min(bounds[1], y)
+                bounds[2] = min(bounds[2], z)
+                bounds[3] = max(bounds[3], x)
+                bounds[4] = max(bounds[4], y)
+                bounds[5] = max(bounds[5], z)
                 i += 3
             }
             return bounds

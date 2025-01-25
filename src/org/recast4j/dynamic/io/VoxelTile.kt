@@ -141,39 +141,45 @@ class VoxelTile {
 
     private fun serializeSpans(heightfield: Heightfield, order: ByteOrder): ByteArray {
         val counts = IntArray(heightfield.width * heightfield.height)
+        var totalCount = serializeSpans0(heightfield, counts)
+        return serializeSpans1(heightfield, order, counts, totalCount)
+    }
+
+    private fun serializeSpans0(heightfield: Heightfield, counts: IntArray): Int {
         var totalCount = 0
-        run {
-            var z = 0
-            var pz = 0
-            while (z < heightfield.height) {
-                for (x in 0 until heightfield.width) {
-                    var span = heightfield.spans[pz + x]
-                    while (span != null) {
-                        counts[pz + x]++
-                        totalCount++
-                        span = span!!.next
-                    }
-                }
-                z++
-                pz += heightfield.width
-            }
-        }
-        val data = ByteArray(totalCount * SERIALIZED_SPAN_BYTES + counts.size * SERIALIZED_SPAN_COUNT_BYTES)
-        var position = 0
-        var z = 0
         var pz = 0
-        while (z < heightfield.height) {
+        for (z in 0 until heightfield.height) {
+            for (x in 0 until heightfield.width) {
+                var span = heightfield.spans[pz + x]
+                while (span != null) {
+                    counts[pz + x]++
+                    totalCount++
+                    span = span.next
+                }
+            }
+            pz += heightfield.width
+        }
+        return totalCount
+    }
+
+    private fun serializeSpans1(
+        heightfield: Heightfield, order: ByteOrder,
+        counts: IntArray, totalCount: Int
+    ): ByteArray {
+        var position = 0
+        var pz = 0
+        val data = ByteArray(totalCount * SERIALIZED_SPAN_BYTES + counts.size * SERIALIZED_SPAN_COUNT_BYTES)
+        for (z in 0 until heightfield.height) {
             for (x in 0 until heightfield.width) {
                 position = putShort(counts[pz + x], data, position, order)
                 var span = heightfield.spans[pz + x]
                 while (span != null) {
-                    position = putInt(span!!.min, data, position, order)
-                    position = putInt(span!!.max, data, position, order)
-                    position = putInt(span!!.area, data, position, order)
-                    span = span!!.next
+                    position = putInt(span.min, data, position, order)
+                    position = putInt(span.max, data, position, order)
+                    position = putInt(span.area, data, position, order)
+                    span = span.next
                 }
             }
-            z++
             pz += heightfield.width
         }
         return data
@@ -182,7 +188,7 @@ class VoxelTile {
     private fun toByteArray(buf: ByteBuffer, width: Int, height: Int, order: ByteOrder): ByteArray {
         val data = ByteArray(buf.limit())
         if (buf.order() == order) {
-            buf[data]
+            buf.get(data)
         } else {
             val l = Math.multiplyExact(width, height)
             var position = 0
