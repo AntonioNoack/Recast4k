@@ -26,6 +26,7 @@ import org.recast4j.LongArrayList
 import org.recast4j.Vectors
 import org.recast4j.detour.PolygonByCircleConstraint.StrictPolygonByCircleConstraint.CIRCLE_SEGMENTS
 import java.util.*
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
 
@@ -552,10 +553,10 @@ open class NavMeshQuery(val nav1: NavMesh) {
         val bmin = Vector3f(center).sub(halfExtents)
         val bmax = Vector3f(center).add(halfExtents)
 
-        val minx = Math.max(nav1.calcTileLocX(bmin), -1_000_000_000)
-        val miny = Math.max(nav1.calcTileLocY(bmin), -1_000_000_000)
-        val maxx = Math.min(nav1.calcTileLocX(bmax), +1_000_000_000)
-        val maxy = Math.min(nav1.calcTileLocY(bmax), +1_000_000_000)
+        val minx = max(nav1.calcTileLocX(bmin), -1_000_000_000)
+        val miny = max(nav1.calcTileLocY(bmin), -1_000_000_000)
+        val maxx = min(nav1.calcTileLocX(bmax), +1_000_000_000)
+        val maxy = min(nav1.calcTileLocY(bmax), +1_000_000_000)
 
         val numTiles = (maxx - minx) * (maxy - miny)
         if (numTiles < nav1.numTiles) {

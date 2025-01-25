@@ -38,18 +38,20 @@ import java.util.stream.Collectors
 import kotlin.math.floor
 
 class DynamicNavMesh(voxelFile: VoxelFile) {
-    val config: DynamicNavMeshConfig
-    private val builder: RecastBuilder
+
+    val config = DynamicNavMeshConfig(voxelFile.useTiles, voxelFile.tileSizeX, voxelFile.tileSizeZ, voxelFile.cellSize)
+
+    private val builder = RecastBuilder()
     private val tiles = LongHashMap<DynamicTile>()
-    private val telemetry: Telemetry
-    private val navMeshParams: NavMeshParams
+    private val telemetry = Telemetry()
+    private val navMeshParams = NavMeshParams()
     private val updateQueue: Queue<UpdateQueueItem> = LinkedBlockingQueue()
     private val currentColliderId = AtomicLong()
-    private var navMesh: NavMesh? = null
     private var dirty = true
 
+    var navMesh: NavMesh? = null
+
     init {
-        config = DynamicNavMeshConfig(voxelFile.useTiles, voxelFile.tileSizeX, voxelFile.tileSizeZ, voxelFile.cellSize)
         config.walkableHeight = voxelFile.walkableHeight
         config.walkableRadius = voxelFile.walkableRadius
         config.walkableClimb = voxelFile.walkableClimb
@@ -62,24 +64,14 @@ class DynamicNavMesh(voxelFile: VoxelFile) {
         config.buildDetailMesh = voxelFile.buildMeshDetail
         config.detailSampleDistance = voxelFile.detailSampleDistance
         config.detailSampleMaxError = voxelFile.detailSampleMaxError
-        builder = RecastBuilder()
-        navMeshParams = NavMeshParams()
-        navMeshParams.origin.x = voxelFile.bounds[0]
-        navMeshParams.origin.y = voxelFile.bounds[1]
-        navMeshParams.origin.z = voxelFile.bounds[2]
+        navMeshParams.origin.set(voxelFile.bounds)
         navMeshParams.tileWidth = voxelFile.cellSize * voxelFile.tileSizeX
         navMeshParams.tileHeight = voxelFile.cellSize * voxelFile.tileSizeZ
         navMeshParams.maxPolys = 0x8000
-        voxelFile.tiles.forEach(Consumer { t: VoxelTile ->
+        for (t in voxelFile.tiles) {
             tiles[lookupKey(t.tileX.toLong(), t.tileZ.toLong())] = DynamicTile(t)
-        })
-        telemetry = Telemetry()
+        }
     }
-
-    fun navMesh(): NavMesh? {
-        return navMesh
-    }
-
     /**
      * Voxel queries require checkpoints to be enabled in [DynamicNavMeshConfig]
      */

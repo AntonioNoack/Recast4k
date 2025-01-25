@@ -129,12 +129,12 @@ class VoxelFile {
                 f.tiles.add(VoxelTile(r.tileX, r.tileZ, r.solidHeightField))
                 val bmin = r.solidHeightField.bmin
                 val bmax = r.solidHeightField.bmax
-                f.bounds[0] = Math.min(f.bounds[0], bmin.x)
-                f.bounds[1] = Math.min(f.bounds[1], bmin.y)
-                f.bounds[2] = Math.min(f.bounds[2], bmin.z)
-                f.bounds[3] = Math.max(f.bounds[3], bmax.x)
-                f.bounds[4] = Math.max(f.bounds[4], bmax.y)
-                f.bounds[5] = Math.max(f.bounds[5], bmax.z)
+                f.bounds[0] = min(f.bounds[0], bmin.x)
+                f.bounds[1] = min(f.bounds[1], bmin.y)
+                f.bounds[2] = min(f.bounds[2], bmin.z)
+                f.bounds[3] = max(f.bounds[3], bmax.x)
+                f.bounds[4] = max(f.bounds[4], bmax.y)
+                f.bounds[5] = max(f.bounds[5], bmax.z)
             }
             return f
         }

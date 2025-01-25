@@ -18,7 +18,6 @@ freely, subject to the following restrictions:
 package org.recast4j.dynamic
 
 import org.joml.Vector3f
-import org.recast4j.Vectors
 import org.recast4j.recast.Heightfield
 import org.recast4j.recast.Span
 
@@ -34,9 +33,8 @@ class DynamicTileCheckpoint(heightfield: Heightfield, val colliders: Set<Long>) 
             source.cellSize,
             source.cellHeight, source.borderSize
         )
-        var z = 0
         var pz = 0
-        while (z < source.height) {
+        for (z in 0 until source.height) {
             for (x in 0 until source.width) {
                 var span = source.spans[pz + x]
                 var prevCopy: Span? = null
@@ -54,7 +52,6 @@ class DynamicTileCheckpoint(heightfield: Heightfield, val colliders: Set<Long>) 
                     span = span.next
                 }
             }
-            z++
             pz += source.width
         }
         return clone

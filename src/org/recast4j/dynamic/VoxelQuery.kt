@@ -19,7 +19,6 @@ package org.recast4j.dynamic
 
 import org.joml.Vector3f
 import org.recast4j.recast.Heightfield
-import java.util.*
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.max
@@ -30,17 +29,17 @@ import kotlin.math.min
  */
 class VoxelQuery(
     private val origin: Vector3f, private val tileWidth: Float, private val tileDepth: Float,
-    private val heightfieldProvider: (Int,Int) -> Heightfield?
+    private val heightfieldProvider: (Int, Int) -> Heightfield?
 ) {
     /**
      * Perform raycast using voxels heightfields.
-     * @return Optional with hit parameter (t) or empty if no hit found
+     * @return Hit parameter (t) or NaN if no hit found
      */
-    fun raycast(start: Vector3f, end: Vector3f): Optional<Float> {
+    fun raycast(start: Vector3f, end: Vector3f): Float {
         return traverseTiles(start, end)
     }
 
-    private fun traverseTiles(start: Vector3f, end: Vector3f): Optional<Float> {
+    private fun traverseTiles(start: Vector3f, end: Vector3f): Float {
         val relStartX = start.x - origin.x
         val relStartZ = start.z - origin.z
         var sx = floor((relStartX / tileWidth)).toInt()
@@ -66,9 +65,7 @@ class VoxelQuery(
         var t = 0f
         while (true) {
             val hit = traversHeightfield(sx, sz, start, end, t, min(1f, min(tMaxX, tMaxZ)))
-            if (hit.isPresent) {
-                return hit
-            }
+            if (hit.isFinite()) return hit
             if ((if (dx > 0) sx >= ex else sx <= ex) && (if (dz > 0) sz >= ez else sz <= ez)) {
                 break
             }
@@ -82,17 +79,14 @@ class VoxelQuery(
                 sz += stepZ
             }
         }
-        return Optional.empty()
+        return Float.NaN
     }
 
     private fun traversHeightfield(
-        x: Int,
-        z: Int,
-        start: Vector3f,
-        end: Vector3f,
-        tMin: Float,
-        tMax: Float
-    ): Optional<Float> {
+        x: Int, z: Int,
+        start: Vector3f, end: Vector3f,
+        tMin: Float, tMax: Float
+    ): Float {
         val ohf = heightfieldProvider(x, z)
         if (ohf != null) {
             var tx = end.x - start.x
@@ -114,25 +108,18 @@ class VoxelQuery(
             val zRem = ohf.cellSize + relStartZ % ohf.cellSize % ohf.cellSize
             val xOffest = abs(if (tx < 0) xRem else ohf.cellSize - xRem)
             val zOffest = abs(if (tz < 0) zRem else ohf.cellSize - zRem)
-            tx = abs(tx)
-            tz = abs(tz)
-            var tMaxX = xOffest / tx
-            var tMaxZ = zOffest / tz
-            val tDeltaX = ohf.cellSize / tx
-            val tDeltaZ = ohf.cellSize / tz
+            val atx = 1f / abs(tx)
+            val atz = 1f / abs(tz)
+            var tMaxX = xOffest * atx
+            var tMaxZ = zOffest * atz
+            val tDeltaX = ohf.cellSize * atx
+            val tDeltaZ = ohf.cellSize * atz
             var t = 0f
             while (true) {
                 if (sx >= 0 && sx < ohf.width && sz >= 0 && sz < ohf.height) {
-                    val y1 = start.y + ty * (tMin + t) - ohf.bmin.y
-                    val y2 = start.y + ty * (tMin + min(tMaxX, tMaxZ)) - ohf.bmin.y
-                    val minY = min(y1, y2) / ohf.cellHeight
-                    val maxY = max(y1, y2) / ohf.cellHeight
-                    var span = ohf.spans[sx + sz * ohf.width]
-                    while (span != null) {
-                        if (span.min <= minY && span.max >= maxY) {
-                            return Optional.of(min(1f, tMin + t))
-                        }
-                        span = span.next
+                    val bySpan = traversHeightfieldSpan(start, ohf, sx, sz, t, ty, tMin, tMaxX, tMaxZ)
+                    if (bySpan.isFinite()) {
+                        return bySpan
                     }
                 }
                 if ((if (dx > 0) sx >= ex else sx <= ex) && (if (dz > 0) sz >= ez else sz <= ez)) {
@@ -149,6 +136,25 @@ class VoxelQuery(
                 }
             }
         }
-        return Optional.empty()
+        return Float.NaN
+    }
+
+    private fun traversHeightfieldSpan(
+        start: Vector3f, ohf: Heightfield,
+        sx: Int, sz: Int,
+        t: Float, ty: Float, tMin: Float, tMaxX: Float, tMaxZ: Float
+    ): Float {
+        val y1 = start.y + ty * (tMin + t) - ohf.bmin.y
+        val y2 = start.y + ty * (tMin + min(tMaxX, tMaxZ)) - ohf.bmin.y
+        val minY = min(y1, y2) / ohf.cellHeight
+        val maxY = max(y1, y2) / ohf.cellHeight
+        var span = ohf.spans[sx + sz * ohf.width]
+        while (span != null) {
+            if (span.min <= minY && span.max >= maxY) {
+                return min(1f, tMin + t)
+            }
+            span = span.next
+        }
+        return Float.NaN
     }
 }

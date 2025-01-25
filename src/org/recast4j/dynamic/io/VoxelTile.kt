@@ -193,16 +193,14 @@ class VoxelTile {
             val l = Math.multiplyExact(width, height)
             var position = 0
             for (i in 0 until l) {
-                val count = buf.short.toInt()
+                val count = buf.getShort().toInt()
                 putShort(count, data, position, order)
                 position += 2
                 for (j in 0 until count) {
                     putInt(buf.getInt(), data, position, order)
-                    position += 4
-                    putInt(buf.getInt(), data, position, order)
-                    position += 4
-                    putInt(buf.getInt(), data, position, order)
-                    position += 4
+                    putInt(buf.getInt(), data, position + 4, order)
+                    putInt(buf.getInt(), data, position + 8, order)
+                    position += 12
                 }
             }
         }

@@ -29,6 +29,7 @@ import org.recast4j.recast.*
 import org.recast4j.recast.RecastBuilder.RecastBuilderResult
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
+import kotlin.math.min
 
 class DynamicTile(val voxelTile: VoxelTile) {
 
@@ -97,7 +98,7 @@ class DynamicTile(val voxelTile: VoxelTile) {
             config.regionMergeArea,
             config.maxEdgeLen,
             config.maxSimplificationError,
-            Math.min(DynamicNavMesh.MAX_VERTICES_PER_POLY, config.verticesPerPoly),
+            min(DynamicNavMesh.MAX_VERTICES_PER_POLY, config.verticesPerPoly),
             true,
             config.detailSampleDistance,
             config.detailSampleMaxError,
@@ -171,8 +172,9 @@ class DynamicTile(val voxelTile: VoxelTile) {
     }
 
     fun addTo(navMesh: NavMesh) {
+        val meshData = meshData
         id = if (meshData != null) {
-            navMesh.addTile(meshData!!, 0, 0)
+            navMesh.addTile(meshData, 0, 0)
         } else {
             navMesh.removeTile(id)
             0

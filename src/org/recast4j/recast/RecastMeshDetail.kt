@@ -1007,6 +1007,7 @@ object RecastMeshDetail {
         array.add(startSpanIndex)
         val dirs = intArrayOf(0, 1, 2, 3)
         Arrays.fill(hp.data, 0, hp.width * hp.height, 0)
+
         // DFS to move to the center. Note that we need a DFS here and can not just move
         // directly towards the center without recording intermediate nodes, even though the polygons
         // are convex. In very rare we can get stuck due to contour simplification if we do not

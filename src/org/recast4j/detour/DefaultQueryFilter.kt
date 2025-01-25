@@ -19,6 +19,7 @@ freely, subject to the following restrictions:
 package org.recast4j.detour
 
 import org.joml.Vector3f
+import kotlin.math.min
 
 /**
  * **The Default Implementation**
@@ -62,7 +63,7 @@ class DefaultQueryFilter : QueryFilter {
     constructor(includeFlags: Int, excludeFlags: Int, areaCost: FloatArray) {
         this.includeFlags = includeFlags
         this.excludeFlags = excludeFlags
-        System.arraycopy(areaCost, 0, areaCosts, 0, Math.min(NavMesh.DT_MAX_AREAS, areaCost.size))
+        System.arraycopy(areaCost, 0, areaCosts, 0, min(NavMesh.DT_MAX_AREAS, areaCost.size))
         for (i in areaCost.size until NavMesh.DT_MAX_AREAS) {
             areaCosts[i] = 1f
         }
