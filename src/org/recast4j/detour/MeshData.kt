@@ -18,7 +18,6 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour
 
-import jdk.nashorn.internal.objects.NativeMath
 import org.joml.Vector3f
 import org.recast4j.Vectors
 import org.recast4j.detour.NavMeshBuilder.createNavMeshData
@@ -81,33 +80,25 @@ class MeshData : MeshHeader() {
                     createBVTree(data, data.bvTree!!, data.bvQuantizationFactor)
         }
 
-        private fun createBVTree(data: MeshData, BVNodes: Array<BVNode>, quantFactor: Float): Int {
-            val items = Array(data.polyCount) { BVNode() }
+        private fun createBVTree(data: MeshData, dstNodes: Array<BVNode>, quantFactor: Float): Int {
+            val srcNodes = Array(data.polyCount) { BVNode() }
             for (i in 0 until data.polyCount) {
-                val node = items[i]
-                node.index = i
-                val bmin = Vector3f()
-                bmin.set(data.vertices, data.polygons[i].vertices[0] * 3)
-                val bmax = Vector3f(bmin)
-                for (j in 1 until data.polygons[i].vertCount) {
-                    val idx = data.polygons[i].vertices[j] * 3
-                    NativeMath.min(bmin, data.vertices, idx)
-                    NativeMath.max(bmax, data.vertices, idx)
-                }
-                val header = data
-                val headerMin = header.bmin
-                node.minX = quantitize(bmin.x, headerMin.x, quantFactor)
-                node.minY = quantitize(bmin.y, headerMin.y, quantFactor)
-                node.minZ = quantitize(bmin.z, headerMin.z, quantFactor)
-                node.maxX = quantitize(bmax.x, headerMin.x, quantFactor)
-                node.maxY = quantitize(bmax.y, headerMin.y, quantFactor)
-                node.maxZ = quantitize(bmax.z, headerMin.z, quantFactor)
+                srcNodes[i].index = i
             }
-            return subdivide(items, 0, data.polyCount, 0, BVNodes)
-        }
-
-        private fun quantitize(bmin: Float, headerMin: Float, quantFactor: Float): Int {
-            return Vectors.clamp(((bmin - headerMin) * quantFactor).toInt(), 0, 0x7fffffff)
+            val dataVertices = data.vertices
+            for (i in 0 until data.polyCount) {
+                val polygon = data.polygons[i]
+                val polygonVertices = polygon.vertices
+                val bmin = Vector3f(data.vertices, polygonVertices[0] * 3)
+                val bmax = Vector3f(bmin)
+                for (j in 1 until polygon.vertCount) {
+                    val idx = polygonVertices[j] * 3
+                    Vectors.min(bmin, dataVertices, idx)
+                    Vectors.max(bmax, dataVertices, idx)
+                }
+                srcNodes[i].setQuantitized(bmin, bmax, data.bmin, quantFactor)
+            }
+            return subdivide(srcNodes, 0, data.polyCount, 0, dstNodes)
         }
     }
 }

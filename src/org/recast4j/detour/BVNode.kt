@@ -18,6 +18,11 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour
 
+import org.joml.Vector3f
+import org.recast4j.Vectors
+import kotlin.math.max
+import kotlin.math.min
+
 /**
  * Bounding volume node.
  *
@@ -38,4 +43,50 @@ class BVNode {
      */
     var index = 0
 
+    fun setQuantitized(bmin: Vector3f, bmax: Vector3f, hmin: Vector3f, quantFactor: Float) {
+        minX = quantitize(bmin.x, hmin.x, quantFactor)
+        minY = quantitize(bmin.y, hmin.y, quantFactor)
+        minZ = quantitize(bmin.z, hmin.z, quantFactor)
+        maxX = quantitize(bmax.x, hmin.x, quantFactor)
+        maxY = quantitize(bmax.y, hmin.y, quantFactor)
+        maxZ = quantitize(bmax.z, hmin.z, quantFactor)
+    }
+
+    fun union(x: Int, y: Int, z: Int) {
+        if (x < minX) minX = x
+        if (y < minY) minY = y
+        if (z < minZ) minZ = z
+        if (x > maxX) maxX = x
+        if (y > maxY) maxY = y
+        if (z > maxZ) maxZ = z
+    }
+
+    fun union(other: BVNode) {
+        minX = min(minX, other.minX)
+        minY = min(minY, other.minY)
+        minZ = min(minZ, other.minZ)
+        maxX = max(maxX, other.maxX)
+        maxY = max(maxY, other.maxY)
+        maxZ = max(maxZ, other.maxZ)
+    }
+
+    fun copyInto(dst: BVNode) {
+        copyBoundsInto(dst)
+        dst.index = index
+    }
+
+    fun copyBoundsInto(dst: BVNode) {
+        dst.minX = minX
+        dst.minY = minY
+        dst.minZ = minZ
+        dst.maxX = maxX
+        dst.maxY = maxY
+        dst.maxZ = maxZ
+    }
+
+    companion object {
+        fun quantitize(bmin: Float, headerMin: Float, quantFactor: Float): Int {
+            return Vectors.clamp(((bmin - headerMin) * quantFactor).toInt(), 0, Int.MAX_VALUE)
+        }
+    }
 }

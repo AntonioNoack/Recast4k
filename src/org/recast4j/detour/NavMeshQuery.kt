@@ -558,7 +558,7 @@ open class NavMeshQuery(val nav1: NavMesh) {
         val maxx = min(nav1.calcTileLocX(bmax), +1_000_000_000)
         val maxy = min(nav1.calcTileLocY(bmax), +1_000_000_000)
 
-        val numTiles = (maxx - minx) * (maxy - miny)
+        val numTiles = (maxx - minx).toLong() * (maxy - miny)
         if (numTiles < nav1.numTiles) {
             // it's more efficient to use indices
             val tiles = ArrayList<MeshTile>()
@@ -818,22 +818,12 @@ open class NavMeshQuery(val nav1: NavMesh) {
     }
 
     fun initSlicedFindPath(
-        startRef: Long,
-        endRef: Long,
-        startPos: Vector3f,
-        endPos: Vector3f,
-        filter: QueryFilter,
-        options: Int,
-        raycastLimit: Float
+        startRef: Long, endRef: Long,
+        startPos: Vector3f, endPos: Vector3f,
+        filter: QueryFilter, options: Int, raycastLimit: Float
     ): Status = initSlicedFindPath(
-        startRef,
-        endRef,
-        startPos,
-        endPos,
-        filter,
-        options,
-        DefaultQueryHeuristic(),
-        raycastLimit
+        startRef, endRef, startPos, endPos,
+        filter, options, DefaultQueryHeuristic(), raycastLimit
     )
 
     /**
@@ -1008,15 +998,13 @@ open class NavMeshQuery(val nav1: NavMesh) {
                 // get the neighbor node
                 val neighbourNode = nodePool.getNode(neighbourRef, 0)
 
-                // do not expand to nodes that were already visited from the
-                // same parent
+                // do not expand to nodes that were already visited from the same parent
                 if (neighbourNode.parentIndex != 0 && neighbourNode.parentIndex == bestNode.parentIndex) {
                     i = bestTile.links[i].indexOfNextLink
                     continue
                 }
 
-                // If the node is visited the first time, calculate node
-                // position.
+                // If the node is visited the first time, calculate node position.
                 var neighbourPos = neighbourNode.pos
                 val midpod = if (neighbourRef == queryData.endRef) getEdgeIntersectionPoint(
                     bestNode.pos, bestRef, bestPoly, bestTile, queryData.endPos,
@@ -1198,9 +1186,7 @@ open class NavMeshQuery(val nav1: NavMesh) {
     }
 
     fun appendVertex(
-        pos: Vector3f,
-        flags: Int,
-        ref: Long,
+        pos: Vector3f, flags: Int, ref: Long,
         straightPath: MutableList<StraightPathItem>,
         maxStraightPath: Int
     ): Status {
