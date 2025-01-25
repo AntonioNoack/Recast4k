@@ -29,7 +29,7 @@ import kotlin.math.min
 /**
  * Represents an agent managed by a #dtCrowd object.
  */
-class CrowdAgent(idx: Int) {
+class CrowdAgent(val idx: Int) {
     /**
      * The type of navigation mesh polygon the agent is currently traversing.
      */
@@ -47,8 +47,6 @@ class CrowdAgent(idx: Int) {
     enum class MoveRequestState {
         NONE, FAILED, VALID, REQUESTING, WAITING_FOR_QUEUE, WAITING_FOR_PATH, VELOCITY
     }
-
-    val idx = idx.toLong()
 
     /** The type of mesh polygon the agent is traversing. (See: #CrowdAgentState)  */
     var state: CrowdAgentState? = null
@@ -100,7 +98,7 @@ class CrowdAgent(idx: Int) {
     var targetRef = 0L
 
     /** Target position of the movement request (or velocity in case of CROWDAGENT_TARGET_VELOCITY).  */
-    val targetPos = Vector3f()
+    val targetPosOrVel = Vector3f()
 
     /** Pathfinder query  */
     var targetPathQueryResult: PathQueryResult? = null
@@ -184,7 +182,7 @@ class CrowdAgent(idx: Int) {
 
     fun setTarget(ref: Long, pos: Vector3f) {
         targetRef = ref
-        targetPos.set(pos)
+        targetPosOrVel.set(pos)
         targetPathQueryResult = null
         targetState = if (targetRef != 0L) MoveRequestState.REQUESTING else MoveRequestState.FAILED
     }

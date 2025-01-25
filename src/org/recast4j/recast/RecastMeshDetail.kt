@@ -550,7 +550,7 @@ object RecastMeshDetail {
         ctx: Telemetry?, mesh: PolyMesh, chf: CompactHeightfield,
         sampleDist: Float, sampleMaxError: Float
     ): PolyMeshDetail? {
-        ctx?.startTimer("POLYMESHDETAIL")
+        ctx?.startTimer(TelemetryType.POLYMESHDETAIL)
         if (mesh.numVertices == 0 || mesh.numPolygons == 0) {
             return null
         }
@@ -695,7 +695,7 @@ object RecastMeshDetail {
             }
             dmesh.numTriangles = l shr 2
         }
-        ctx?.stopTimer("POLYMESHDETAIL")
+        ctx?.stopTimer(TelemetryType.POLYMESHDETAIL)
         return dmesh
     }
 

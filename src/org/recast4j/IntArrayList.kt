@@ -1,24 +1,19 @@
 package org.recast4j
 
 import kotlin.math.max
-import kotlin.math.min
 
-class IntArrayList(cap: Int = 16) {
+class IntArrayList(var values: IntArray) {
 
-    var values = IntArray(cap)
     var size = 0
 
+    constructor(cap: Int = 16) : this(IntArray(cap))
     constructor(src: IntArrayList) : this(src.size) {
         System.arraycopy(src.values, 0, values, 0, src.size)
         size = src.size
     }
 
     fun add(v: Int) {
-        if (size + 1 >= values.size) {
-            val data = IntArray(max(values.size * 2, 16))
-            System.arraycopy(values, 0, data, 0, size)
-            this.values = data
-        }
+        ensureExtra(1)
         values[size++] = v
     }
 
@@ -31,17 +26,6 @@ class IntArrayList(cap: Int = 16) {
     operator fun get(index: Int) = values[index]
     operator fun set(index: Int, value: Int) {
         values[index] = value
-    }
-
-    fun reverse() {
-        var j = size - 1
-        val values = values
-        for (i in 0 until size / 2) {
-            val t = values[i]
-            values[i] = values[j]
-            values[j] = t
-            j--
-        }
     }
 
     fun addAll(list: IntArrayList) {
@@ -92,28 +76,16 @@ class IntArrayList(cap: Int = 16) {
         ensureCapacity(size + extra)
     }
 
-    @Suppress("MemberVisibilityCanBePrivate")
-    fun ensureCapacity(size: Int) {
+    private fun ensureCapacity(size: Int) {
         if (values.size < size) {
-            val newSize = max(values.size * 2, max(size, 16))
-            val old = values
-            val new = IntArray(newSize)
-            System.arraycopy(old, 0, new, 0, this.size)
-            values = new
+            values = values.copyOf(max(values.size * 2, max(size, 16)))
         }
     }
 
     fun isEmpty() = size <= 0
 
-    fun shrink(newSize: Int) {
-        size = min(size, newSize)
-    }
-
     fun subList(startIndex: Int, endIndex: Int): IntArrayList {
-        val child = IntArrayList(endIndex - startIndex)
-        System.arraycopy(values, startIndex, child.values, 0, endIndex - startIndex)
-        child.size = endIndex - startIndex
-        return child
+        return IntArrayList(values.copyOfRange(startIndex, endIndex))
     }
 
     companion object {

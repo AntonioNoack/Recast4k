@@ -44,17 +44,14 @@ object RecastLayers {
         chf: CompactHeightfield,
         walkableHeight: Int
     ): Array<HeightfieldLayer>? {
-        ctx?.startTimer("RC_TIMER_BUILD_LAYERS")
+        ctx?.startTimer(TelemetryType.BUILD_LAYERS)
         val w = chf.width
         val h = chf.height
         val borderSize = chf.borderSize
         val srcReg = IntArray(chf.spanCount)
         Arrays.fill(srcReg, 0xFF)
         val numSweeps = chf.width // max(chf.width, chf.height);
-        val sweeps = arrayOfNulls<SweepSpan>(numSweeps)
-        for (i in sweeps.indices) {
-            sweeps[i] = SweepSpan()
-        }
+        val sweeps = Array(numSweeps) { SweepSpan() }
         // Partition walkable area into monotone regions.
         val prevCount = IntArray(256)
         var regId = 0
@@ -80,8 +77,9 @@ object RecastLayers {
                     }
                     if (sid == 0xff) {
                         sid = sweepId++
-                        sweeps[sid]!!.neighborId = 0xff
-                        sweeps[sid]!!.numSamples = 0
+                        val sweep = sweeps[sid]
+                        sweep.neighborId = 0xff
+                        sweep.numSamples = 0
                     }
 
                     // -y
@@ -93,16 +91,17 @@ object RecastLayers {
                         if (nr != 0xff) {
                             // Set neighbour when first valid neighbour is
                             // encoutered.
-                            if (sweeps[sid]!!.numSamples == 0) sweeps[sid]!!.neighborId = nr
-                            if (sweeps[sid]!!.neighborId == nr) {
+                            val sweep = sweeps[sid]
+                            if (sweep.numSamples == 0) sweep.neighborId = nr
+                            if (sweep.neighborId == nr) {
                                 // Update existing neighbour
-                                sweeps[sid]!!.numSamples++
+                                sweep.numSamples++
                                 prevCount[nr]++
                             } else {
                                 // This is hit if there is nore than one
                                 // neighbour.
                                 // Invalidate the neighbour.
-                                sweeps[sid]!!.neighborId = 0xff
+                                sweep.neighborId = 0xff
                             }
                         }
                     }
@@ -116,13 +115,14 @@ object RecastLayers {
                 // connection to it,
                 // the sweep will be merged with the previous one, else new
                 // region is created.
-                if (sweeps[i]!!.neighborId != 0xff && prevCount[sweeps[i]!!.neighborId] == sweeps[i]!!.numSamples) {
-                    sweeps[i]!!.regionId = sweeps[i]!!.neighborId
+                val sweep = sweeps[i]
+                if (sweep.neighborId != 0xff && prevCount[sweep.neighborId] == sweep.numSamples) {
+                    sweep.regionId = sweep.neighborId
                 } else {
                     if (regId == 255) {
                         throw RuntimeException("rcBuildHeightfieldLayers: Region ID overflow.")
                     }
-                    sweeps[i]!!.regionId = regId++
+                    sweep.regionId = regId++
                 }
             }
 
@@ -130,8 +130,9 @@ object RecastLayers {
             for (x in borderSize until w - borderSize) {
                 val c = x + y * w
                 for (i in chf.index[c] until chf.endIndex[c]) {
-                    if (srcReg[i] != 0xff)
-                        srcReg[i] = sweeps[srcReg[i]]!!.regionId
+                    if (srcReg[i] != 0xff) {
+                        srcReg[i] = sweeps[srcReg[i]].regionId
+                    }
                 }
             }
         }
@@ -152,8 +153,9 @@ object RecastLayers {
                     if (ri == 0xff) {
                         continue
                     }
-                    regions[ri].yMin = min(regions[ri].yMin, s.y)
-                    regions[ri].yMax = max(regions[ri].yMax, s.y)
+                    val regRi = regions[ri]
+                    regRi.yMin = min(regRi.yMin, s.y)
+                    regRi.yMax = max(regRi.yMax, s.y)
 
                     // Collect all region layers.
                     lregs.add(ri)
@@ -165,7 +167,9 @@ object RecastLayers {
                             val ay: Int = y + getDirOffsetY(dir)
                             val ai: Int = chf.index[ax + ay * w] + getCon(s, dir)
                             val rai = srcReg[ai]
-                            if (rai != 0xff && rai != ri) addUnique(regions[ri].neis, rai)
+                            if (rai != 0xff && rai != ri) {
+                                addUnique(regRi.neis, rai)
+                            }
                         }
                     }
                 }
@@ -173,11 +177,11 @@ object RecastLayers {
                 // Update overlapping regions.
                 for (i in 0 until lregs.size - 1) {
                     for (j in i + 1 until lregs.size) {
-                        if (lregs[i] != lregs[j]) {
-                            val ri = regions[lregs[i]]
-                            val rj = regions[lregs[j]]
-                            addUnique(ri.layers, lregs[j])
-                            addUnique(rj.layers, lregs[i])
+                        val lri = lregs[i]
+                        val lrj = lregs[j]
+                        if (lri != lrj) {
+                            addUnique(regions[lri].layers, lrj)
+                            addUnique(regions[lrj].layers, lri)
                         }
                     }
                 }
@@ -429,7 +433,7 @@ object RecastLayers {
             }
         }
 
-        // ctx->stopTimer(RC_TIMER_BUILD_LAYERS);
+        ctx?.stopTimer(TelemetryType.BUILD_LAYERS)
         return lset
     }
 

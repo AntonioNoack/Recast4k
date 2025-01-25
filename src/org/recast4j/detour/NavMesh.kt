@@ -776,8 +776,9 @@ class NavMesh(
      * Returns closest point on polygon.
      */
     fun closestPointOnDetailEdges(tile: MeshTile, poly: Poly, pos: Vector3f, onlyBoundary: Boolean): Vector3f {
-        val flagAnyBoundaryEdge =
-            DT_DETAIL_EDGE_BOUNDARY or (DT_DETAIL_EDGE_BOUNDARY shl 2) or (DT_DETAIL_EDGE_BOUNDARY shl 4)
+        val flagAnyBoundaryEdge = DT_DETAIL_EDGE_BOUNDARY or
+                (DT_DETAIL_EDGE_BOUNDARY shl 2) or
+                (DT_DETAIL_EDGE_BOUNDARY shl 4)
         val ip = poly.index
         var dmin = Float.MAX_VALUE
         var tmin = 0f
@@ -818,11 +819,13 @@ class NavMesh(
                 }
             }
         } else {
+            if (tileData == null || poly.vertCount <= 0) return Vector3f() // invalid/empty
             val (v0, v1) = tripletVec3f.get()
+            val vertices = tileData.vertices
             for (j in 0 until poly.vertCount) {
                 val k = (j + 1) % poly.vertCount
-                v0.set(tile.data!!.vertices, poly.vertices[j] * 3)
-                v1.set(tile.data!!.vertices, poly.vertices[k] * 3)
+                v0.set(vertices, poly.vertices[j] * 3)
+                v1.set(vertices, poly.vertices[k] * 3)
                 val (d, t) = Vectors.distancePtSegSqr2D(pos, v0, v1)
                 if (d < dmin) {
                     dmin = d
@@ -911,11 +914,13 @@ class NavMesh(
         // Off-mesh connections do not have detail polys and getting height
         // over them does not make sense.
         if (poly.type == Poly.DT_POLYTYPE_OFFMESH_CONNECTION) return Float.NaN
+        if (tile == null || poly.vertCount <= 0) return Float.NaN
         val ip = poly.index
+        val tileData = tile.data!!
         val vertices = tmpVertices.get()
         val nv = poly.vertCount
         for (i in 0 until nv) {
-            System.arraycopy(tile!!.data!!.vertices, poly.vertices[i] * 3, vertices, i * 3, 3)
+            System.arraycopy(tileData.vertices, poly.vertices[i] * 3, vertices, i * 3, 3)
         }
         if (!Vectors.pointInPolygon(pos, vertices, nv)) {
             return Float.NaN
@@ -923,9 +928,9 @@ class NavMesh(
 
         // Find height at the location.
         val (v0, v1, v2) = tripletVec3f.get()
-        val tileData = tile!!.data
-        if (tileData?.detailMeshes != null) {
-            val pd = tile.data!!.detailMeshes!![ip]
+        val detailMeshes = tileData.detailMeshes
+        if (detailMeshes != null) {
+            val pd = detailMeshes[ip]
             for (j in 0 until pd.triCount) {
                 val t = (pd.triBase + j) * 4
                 fill(tileData, t + 0, poly, v0, pd)
@@ -935,7 +940,7 @@ class NavMesh(
                 if (h.isFinite()) return h
             }
         } else {
-            val vs = tile.data!!.vertices
+            val vs = tileData.vertices
             val ix = poly.vertices
             v0.set(vs, ix[0] * 3)
             for (j in 1 until poly.vertCount - 1) {

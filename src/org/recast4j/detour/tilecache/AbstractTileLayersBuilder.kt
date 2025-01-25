@@ -67,5 +67,5 @@ abstract class AbstractTileLayersBuilder {
         return layers
     }
 
-    protected abstract fun build(tx: Int, ty: Int, order: ByteOrder?, cCompatibility: Boolean): List<ByteArray>?
+    protected abstract fun build(tx: Int, ty: Int, order: ByteOrder, cCompatibility: Boolean): List<ByteArray>?
 }

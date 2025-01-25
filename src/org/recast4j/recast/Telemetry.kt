@@ -21,15 +21,16 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
 class Telemetry {
-    private val timerStart = ThreadLocal.withInitial<MutableMap<String, AtomicLong>> { HashMap() }
-    private val timerAccum: MutableMap<String, AtomicLong> = ConcurrentHashMap()
-    fun startTimer(name: String) {
-        timerStart.get()[name] = AtomicLong(System.nanoTime())
+    private val timerStart = ThreadLocal.withInitial<HashMap<TelemetryType, Long>> { HashMap() }
+    private val timerAccum: MutableMap<TelemetryType, AtomicLong> = ConcurrentHashMap()
+
+    fun startTimer(type: TelemetryType) {
+        timerStart.get()[type] = System.nanoTime()
     }
 
-    fun stopTimer(name: String) {
-        timerAccum.computeIfAbsent(name) { AtomicLong() }
-            .addAndGet(System.nanoTime() - timerStart.get()[name]!!.get())
+    fun stopTimer(type: TelemetryType) {
+        timerAccum.computeIfAbsent(type) { AtomicLong() }
+            .addAndGet(System.nanoTime() - timerStart.get()[type]!!)
     }
 
     fun warn(string: String?) {
@@ -37,6 +38,9 @@ class Telemetry {
     }
 
     fun print() {
-        timerAccum.forEach { (n: String, v: AtomicLong) -> println(n + ": " + v.get() / 1000000) }
+        timerAccum.forEach { (n: TelemetryType, v: AtomicLong) ->
+            val time = v.get() / 100_000
+            println("${n.name}: ${time / 10}.${time % 10} ms")
+        }
     }
 }

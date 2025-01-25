@@ -46,9 +46,6 @@ class ChunkyTriMesh(vertices: FloatArray, tris: IntArray, numTris: Int, trisPerC
         }
     }
 
-    var nodes: MutableList<Node1>
-    var numTriangles: Int
-    var maxTrisPerChunk: Int
     private fun calcExtends(items: Array<Node0>, startIndex: Int, endIndex: Int, dst: Node1) {
         var n = items[startIndex]
         dst.minX = n.minX
@@ -118,42 +115,50 @@ class ChunkyTriMesh(vertices: FloatArray, tris: IntArray, numTris: Int, trisPerC
         }
     }
 
-    init {
-        val numChunks = (numTris + trisPerChunk - 1) / trisPerChunk
-        nodes = ArrayList(numChunks)
-        numTriangles = numTris
+    val numChunks = (numTris + trisPerChunk - 1) / trisPerChunk
+    var nodes: ArrayList<Node1> = ArrayList(numChunks)
+    var numTriangles = numTris
+    var maxTrisPerChunk: Int
 
-        // Build tree
-        val items = Array(numTris) { Node0() }
-        for (i in 0 until numTris) {
-            val t = i * 3
-            val it = items[i]
-            it.i = i
-            // Calc triangle XZ bounds.
-            it.maxX = vertices[tris[t] * 3]
-            it.minX = it.maxX
-            it.maxY = vertices[tris[t] * 3 + 2]
-            it.minY = it.maxY
-            for (j in 1..2) {
-                val v = tris[t + j] * 3
-                if (vertices[v] < it.minX) {
-                    it.minX = vertices[v]
-                }
-                if (vertices[v + 2] < it.minY) {
-                    it.minY = vertices[v + 2]
-                }
-                if (vertices[v] > it.maxX) {
-                    it.maxX = vertices[v]
-                }
-                if (vertices[v + 2] > it.maxY) {
-                    it.maxY = vertices[v + 2]
-                }
+    init {
+        val items = buildTree(numTris, vertices, tris)
+        subdivide(items, 0, numTris, trisPerChunk, nodes, tris)
+        maxTrisPerChunk = calculateMaxTrisPerChunk()
+    }
+
+    private fun buildTree(numTris: Int, vertices: FloatArray, tris: IntArray): Array<Node0> {
+        return Array(numTris) { i -> buildTreeNode(i, vertices, tris) }
+    }
+
+    private fun buildTreeNode(i: Int, vertices: FloatArray, tris: IntArray): Node0 {
+        val t = i * 3
+        val it = Node0()
+        it.i = i
+        // Calc triangle XZ bounds.
+        it.maxX = vertices[tris[t] * 3]
+        it.minX = it.maxX
+        it.maxY = vertices[tris[t] * 3 + 2]
+        it.minY = it.maxY
+        for (j in 1..2) {
+            val v = tris[t + j] * 3
+            if (vertices[v] < it.minX) {
+                it.minX = vertices[v]
+            }
+            if (vertices[v + 2] < it.minY) {
+                it.minY = vertices[v + 2]
+            }
+            if (vertices[v] > it.maxX) {
+                it.maxX = vertices[v]
+            }
+            if (vertices[v + 2] > it.maxY) {
+                it.maxY = vertices[v + 2]
             }
         }
-        subdivide(items, 0, numTris, trisPerChunk, nodes, tris)
+        return it
+    }
 
-        // Calc max tris per node.
-        maxTrisPerChunk = 0
+    private fun calculateMaxTrisPerChunk(): Int {
+        var maxTrisPerChunk = 0
         for (node in nodes) {
             val isLeaf = node.i >= 0
             if (!isLeaf) {
@@ -163,6 +168,7 @@ class ChunkyTriMesh(vertices: FloatArray, tris: IntArray, numTris: Int, trisPerC
                 maxTrisPerChunk = node.triangles.size / 3
             }
         }
+        return maxTrisPerChunk
     }
 
     private fun checkOverlapRect(aMin: FloatArray, aMax: FloatArray, b: Node1): Boolean {
@@ -171,7 +177,7 @@ class ChunkyTriMesh(vertices: FloatArray, tris: IntArray, numTris: Int, trisPerC
 
     fun getChunksOverlappingRect(bmin: FloatArray, bmax: FloatArray): List<Node1> {
         // Traverse tree
-        val ids: MutableList<Node1> = ArrayList()
+        val ids = ArrayList<Node1>()
         var i = 0
         while (i < nodes.size) {
             val node = nodes[i]

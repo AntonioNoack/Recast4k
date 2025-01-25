@@ -21,8 +21,15 @@ package org.recast4j.detour.crowd
 /** Configuration parameters for a crowd agent.  */
 class CrowdAgentParams {
 
-    var radius = 0f// >= 0
-    var height = 1f// > 0
+    /**
+     * >= 0
+     * */
+    var radius = 0f
+
+    /**
+     * > 0
+     * */
+    var height = 1f
 
     /** Maximum allowed acceleration. >= 0  */
     var maxAcceleration = 0f

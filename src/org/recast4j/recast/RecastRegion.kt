@@ -399,10 +399,9 @@ object RecastRegion {
         startLevel: Int, chf: CompactHeightfield, srcReg: IntArray, nbStacks: Int,
         stacks: List<IntArrayList>, loglevelsPerStack: Int
     ) { // the levels per stack (2 in our case) as a bit shift
-        var startLevel = startLevel
+        val startLevelI = startLevel shr loglevelsPerStack
         val w = chf.width
         val h = chf.height
-        startLevel = startLevel shr loglevelsPerStack
         for (j in 0 until nbStacks) {
             stacks[j].clear()
         }
@@ -416,7 +415,7 @@ object RecastRegion {
                         continue
                     }
                     val level = chf.dist[i] shr loglevelsPerStack
-                    var sId = startLevel - level
+                    var sId = startLevelI - level
                     if (sId >= nbStacks) {
                         continue
                     }
@@ -459,9 +458,9 @@ object RecastRegion {
         }
     }
 
-    private fun replaceNeighbour(reg: Region?, oldId: Int, newId: Int) {
+    private fun replaceNeighbour(reg: Region, oldId: Int, newId: Int) {
         var neiChanged = false
-        val con = reg!!.connections
+        val con = reg.connections
         for (i in 0 until con.size) {
             if (con[i] == oldId) {
                 con[i] = newId
@@ -479,8 +478,8 @@ object RecastRegion {
         }
     }
 
-    private fun canMergeWithRegion(rega: Region?, regb: Region?): Boolean {
-        if (rega!!.areaType != regb!!.areaType) {
+    private fun canMergeWithRegion(rega: Region, regb: Region): Boolean {
+        if (rega.areaType != regb.areaType) {
             return false
         }
         var n = 0
@@ -502,60 +501,32 @@ object RecastRegion {
         return true
     }
 
-    private fun addUniqueFloorRegion(reg: Region?, n: Int) {
-        if (!reg!!.floors.contains(n)) {
+    private fun addUniqueFloorRegion(reg: Region, n: Int) {
+        if (!reg.floors.contains(n)) {
             reg.floors.add(n)
         }
     }
 
-    private fun mergeRegions(rega: Region?, regb: Region?): Boolean {
-        val aid = rega!!.id
-        val bid = regb!!.id
+    private fun mergeRegions(rega: Region, regb: Region): Boolean {
+        val aid = rega.id
+        val bid = regb.id
 
         // Duplicate current neighbourhood.
         val acon = IntArrayList(rega.connections)
-        val bcon: IntArrayList = regb.connections
+        val bcon = regb.connections
 
-        // Find insertion point on A.
-        var insa = -1
-        for (i in 0 until acon.size) {
-            if (acon[i] == bid) {
-                insa = i
-                break
-            }
-        }
-        if (insa == -1) {
-            return false
-        }
-
-        // Find insertion point on B.
-        var insb = -1
-        for (i in 0 until bcon.size) {
-            if (bcon[i] == aid) {
-                insb = i
-                break
-            }
-        }
-        if (insb == -1) {
+        // Find insertion point on A and B.
+        var insa = findInsertionPoint(acon, bid)
+        var insb = findInsertionPoint(bcon, aid)
+        if (insa == -1 || insb == -1) {
             return false
         }
 
         // Merge neighbours.
         rega.connections.clear()
-        run {
-            var i = 0
-            val ni = acon.size
-            while (i < ni - 1) {
-                rega.connections.add(acon[(insa + 1 + i) % ni])
-                ++i
-            }
-        }
-        var i = 0
-        val ni = bcon.size
-        while (i < ni - 1) {
-            rega.connections.add(bcon[(insb + 1 + i) % ni])
-            ++i
-        }
+        addConnections(rega, acon, insa)
+        addConnections(rega, bcon, insb)
+
         removeAdjacentNeighbours(rega)
         val flo = regb.floors
         for (j in 0 until flo.size) {
@@ -565,6 +536,22 @@ object RecastRegion {
         regb.spanCount = 0
         regb.connections.clear()
         return true
+    }
+
+    private fun findInsertionPoint(acon: IntArrayList, bid: Int): Int {
+        for (i in 0 until acon.size) {
+            if (acon[i] == bid) {
+                return i
+            }
+        }
+        return -1
+    }
+
+    private fun addConnections(rega: Region, acon: IntArrayList, insa: Int) {
+        val ni1 = acon.size
+        for (i in 0 until ni1 - 1) {
+            rega.connections.add(acon[(insa + 1 + i) % ni1])
+        }
     }
 
     private fun isRegionConnectedToBorder(reg: Region?): Boolean {
@@ -664,12 +651,7 @@ object RecastRegion {
         val w = chf.width
         val h = chf.height
         val nreg = maxRegionId + 1
-        val regions = arrayOfNulls<Region>(nreg)
-
-        // Construct regions
-        for (i in 0 until nreg) {
-            regions[i] = Region(i)
-        }
+        val regions = Array(nreg) { Region(it) }
 
         // Find edge of a region and find connections around the contour.
         for (y in 0 until h) {
@@ -681,7 +663,7 @@ object RecastRegion {
                         continue
                     }
                     val reg = regions[r]
-                    reg!!.spanCount++
+                    reg.spanCount++
 
                     // Update floors.
                     for (j in chf.index[c] until chf.endIndex[c]) {
@@ -722,7 +704,7 @@ object RecastRegion {
         val trace = IntArrayList(32)
         for (i in 0 until nreg) {
             val reg = regions[i]
-            if (reg!!.id == 0 || reg.id and RecastConstants.RC_BORDER_REG != 0) {
+            if (reg.id == 0 || reg.id and RecastConstants.RC_BORDER_REG != 0) {
                 continue
             }
             if (reg.spanCount == 0) {
@@ -743,7 +725,7 @@ object RecastRegion {
                 // Pop
                 val ri = stack.remove(stack.size - 1)
                 val creg = regions[ri]
-                spanCount += creg!!.spanCount
+                spanCount += creg.spanCount
                 trace.add(ri)
                 val con = creg.connections
                 for (j in 0 until con.size) {
@@ -752,7 +734,7 @@ object RecastRegion {
                         continue
                     }
                     val neireg = regions[creg.connections[j]]
-                    if (neireg!!.visited) {
+                    if (neireg.visited) {
                         continue
                     }
                     if (neireg.id == 0 || neireg.id and RecastConstants.RC_BORDER_REG != 0) {
@@ -772,7 +754,7 @@ object RecastRegion {
                 // Kill all visited regions.
                 for (tri in 0 until trace.size) {
                     val tr = trace[tri]
-                    val rg = regions[tr]!!
+                    val rg = regions[tr]
                     rg.spanCount = 0
                     rg.id = 0
                 }
@@ -785,7 +767,7 @@ object RecastRegion {
             mergeCount = 0
             for (i in 0 until nreg) {
                 val reg = regions[i]
-                if (reg!!.id == 0 || reg.id and RecastConstants.RC_BORDER_REG != 0) {
+                if (reg.id == 0 || reg.id and RecastConstants.RC_BORDER_REG != 0) {
                     continue
                 }
                 if (reg.overlap) {
@@ -811,7 +793,7 @@ object RecastRegion {
                         continue
                     }
                     val mreg = regions[con[j]]
-                    if (mreg!!.id == 0 || mreg.id and RecastConstants.RC_BORDER_REG != 0 || mreg.overlap) {
+                    if (mreg.id == 0 || mreg.id and RecastConstants.RC_BORDER_REG != 0 || mreg.overlap) {
                         continue
                     }
                     if (mreg.spanCount < smallest && canMergeWithRegion(reg, mreg) && canMergeWithRegion(mreg, reg)) {
@@ -828,7 +810,7 @@ object RecastRegion {
                     if (mergeRegions(target, reg)) {
                         // Fixup regions pointing to current region.
                         for (j in 0 until nreg) {
-                            val regJ = regions[j]!!
+                            val regJ = regions[j]
                             if (regJ.id == 0 || regJ.id and RecastConstants.RC_BORDER_REG != 0) {
                                 continue
                             }
@@ -849,26 +831,27 @@ object RecastRegion {
 
         // Compress region Ids.
         for (i in 0 until nreg) {
-            regions[i]!!.remap = false
-            if (regions[i]!!.id == 0) {
+            regions[i].remap = false
+            if (regions[i].id == 0) {
                 continue  // Skip nil regions.
             }
-            if (regions[i]!!.id and RecastConstants.RC_BORDER_REG != 0) {
+            if (regions[i].id and RecastConstants.RC_BORDER_REG != 0) {
                 continue  // Skip external regions.
             }
-            regions[i]!!.remap = true
+            regions[i].remap = true
         }
         var regIdGen = 0
         for (i in 0 until nreg) {
-            if (!regions[i]!!.remap) {
+            if (!regions[i].remap) {
                 continue
             }
-            val oldId = regions[i]!!.id
+            val oldId = regions[i].id
             val newId = ++regIdGen
             for (j in i until nreg) {
-                if (regions[j]!!.id == oldId) {
-                    regions[j]!!.id = newId
-                    regions[j]!!.remap = false
+                val regionJ = regions[j]
+                if (regionJ.id == oldId) {
+                    regionJ.id = newId
+                    regionJ.remap = false
                 }
             }
         }
@@ -877,21 +860,22 @@ object RecastRegion {
         // Remap regions.
         for (i in 0 until chf.spanCount) {
             if (srcReg[i] and RecastConstants.RC_BORDER_REG == 0) {
-                srcReg[i] = regions[srcReg[i]]!!.id
+                srcReg[i] = regions[srcReg[i]].id
             }
         }
 
         // Return regions that we found to be overlapping.
         for (i in 0 until nreg) {
-            if (regions[i]!!.overlap) {
-                overlaps.add(regions[i]!!.id)
+            val regionI = regions[i]
+            if (regionI.overlap) {
+                overlaps.add(regionI.id)
             }
         }
         return maxRegionId
     }
 
-    private fun addUniqueConnection(reg: Region?, n: Int) {
-        if (!reg!!.connections.contains(n)) {
+    private fun addUniqueConnection(reg: Region, n: Int) {
+        if (!reg.connections.contains(n)) {
             reg.connections.add(n)
         }
     }
@@ -1074,31 +1058,31 @@ object RecastRegion {
         return maxRegionId
     }
 
-    /// @par
-    ///
-    /// This is usually the second to the last step in creating a fully built
-    /// compact heightfield. This step is required before regions are built
-    /// using #rcBuildRegions or #rcBuildRegionsMonotone.
-    ///
-    /// After this step, the distance data is available via the rcCompactHeightfield::maxDistance
-    /// and rcCompactHeightfield::dist fields.
-    ///
-    /// @see rcCompactHeightfield, rcBuildRegions, rcBuildRegionsMonotone
+    /**
+     * This is usually the second to the last step in creating a fully built
+     * compact heightfield. This step is required before regions are built
+     * using #rcBuildRegions or #rcBuildRegionsMonotone.
+     *
+     * After this step, the distance data is available via the rcCompactHeightfield::maxDistance
+     * and rcCompactHeightfield::dist fields.
+     *
+     * @see rcCompactHeightfield, rcBuildRegions, rcBuildRegionsMonotone
+     */
     fun buildDistanceField(ctx: Telemetry?, chf: CompactHeightfield) {
-        ctx?.startTimer("DISTANCEFIELD")
+        ctx?.startTimer(TelemetryType.DISTANCEFIELD)
         var src = IntArray(chf.spanCount)
-        ctx?.startTimer("DISTANCEFIELD_DIST")
+        ctx?.startTimer(TelemetryType.DISTANCEFIELD_DIST)
         chf.maxDistance = calculateDistanceField(chf, src)
-        ctx?.stopTimer("DISTANCEFIELD_DIST")
-        ctx?.startTimer("DISTANCEFIELD_BLUR")
+        ctx?.stopTimer(TelemetryType.DISTANCEFIELD_DIST)
+        ctx?.startTimer(TelemetryType.DISTANCEFIELD_BLUR)
 
         // Blur
         src = boxBlur(chf, src)
 
         // Store distance.
         System.arraycopy(src, 0, chf.dist, 0, src.size)
-        ctx?.stopTimer("DISTANCEFIELD_BLUR")
-        ctx?.stopTimer("DISTANCEFIELD")
+        ctx?.stopTimer(TelemetryType.DISTANCEFIELD_BLUR)
+        ctx?.stopTimer(TelemetryType.DISTANCEFIELD)
     }
 
     private fun paintRectRegion(
@@ -1118,40 +1102,37 @@ object RecastRegion {
         }
     }
 
-    /// @par
-    ///
-    /// Non-null regions will consist of connected, non-overlapping walkable spans that form a single contour.
-    /// Contours will form simple polygons.
-    ///
-    /// If multiple regions form an area that is smaller than @p minRegionArea, then all spans will be
-    /// re-assigned to the zero (null) region.
-    ///
-    /// Partitioning can result in smaller than necessary regions. @p mergeRegionArea helps
-    /// reduce unecessarily small regions.
-    ///
-    /// See the #rcConfig documentation for more information on the configuration parameters.
-    ///
-    /// The region data will be available via the rcCompactHeightfield::maxRegions
-    /// and rcCompactSpan::reg fields.
-    ///
-    /// @warning The distance field must be created using #rcBuildDistanceField before attempting to build regions.
-    ///
-    /// @see rcCompactHeightfield, rcCompactSpan, rcBuildDistanceField, rcBuildRegionsMonotone, rcConfig
+    /**
+     * Non-null regions will consist of connected, non-overlapping walkable spans that form a single contour.
+     * Contours will form simple polygons.
+     *
+     * If multiple regions form an area that is smaller than @p minRegionArea, then all spans will be
+     * re-assigned to the zero (null) region.
+     *
+     * Partitioning can result in smaller than necessary regions. @p mergeRegionArea helps
+     * reduce unecessarily small regions.
+     *
+     * See the #rcConfig documentation for more information on the configuration parameters.
+     *
+     * The region data will be available via the rcCompactHeightfield::maxRegions
+     * and rcCompactSpan::reg fields.
+     *
+     * @warning The distance field must be created using #rcBuildDistanceField before attempting to build regions.
+     *
+     * @see rcCompactHeightfield, rcCompactSpan, rcBuildDistanceField, rcBuildRegionsMonotone, rcConfig
+     */
     fun buildRegionsMonotone(
         ctx: Telemetry?, chf: CompactHeightfield, minRegionArea: Int,
         mergeRegionArea: Int
     ) {
-        ctx?.startTimer("REGIONS")
+        ctx?.startTimer(TelemetryType.REGIONS)
         val w = chf.width
         val h = chf.height
         val borderSize = chf.borderSize
         var id = 1
         val srcReg = IntArray(chf.spanCount)
         val nsweeps = max(chf.width, chf.height)
-        val sweeps = arrayOfNulls<SweepSpan>(nsweeps)
-        for (i in sweeps.indices) {
-            sweeps[i] = SweepSpan()
-        }
+        val sweeps = Array(nsweeps) { SweepSpan() }
 
         // Mark border regions.
         if (borderSize > 0) {
@@ -1159,14 +1140,10 @@ object RecastRegion {
             val bw = min(w, borderSize)
             val bh = min(h, borderSize)
             // Paint regions
-            paintRectRegion(0, bw, 0, h, id or RecastConstants.RC_BORDER_REG, chf, srcReg)
-            id++
-            paintRectRegion(w - bw, w, 0, h, id or RecastConstants.RC_BORDER_REG, chf, srcReg)
-            id++
-            paintRectRegion(0, w, 0, bh, id or RecastConstants.RC_BORDER_REG, chf, srcReg)
-            id++
-            paintRectRegion(0, w, h - bh, h, id or RecastConstants.RC_BORDER_REG, chf, srcReg)
-            id++
+            paintRectRegion(0, bw, 0, h, (id++) or RecastConstants.RC_BORDER_REG, chf, srcReg)
+            paintRectRegion(w - bw, w, 0, h, (id++) or RecastConstants.RC_BORDER_REG, chf, srcReg)
+            paintRectRegion(0, w, 0, bh, (id++) or RecastConstants.RC_BORDER_REG, chf, srcReg)
+            paintRectRegion(0, w, h - bh, h, (id++) or RecastConstants.RC_BORDER_REG, chf, srcReg)
         }
         var prev = IntArray(1024)
 
@@ -1199,9 +1176,10 @@ object RecastRegion {
                     }
                     if (previd == 0) {
                         previd = rid++
-                        sweeps[previd]!!.rowId = previd
-                        sweeps[previd]!!.numSamples = 0
-                        sweeps[previd]!!.neighborId = 0
+                        val sweep = sweeps[previd]
+                        sweep.rowId = previd
+                        sweep.numSamples = 0
+                        sweep.neighborId = 0
                     }
 
                     // -y
@@ -1211,15 +1189,16 @@ object RecastRegion {
                         val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 3)
                         if (srcReg[ai] != 0 && srcReg[ai] and RecastConstants.RC_BORDER_REG == 0 && chf.areas[i] == chf.areas[ai]) {
                             val nr = srcReg[ai]
-                            if (sweeps[previd]!!.neighborId == 0 || sweeps[previd]!!.neighborId == nr) {
-                                sweeps[previd]!!.neighborId = nr
-                                sweeps[previd]!!.numSamples++
+                            val sweep = sweeps[previd]
+                            if (sweep.neighborId == 0 || sweep.neighborId == nr) {
+                                sweep.neighborId = nr
+                                sweep.numSamples++
                                 if (prev.size <= nr) {
                                     prev = prev.copyOf(prev.size * 2)
                                 }
                                 prev[nr]++
                             } else {
-                                sweeps[previd]!!.neighborId = RC_NULL_NEI
+                                sweep.neighborId = RC_NULL_NEI
                             }
                         }
                     }
@@ -1229,10 +1208,11 @@ object RecastRegion {
 
             // Create unique ID.
             for (i in 1 until rid) {
-                if (sweeps[i]!!.neighborId != RC_NULL_NEI && sweeps[i]!!.neighborId != 0 && prev[sweeps[i]!!.neighborId] == sweeps[i]!!.numSamples) {
-                    sweeps[i]!!.regionId = sweeps[i]!!.neighborId
+                val sweep = sweeps[i]
+                if (sweep.neighborId != RC_NULL_NEI && sweep.neighborId != 0 && prev[sweep.neighborId] == sweep.numSamples) {
+                    sweep.regionId = sweep.neighborId
                 } else {
-                    sweeps[i]!!.regionId = id++
+                    sweep.regionId = id++
                 }
             }
 
@@ -1241,55 +1221,55 @@ object RecastRegion {
                 val c = x + y * w
                 for (i in chf.index[c] until chf.endIndex[c]) {
                     if (srcReg[i] in 1 until rid) {
-                        srcReg[i] = sweeps[srcReg[i]]!!.regionId
+                        srcReg[i] = sweeps[srcReg[i]].regionId
                     }
                 }
             }
         }
-        ctx?.startTimer("REGIONS_FILTER")
+        ctx?.startTimer(TelemetryType.REGIONS_FILTER)
 
         // Merge regions and filter out small regions.
         val overlaps = IntArrayList()
         chf.maxRegions = mergeAndFilterRegions(minRegionArea, mergeRegionArea, id, chf, srcReg, overlaps)
 
         // Monotone partitioning does not generate overlapping regions.
-        ctx?.stopTimer("REGIONS_FILTER")
+        ctx?.stopTimer(TelemetryType.REGIONS_FILTER)
 
         // Store the result out.
         for (i in 0 until chf.spanCount) {
             chf.spans[i].regionId = srcReg[i]
         }
-        ctx?.stopTimer("REGIONS")
+        ctx?.stopTimer(TelemetryType.REGIONS)
     }
 
-    /// @par
-    ///
-    /// Non-null regions will consist of connected, non-overlapping walkable spans that form a single contour.
-    /// Contours will form simple polygons.
-    ///
-    /// If multiple regions form an area that is smaller than @p minRegionArea, then all spans will be
-    /// re-assigned to the zero (null) region.
-    ///
-    /// Watershed partitioning can result in smaller than necessary regions, especially in diagonal corridors.
-    /// @p mergeRegionArea helps reduce unecessarily small regions.
-    ///
-    /// See the #rcConfig documentation for more information on the configuration parameters.
-    ///
-    /// The region data will be available via the rcCompactHeightfield::maxRegions
-    /// and rcCompactSpan::reg fields.
-    ///
-    /// @warning The distance field must be created using #rcBuildDistanceField before attempting to build regions.
-    ///
-    /// @see rcCompactHeightfield, rcCompactSpan, rcBuildDistanceField, rcBuildRegionsMonotone, rcConfig
+    /**
+     * Non-null regions will consist of connected, non-overlapping walkable spans that form a single contour.
+     * Contours will form simple polygons.
+     *
+     * If multiple regions form an area that is smaller than @p minRegionArea, then all spans will be
+     * re-assigned to the zero (null) region.
+     *
+     * Watershed partitioning can result in smaller than necessary regions, especially in diagonal corridors.
+     * @p mergeRegionArea helps reduce unecessarily small regions.
+     *
+     * See the #rcConfig documentation for more information on the configuration parameters.
+     *
+     * The region data will be available via the rcCompactHeightfield::maxRegions
+     * and rcCompactSpan::reg fields.
+     *
+     * @warning The distance field must be created using #rcBuildDistanceField before attempting to build regions.
+     *
+     * @see rcCompactHeightfield, rcCompactSpan, rcBuildDistanceField, rcBuildRegionsMonotone, rcConfig
+     */
     fun buildRegions(
         ctx: Telemetry?, chf: CompactHeightfield, minRegionArea: Int,
         mergeRegionArea: Int
     ) {
-        ctx?.startTimer("REGIONS")
+        ctx?.startTimer(TelemetryType.REGIONS)
         val w = chf.width
         val h = chf.height
         val borderSize = chf.borderSize
-        ctx?.startTimer("REGIONS_WATERSHED")
+        ctx?.startTimer(TelemetryType.REGIONS_WATERSHED)
         val LOG_NB_STACKS = 3
         val NB_STACKS = 1 shl LOG_NB_STACKS
         val lvlStacks: MutableList<IntArrayList> = ArrayList()
@@ -1312,14 +1292,10 @@ object RecastRegion {
             val bw = min(w, borderSize)
             val bh = min(h, borderSize)
             // Paint regions
-            paintRectRegion(0, bw, 0, h, regionId or RecastConstants.RC_BORDER_REG, chf, srcReg)
-            regionId++
-            paintRectRegion(w - bw, w, 0, h, regionId or RecastConstants.RC_BORDER_REG, chf, srcReg)
-            regionId++
-            paintRectRegion(0, w, 0, bh, regionId or RecastConstants.RC_BORDER_REG, chf, srcReg)
-            regionId++
-            paintRectRegion(0, w, h - bh, h, regionId or RecastConstants.RC_BORDER_REG, chf, srcReg)
-            regionId++
+            paintRectRegion(0, bw, 0, h, (regionId++) or RecastConstants.RC_BORDER_REG, chf, srcReg)
+            paintRectRegion(w - bw, w, 0, h, (regionId++) or RecastConstants.RC_BORDER_REG, chf, srcReg)
+            paintRectRegion(0, w, 0, bh, (regionId++) or RecastConstants.RC_BORDER_REG, chf, srcReg)
+            paintRectRegion(0, w, h - bh, h, (regionId++) or RecastConstants.RC_BORDER_REG, chf, srcReg)
         }
         chf.borderSize = borderSize
         var sId = -1
@@ -1335,12 +1311,12 @@ object RecastRegion {
             }
 
             // ctx->stopTimer(RC_TIMER_DIVIDE_TO_LEVELS);
-            ctx?.startTimer("REGIONS_EXPAND")
+            ctx?.startTimer(TelemetryType.REGIONS_EXPAND)
 
             // Expand current regions until no empty connected cells found.
             expandRegions(expandIters, level, chf, srcReg, srcDist, lvlStacks[sId], false)
-            ctx?.stopTimer("REGIONS_EXPAND")
-            ctx?.startTimer("REGIONS_FLOOD")
+            ctx?.stopTimer(TelemetryType.REGIONS_EXPAND)
+            ctx?.startTimer(TelemetryType.REGIONS_FLOOD)
 
             // Mark new regions with IDs.
             var j = 0
@@ -1355,13 +1331,13 @@ object RecastRegion {
                 }
                 j += 3
             }
-            ctx?.stopTimer("REGIONS_FLOOD")
+            ctx?.stopTimer(TelemetryType.REGIONS_FLOOD)
         }
 
         // Expand current regions until no empty connected cells found.
         expandRegions(expandIters * 8, 0, chf, srcReg, srcDist, stack, true)
-        ctx?.stopTimer("REGIONS_WATERSHED")
-        ctx?.startTimer("REGIONS_FILTER")
+        ctx?.stopTimer(TelemetryType.REGIONS_WATERSHED)
+        ctx?.startTimer(TelemetryType.REGIONS_FILTER)
 
         // Merge regions and filter out smalle regions.
         val overlaps = IntArrayList()
@@ -1371,27 +1347,24 @@ object RecastRegion {
         if (overlaps.size > 0 && ctx != null) {
             ctx.warn("rcBuildRegions: " + overlaps.size + " overlapping regions.")
         }
-        ctx?.stopTimer("REGIONS_FILTER")
+        ctx?.stopTimer(TelemetryType.REGIONS_FILTER)
 
         // Write the result out.
         for (i in 0 until chf.spanCount) {
             chf.spans[i].regionId = srcReg[i]
         }
-        ctx?.stopTimer("REGIONS")
+        ctx?.stopTimer(TelemetryType.REGIONS)
     }
 
     fun buildLayerRegions(ctx: Telemetry?, chf: CompactHeightfield, minRegionArea: Int) {
-        ctx?.startTimer("REGIONS")
+        ctx?.startTimer(TelemetryType.REGIONS)
         val w = chf.width
         val h = chf.height
         val borderSize = chf.borderSize
         var id = 1
         val srcReg = IntArray(chf.spanCount)
         val nsweeps = max(chf.width, chf.height)
-        val sweeps = arrayOfNulls<SweepSpan>(nsweeps)
-        for (i in sweeps.indices) {
-            sweeps[i] = SweepSpan()
-        }
+        val sweeps = Array(nsweeps) { SweepSpan() }
 
         // Mark border regions.
         if (borderSize > 0) {
@@ -1439,9 +1412,10 @@ object RecastRegion {
                     }
                     if (previd == 0) {
                         previd = rid++
-                        sweeps[previd]!!.rowId = previd
-                        sweeps[previd]!!.numSamples = 0
-                        sweeps[previd]!!.neighborId = 0
+                        val sweep = sweeps[previd]
+                        sweep.rowId = previd
+                        sweep.numSamples = 0
+                        sweep.neighborId = 0
                     }
 
                     // -y
@@ -1451,15 +1425,16 @@ object RecastRegion {
                         val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 3)
                         if (srcReg[ai] != 0 && srcReg[ai] and RecastConstants.RC_BORDER_REG == 0 && chf.areas[i] == chf.areas[ai]) {
                             val nr = srcReg[ai]
-                            if (sweeps[previd]!!.neighborId == 0 || sweeps[previd]!!.neighborId == nr) {
-                                sweeps[previd]!!.neighborId = nr
-                                sweeps[previd]!!.numSamples++
+                            val sweep = sweeps[previd]
+                            if (sweep.neighborId == 0 || sweep.neighborId == nr) {
+                                sweep.neighborId = nr
+                                sweep.numSamples++
                                 if (prev.size <= nr) {
                                     prev = prev.copyOf(prev.size * 2)
                                 }
                                 prev[nr]++
                             } else {
-                                sweeps[previd]!!.neighborId = RC_NULL_NEI
+                                sweep.neighborId = RC_NULL_NEI
                             }
                         }
                     }
@@ -1469,10 +1444,11 @@ object RecastRegion {
 
             // Create unique ID.
             for (i in 1 until rid) {
-                if (sweeps[i]!!.neighborId != RC_NULL_NEI && sweeps[i]!!.neighborId != 0 && prev[sweeps[i]!!.neighborId] == sweeps[i]!!.numSamples) {
-                    sweeps[i]!!.regionId = sweeps[i]!!.neighborId
+                val sweep = sweeps[i]
+                if (sweep.neighborId != RC_NULL_NEI && sweep.neighborId != 0 && prev[sweep.neighborId] == sweep.numSamples) {
+                    sweep.regionId = sweep.neighborId
                 } else {
-                    sweeps[i]!!.regionId = id++
+                    sweep.regionId = id++
                 }
             }
 
@@ -1481,22 +1457,22 @@ object RecastRegion {
                 val c = x + y * w
                 for (i in chf.index[c] until chf.endIndex[c]) {
                     if (srcReg[i] in 1 until rid) {
-                        srcReg[i] = sweeps[srcReg[i]]!!.regionId
+                        srcReg[i] = sweeps[srcReg[i]].regionId
                     }
                 }
             }
         }
-        ctx?.startTimer("REGIONS_FILTER")
+        ctx?.startTimer(TelemetryType.REGIONS_FILTER)
 
         // Merge monotone regions to layers and remove small regions.
         chf.maxRegions = mergeAndFilterLayerRegions(minRegionArea, id, chf, srcReg)
-        ctx?.stopTimer("REGIONS_FILTER")
+        ctx?.stopTimer(TelemetryType.REGIONS_FILTER)
 
         // Store the result out.
         for (i in 0 until chf.spanCount) {
             chf.spans[i].regionId = srcReg[i]
         }
-        ctx?.stopTimer("REGIONS")
+        ctx?.stopTimer(TelemetryType.REGIONS)
     }
 
     internal class SweepSpan {

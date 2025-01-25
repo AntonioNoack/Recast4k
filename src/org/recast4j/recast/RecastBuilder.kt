@@ -19,7 +19,6 @@ freely, subject to the following restrictions:
 package org.recast4j.recast
 
 import org.joml.Vector3f
-import org.recast4j.recast.RecastConstants.PartitionType
 import org.recast4j.recast.geom.ConvexVolumeProvider
 import org.recast4j.recast.geom.InputGeomProvider
 import java.util.concurrent.CountDownLatch
@@ -131,54 +130,23 @@ class RecastBuilder {
 
         // Partition the heightfield so that we can use simple algorithm later
         // to triangulate the walkable areas.
-        // There are 3 partitioning methods, each with some pros and cons:
-        // 1) Watershed partitioning
-        // - the classic Recast partitioning
-        // - creates the nicest tessellation
-        // - usually slowest
-        // - partitions the heightfield into nice regions without holes or
-        // overlaps
-        // - the are some corner cases where this method creates produces holes
-        // and overlaps
-        // - holes may appear when a small obstacles is close to large open area
-        // (triangulation can handle this)
-        // - overlaps may occur if you have narrow spiral corridors (i.e
-        // stairs), this make triangulation to fail
-        // * generally the best choice if you precompute the nacmesh, use this
-        // if you have large open areas
-        // 2) Monotone portioning
-        // - fastest
-        // - partitions the heightfield into regions without holes and overlaps
-        // (guaranteed)
-        // - creates long thin polygons, which sometimes causes paths with
-        // detours
-        // * use this if you want fast navmesh generation
-        // 3) Layer partitioning
-        // - quite fast
-        // - partitions the heighfield into non-overlapping regions
-        // - relies on the triangulation code to cope with holes (thus slower
-        // than monotone partitioning)
-        // - produces better triangles than monotone partitioning
-        // - does not have the corner cases of watershed partitioning
-        // - can be slow and create a bit ugly tessellation (still better than
-        // monotone)
-        // if you have large open areas with small obstacles (not a problem if
-        // you use tiles)
-        // * good choice to use for tiled navmesh with medium and small sized
-        // tiles
-        if (cfg.partitionType == PartitionType.WATERSHED) {
-            // Prepare for region partitioning, by calculating distance field
-            // along the walkable surface.
-            RecastRegion.buildDistanceField(ctx, chf)
-            // Partition the walkable surface into simple regions without holes.
-            RecastRegion.buildRegions(ctx, chf, cfg.minRegionArea, cfg.mergeRegionArea)
-        } else if (cfg.partitionType == PartitionType.MONOTONE) {
-            // Partition the walkable surface into simple regions without holes.
-            // Monotone partitioning does not need distancefield.
-            RecastRegion.buildRegionsMonotone(ctx, chf, cfg.minRegionArea, cfg.mergeRegionArea)
-        } else {
-            // Partition the walkable surface into simple regions without holes.
-            RecastRegion.buildLayerRegions(ctx, chf, cfg.minRegionArea)
+        when (cfg.partitionType) {
+            PartitionType.WATERSHED -> {
+                // Prepare for region partitioning, by calculating distance field
+                // along the walkable surface.
+                RecastRegion.buildDistanceField(ctx, chf)
+                // Partition the walkable surface into simple regions without holes.
+                RecastRegion.buildRegions(ctx, chf, cfg.minRegionArea, cfg.mergeRegionArea)
+            }
+            PartitionType.MONOTONE -> {
+                // Partition the walkable surface into simple regions without holes.
+                // Monotone partitioning does not need distance field.
+                RecastRegion.buildRegionsMonotone(ctx, chf, cfg.minRegionArea, cfg.mergeRegionArea)
+            }
+            PartitionType.LAYERS -> {
+                // Partition the walkable surface into simple regions without holes.
+                RecastRegion.buildLayerRegions(ctx, chf, cfg.minRegionArea)
+            }
         }
 
         //
@@ -206,7 +174,7 @@ class RecastBuilder {
         return RecastBuilderResult(tileX, tileZ, solid, chf, cset, pmesh, dmesh, ctx)
     }
 
-    /*
+    /**
      * Step 2. Filter walkable surfaces.
      */
     private fun filterHeightfield(solid: Heightfield, cfg: RecastConfig, ctx: Telemetry?) {

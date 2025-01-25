@@ -32,10 +32,6 @@ class NavMeshDataCreateParams {
         val f0 = FloatArray(0)
     }
 
-    /// @name Polygon Mesh Attributes
-    /// Used to create the base navigation graph.
-    /// See #rcPolyMesh for details related to these attributes.
-
     /**
      * The polygon mesh vertices. [(x, y, z) * #vertCount] [Unit: vx]
      */
@@ -75,10 +71,9 @@ class NavMeshDataCreateParams {
      */
     var maxVerticesPerPolygon = 3
 
-    /// @}
-    /// @name Height Detail Attributes (Optional)
-    /// See #rcPolyMeshDetail for details related to these attributes.
-    /// @{
+    /** @name Height Detail Attributes (Optional)
+     *See #rcPolyMeshDetail for details related to these attributes.
+     */
 
     /**
      * The height detail sub-mesh data. [Size: 4 * #polyCount]
@@ -108,12 +103,12 @@ class NavMeshDataCreateParams {
      */
     var detailTriCount = 0
 
-    /// @}
-    /// @name Off-Mesh Connections Attributes (Optional)
-    /// Used to define a custom point-to-point edge within the navigation graph, an
-    /// off-mesh connection is a user defined traversable connection made up to two vertices,
-    /// at least one of which resides within a navigation mesh polygon.
-    /// @{
+    /**
+     * @name Off-Mesh Connections Attributes (Optional)
+     * Used to define a custom point-to-point edge within the navigation graph, an
+     * off-mesh connection is a user defined traversable connection made up to two vertices,
+     * at least one of which resides within a navigation mesh polygon.
+     * */
 
     /**
      * Off-mesh connection vertices. [(ax, ay, az, bx, by, bz) * #offMeshConCount]
@@ -153,10 +148,9 @@ class NavMeshDataCreateParams {
     /** The number of off-mesh connections. [Limit: >= 0] */
     var offMeshConCount = 0
 
-    /// @}
-    /// @name Tile Attributes
-    /// @note The tile grid/layer data can be left at zero if the destination is a single tile mesh.
-    /// @{
+    /** @name Tile Attributes
+     * @note The tile grid/layer data can be left at zero if the destination is a single tile mesh.
+     */
 
     /**
      * The user defined id of the tile.
@@ -184,7 +178,7 @@ class NavMeshDataCreateParams {
     lateinit var bmin: Vector3f
     lateinit var bmax: Vector3f
 
-    /* General Configuration Attributes */
+    /** General Configuration Attributes */
 
     /**
      * The agent height.

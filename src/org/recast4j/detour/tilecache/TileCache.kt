@@ -50,40 +50,33 @@ class TileCache(
     private val requests: MutableList<ObstacleRequest> = ArrayList()
     private val update = LongArrayList()
     private val builder = TileCacheBuilder()
-    private val tileReader = TileCacheLayerHeaderReader()
     private fun contains(a: LongArrayList, v: Long): Boolean {
         return a.contains(v)
     }
 
-    /// Encodes a tile id.
     private fun encodeTileId(salt: Int, it: Int): Long {
         return salt.toLong() shl numTileBitsInTileID or it.toLong()
     }
 
-    /// Decodes a tile salt.
     private fun decodeTileIdSalt(ref: Long): Int {
         val saltMask = (1L shl numSaltBitsInTileID) - 1
         return (ref shr numTileBitsInTileID and saltMask).toInt()
     }
 
-    /// Decodes a tile id.
     private fun decodeTileIdTile(ref: Long): Int {
         val tileMask = (1L shl numTileBitsInTileID) - 1
         return (ref and tileMask).toInt()
     }
 
-    /// Encodes an obstacle id.
     private fun encodeObstacleId(salt: Int, it: Int): Long {
         return salt.toLong() shl 16 or it.toLong()
     }
 
-    /// Decodes an obstacle salt.
     private fun decodeObstacleIdSalt(ref: Long): Int {
         val saltMask = (1L shl 16) - 1
         return (ref shr 16 and saltMask).toInt()
     }
 
-    /// Decodes an obstacle id.
     private fun decodeObstacleIdObstacle(ref: Long): Int {
         val tileMask = (1L shl 16) - 1
         return (ref and tileMask).toInt()
@@ -163,7 +156,7 @@ class TileCache(
         val buf = ByteBuffer.wrap(data)
         buf.order(storageParams.byteOrder)
         // todo assign proper index...
-        val tile = tileReader.read(buf, storageParams.cCompatibility, CompressedTile(0))
+        val tile = TileCacheLayerHeaderReader.read(buf, storageParams.cCompatibility, CompressedTile(0))
         // Make sure the location is free.
         if (getTileAt(tile.tx, tile.ty, tile.tlayer) != null) {
             return 0

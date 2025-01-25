@@ -252,11 +252,11 @@ object RecastRasterization {
         solid: Heightfield, vertices: FloatArray, v0: Int, v1: Int, v2: Int, area: Int, flagMergeThr: Int,
         ctx: Telemetry?
     ) {
-        ctx?.startTimer("RASTERIZE_TRIANGLES")
+        ctx?.startTimer(TelemetryType.RASTERIZE_TRIANGLES)
         val ics = 1f / solid.cellSize
         val ich = 1f / solid.cellHeight
         rasterizeTri(vertices, v0, v1, v2, area, solid, solid.bmin, solid.bmax, solid.cellSize, ics, ich, flagMergeThr)
-        ctx?.stopTimer("RASTERIZE_TRIANGLES")
+        ctx?.stopTimer(TelemetryType.RASTERIZE_TRIANGLES)
     }
 
     /**
@@ -268,7 +268,7 @@ object RecastRasterization {
         solid: Heightfield, vertices: FloatArray, tris: IntArray, areas: IntArray, nt: Int, flagMergeThr: Int,
         ctx: Telemetry?
     ) {
-        ctx?.startTimer("RASTERIZE_TRIANGLES")
+        ctx?.startTimer(TelemetryType.RASTERIZE_TRIANGLES)
         val ics = 1f / solid.cellSize
         val ich = 1f / solid.cellHeight
         // Rasterize triangles.
@@ -292,7 +292,7 @@ object RecastRasterization {
                 flagMergeThr
             )
         }
-        ctx?.stopTimer("RASTERIZE_TRIANGLES")
+        ctx?.stopTimer(TelemetryType.RASTERIZE_TRIANGLES)
     }
 
     /**
@@ -304,7 +304,7 @@ object RecastRasterization {
         solid: Heightfield, vertices: FloatArray, areas: IntArray, nt: Int, flagMergeThr: Int,
         ctx: Telemetry?
     ) {
-        ctx?.startTimer("RASTERIZE_TRIANGLES")
+        ctx?.startTimer(TelemetryType.RASTERIZE_TRIANGLES)
         val ics = 1f / solid.cellSize
         val ich = 1f / solid.cellHeight
         // Rasterize triangles.
@@ -326,6 +326,6 @@ object RecastRasterization {
                 flagMergeThr
             )
         }
-        ctx?.stopTimer("RASTERIZE_TRIANGLES")
+        ctx?.stopTimer(TelemetryType.RASTERIZE_TRIANGLES)
     }
 }

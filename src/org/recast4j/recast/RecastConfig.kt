@@ -18,7 +18,7 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.recast
 
-import org.recast4j.recast.RecastConstants.PartitionType
+import org.recast4j.recast.PartitionType
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.round
@@ -30,7 +30,7 @@ class RecastConfig(
     val tileSizeZ: Int,
     /** The size of the non-navigable border around the heightfield. [Limit: &gt;=0] [Units: vx]  */
     val borderSize: Int,
-    val partitionType: PartitionType?,
+    val partitionType: PartitionType,
     /** The xz-plane cell size to use for fields. [Limit: &gt; 0] [Units: wu]  */
     val cellSize: Float,
     /** The y-axis cell size to use for fields. [Limit: &gt; 0] [Units: wu]  */
@@ -123,7 +123,7 @@ class RecastConfig(
      * Non-tiled build configuration
      */
     constructor(
-        partitionType: PartitionType?, cellSize: Float, cellHeight: Float, agentHeight: Float, agentRadius: Float,
+        partitionType: PartitionType, cellSize: Float, cellHeight: Float, agentHeight: Float, agentRadius: Float,
         agentMaxClimb: Float, agentMaxSlope: Float, regionMinSize: Int, regionMergeSize: Int, edgeMaxLen: Float,
         edgeMaxError: Float, verticesPerPoly: Int, detailSampleDist: Float, detailSampleMaxError: Float,
         walkableAreaMod: AreaModification
@@ -154,7 +154,7 @@ class RecastConfig(
      * Non-tiled build configuration
      */
     constructor(
-        partitionType: PartitionType?,
+        partitionType: PartitionType,
         cellSize: Float,
         cellHeight: Float,
         agentMaxSlope: Float,
@@ -174,29 +174,14 @@ class RecastConfig(
         walkableAreaMod: AreaModification,
         buildMeshDetail: Boolean
     ) : this(
-        false,
-        0,
-        0,
-        0,
-        partitionType,
-        cellSize,
-        cellHeight,
-        agentMaxSlope,
-        filterLowHangingObstacles,
-        filterLedgeSpans,
-        filterWalkableLowHeightSpans,
-        agentHeight,
-        agentRadius,
-        agentMaxClimb,
+        false, 0, 0, 0,
+        partitionType, cellSize, cellHeight, agentMaxSlope,
+        filterLowHangingObstacles, filterLedgeSpans, filterWalkableLowHeightSpans,
+        agentHeight, agentRadius, agentMaxClimb,
         regionMinSize * regionMinSize * cellSize * cellSize,
         regionMergeSize * regionMergeSize * cellSize * cellSize,
-        edgeMaxLen,
-        edgeMaxError,
-        verticesPerPoly,
-        buildMeshDetail,
-        detailSampleDist,
-        detailSampleMaxError,
-        walkableAreaMod
+        edgeMaxLen, edgeMaxError, verticesPerPoly, buildMeshDetail,
+        detailSampleDist, detailSampleMaxError, walkableAreaMod
     ) {
         // Note: area = size*size in [Units: wu]
     }

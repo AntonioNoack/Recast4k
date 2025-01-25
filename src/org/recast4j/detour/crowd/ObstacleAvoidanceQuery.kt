@@ -23,7 +23,8 @@ import org.recast4j.Vectors
 import org.recast4j.detour.crowd.debug.ObstacleAvoidanceDebugData
 import kotlin.math.*
 
-class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
+class ObstacleAvoidanceQuery(maxCircles: Int, maxSegments: Int) {
+
     class ObstacleCircle {
         /**
          * Position of the obstacle
@@ -108,22 +109,27 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
         }
     }
 
-    private var params: ObstacleAvoidanceParams? = null
+    private lateinit var params: ObstacleAvoidanceParams
     private var invHorizTime = 0f
     private var invVmax = 0f
-    val circles: Array<ObstacleCircle?> = arrayOfNulls(m_maxCircles)
+
+    val circles = Array(maxCircles) { ObstacleCircle() }
+    private val maxCircles get() = circles.size
+
+    val segments = Array(maxSegments) { ObstacleSegment() }
+    private val maxNumSegments get() = segments.size
+
     var circleCount = 0
-    private val maxNumSegments: Int
-    val segments: Array<ObstacleSegment?>
-    var segmentCount: Int
+    var segmentCount: Int = 0
+
     fun reset() {
         circleCount = 0
         segmentCount = 0
     }
 
     fun addCircle(pos: Vector3f, rad: Float, vel: Vector3f, dvel: Vector3f) {
-        if (circleCount >= m_maxCircles) return
-        val cir = circles[circleCount++]!!
+        if (circleCount >= maxCircles) return
+        val cir = circles[circleCount++]
         cir.p.set(pos)
         cir.rad = rad
         cir.vel.set(vel)
@@ -132,22 +138,23 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
 
     fun addSegment(p: Vector3f, q: Vector3f) {
         if (segmentCount >= maxNumSegments) return
-        val seg = segments[segmentCount++]!!
+        val seg = segments[segmentCount++]
         seg.p.set(p)
         seg.q.set(q)
     }
 
     private fun prepare(pos: Vector3f, dvel: Vector3f) {
         // Prepare obstacles
+        val dv = Vector3f()
         for (i in 0 until circleCount) {
             val cir = circles[i]
 
             // Side
-            val pb = cir!!.p
+            val pb = cir.p
             val orig = Vector3f()
             cir.dp.set(pb).sub(pos)
             cir.dp.normalize()
-            val dv: Vector3f = Vectors.sub(cir.dvel, dvel)
+            cir.dvel.sub(dvel, dv)
             val a = Vectors.triArea2D(orig, cir.dp, dv)
             if (a < 0.01f) {
                 cir.np.x = -cir.dp.z
@@ -162,7 +169,7 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
 
             // Precalc if the agent is really close to the segment.
             val r = 0.01f
-            val (first) = Vectors.distancePtSegSqr2D(pos, seg!!.p, seg.q)
+            val (first) = Vectors.distancePtSegSqr2D(pos, seg.p, seg.q)
             seg.touch = first < r * r
         }
     }
@@ -210,17 +217,17 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
         minPenalty: Float, debug: ObstacleAvoidanceDebugData?
     ): Float {
         // penalty for straying away from the desired and current velocities
-        val vpen = params!!.weightDesVel * (Vectors.dist2D(vcand, dvel) * invVmax)
-        val vcpen = params!!.weightCurVel * (Vectors.dist2D(vcand, vel) * invVmax)
+        val vpen = params.weightDesVel * (Vectors.dist2D(vcand, dvel) * invVmax)
+        val vcpen = params.weightCurVel * (Vectors.dist2D(vcand, vel) * invVmax)
 
         // find the threshold hit time to bail out based on the early out penalty
         // (see how the penalty is calculated below to understnad)
         val minPen = minPenalty - vpen - vcpen
-        val tThresold = (params!!.weightToi / minPen - 0.1f) * params!!.horizTime
-        if (tThresold - params!!.horizTime > -Float.MIN_VALUE) return minPenalty // already too much
+        val tThresold = (params.weightToi / minPen - 0.1f) * params.horizTime
+        if (tThresold - params.horizTime > -Float.MIN_VALUE) return minPenalty // already too much
 
         // Find min time of impact and exit amongst all obstacles.
-        var tmin = params!!.horizTime
+        var tmin = params.horizTime
         var side = 0f
         var nside = 0
         for (i in 0 until circleCount) {
@@ -229,7 +236,7 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
             // RVO
             var vab = Vector3f(vcand).mul(2f)
             vab = Vectors.sub(vab, vel)
-            vab = Vectors.sub(vab, cir!!.vel)
+            vab = Vectors.sub(vab, cir.vel)
 
             // Side
             side += Vectors.clamp(min(Vectors.dot2D(cir.dp, vab) * 0.5f + 0.5f, Vectors.dot2D(cir.np, vab) * 2), 0f, 1f)
@@ -254,7 +261,7 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
         for (i in 0 until segmentCount) {
             val seg = segments[i]
             var htmin: Float
-            if (seg!!.touch) {
+            if (seg.touch) {
                 // Special case when the agent is very close to the segment.
                 val sdir = Vectors.sub(seg.q, seg.p)
                 val snorm = Vector3f()
@@ -282,8 +289,8 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
 
         // Normalize side bias, to prevent it dominating too much.
         if (nside != 0) side /= nside.toFloat()
-        val spen = params!!.weightSide * side
-        val tpen = params!!.weightToi * (1f / (0.1f + tmin * invHorizTime))
+        val spen = params.weightSide * side
+        val tpen = params.weightToi * (1f / (0.1f + tmin * invHorizTime))
         val penalty = vpen + vcpen + spen + tpen
         // Store different penalties for debug viewing
         if (debug != null) debug.addSample(vcand, cs, penalty, vpen, vcpen, spen, tpen)
@@ -292,22 +299,22 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
 
     fun sampleVelocityGrid(
         pos: Vector3f, rad: Float, vmax: Float, vel: Vector3f, dvel: Vector3f,
-        params: ObstacleAvoidanceParams?, debug: ObstacleAvoidanceDebugData?
+        params: ObstacleAvoidanceParams, debug: ObstacleAvoidanceDebugData?
     ): Pair<Int, Vector3f> {
         prepare(pos, dvel)
         this.params = params
-        invHorizTime = 1f / this.params!!.horizTime
+        invHorizTime = 1f / this.params.horizTime
         invVmax = if (vmax > 0) 1f / vmax else Float.MAX_VALUE
         val nvel = Vector3f()
         debug?.reset()
-        val cvx = dvel.x * this.params!!.velBias
-        val cvz = dvel.z * this.params!!.velBias
-        val cs = vmax * 2 * (1 - this.params!!.velBias) / (this.params!!.gridSize - 1)
-        val half = (this.params!!.gridSize - 1) * cs * 0.5f
+        val cvx = dvel.x * params.velBias
+        val cvz = dvel.z * params.velBias
+        val cs = vmax * 2 * (1 - params.velBias) / (params.gridSize - 1)
+        val half = (params.gridSize - 1) * cs * 0.5f
         var minPenalty = Float.MAX_VALUE
         var ns = 0
-        for (y in 0 until this.params!!.gridSize) {
-            for (x in 0 until this.params!!.gridSize) {
+        for (y in 0 until params.gridSize) {
+            for (x in 0 until params.gridSize) {
                 val vcand = Vector3f(cvx + x * cs - half, 0f, cvz + y * cs - half)
                 val vmax2 = vmax + cs / 2
                 if (vcand.x * vcand.x + vcand.z * vcand.z > vmax2 * vmax2) continue
@@ -329,18 +336,6 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
         d = 1f / d
         v[0] *= d
         v[2] *= d
-    }
-
-    init {
-        for (i in 0 until m_maxCircles) {
-            circles[i] = ObstacleCircle()
-        }
-        maxNumSegments = maxSegments
-        segmentCount = 0
-        segments = arrayOfNulls(maxNumSegments)
-        for (i in 0 until maxNumSegments) {
-            segments[i] = ObstacleSegment()
-        }
     }
 
     fun sampleVelocityAdaptive(
@@ -402,8 +397,8 @@ class ObstacleAvoidanceQuery(private val m_maxCircles: Int, maxSegments: Int) {
         }
 
         // Start sampling.
-        var cr = vmax * (1f - this.params!!.velBias)
-        val res = Vector3f(dvel.x * this.params!!.velBias, 0f, dvel.z * this.params!!.velBias)
+        var cr = vmax * (1f - params.velBias)
+        val res = Vector3f(dvel.x * params.velBias, 0f, dvel.z * params.velBias)
         var ns = 0
         for (k in 0 until depth) {
             var minPenalty = Float.MAX_VALUE

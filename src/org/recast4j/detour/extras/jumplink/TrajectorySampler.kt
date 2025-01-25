@@ -3,20 +3,20 @@ package org.recast4j.detour.extras.jumplink
 import org.joml.Vector3f
 import org.recast4j.Vectors
 import org.recast4j.recast.Heightfield
-import org.recast4j.recast.Span
 import kotlin.math.*
 
-internal class TrajectorySampler {
+internal object TrajectorySampler {
     fun sample(jlc: JumpLinkBuilderConfig, heightfield: Heightfield, es: EdgeSampler) {
-        val l = es.start.samples!!.size
+        val startSamples = es.start.samples!!
+        val l = startSamples.size
         for (i in 0 until l) {
-            val s0 = es.start.samples!![i]
+            val s0 = startSamples[i]
             for (end in es.end) {
                 val s1 = end.samples!![i]
                 if (!s0.validHeight || !s1.validHeight) {
                     continue
                 }
-                if (!sampleTrajectory(jlc, heightfield, s0.p, s1.p, es.trajectory)) {
+                if (!sampleTrajectory(jlc, heightfield, s0.position, s1.position, es.trajectory)) {
                     continue
                 }
                 s0.validTrajectory = true
@@ -52,10 +52,8 @@ internal class TrajectorySampler {
         val iz = floor(((z - origin.z) / cellSize)).toInt()
         val w = solid.width
         val h = solid.height
-        if (ix < 0 || iz < 0 || ix > w || iz > h) {
-            return false
-        }
-        var s: Span? = solid.spans[ix + iz * w] ?: return false
+        if (ix < 0 || iz < 0 || ix > w || iz > h) return false
+        var s = solid.spans[ix + iz * w]
         while (s != null) {
             val cellHeight = solid.cellHeight
             val syMin = origin.y + s.min * cellHeight

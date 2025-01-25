@@ -46,8 +46,11 @@ open class TileCacheLayerHeader {
     var maxy = 0
 
     companion object {
+        /**
+         * 'DTLR'
+         * */
         const val DT_TILECACHE_MAGIC =
-            'D'.code shl 24 or ('T'.code shl 16) or ('L'.code shl 8) or 'R'.code /// < 'DTLR';
+            'D'.code shl 24 or ('T'.code shl 16) or ('L'.code shl 8) or 'R'.code
         const val DT_TILECACHE_VERSION = 1
     }
 }

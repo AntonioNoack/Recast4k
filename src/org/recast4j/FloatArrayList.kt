@@ -8,12 +8,18 @@ class FloatArrayList(cap: Int = 16) {
     var size = 0
 
     fun add(v: Float) {
-        if (size >= values.size) {
-            val data = FloatArray(max(values.size * 2, 16))
-            System.arraycopy(values, 0, data, 0, size)
-            this.values = data
-        }
+        ensureExtra(1)
         values[size++] = v
+    }
+
+    fun ensureExtra(extra: Int) {
+        ensureCapacity(size + extra)
+    }
+
+    private fun ensureCapacity(size: Int) {
+        if (values.size < size) {
+            values = values.copyOf(max(values.size * 2, max(size, 16)))
+        }
     }
 
     operator fun get(index: Int) = values[index]

@@ -24,12 +24,12 @@ import kotlin.math.floor
 
 class ProximityGrid(val cellSize: Float) {
 
-    private val invCellSize = 1f / cellSize
-    private val agents = LongHashMap<ArrayList<CrowdAgent>>()
-
     companion object {
         private val cache = ArrayList<ArrayList<CrowdAgent>>()
     }
+
+    private val invCellSize = 1f / cellSize
+    private val agents = LongHashMap<ArrayList<CrowdAgent>>()
 
     fun clear() {
         agents.forEachValue { v ->
@@ -39,7 +39,7 @@ class ProximityGrid(val cellSize: Float) {
         agents.clear()
     }
 
-    fun addItem(agent: CrowdAgent, minXf: Float, minYf: Float, maxXf: Float, maxYf: Float) {
+    fun addAgentToBuckets(agent: CrowdAgent, minXf: Float, minYf: Float, maxXf: Float, maxYf: Float) {
         val minX = floor((minXf * invCellSize)).toInt()
         val minY = floor((minYf * invCellSize)).toInt()
         val maxX = floor((maxXf * invCellSize)).toInt()

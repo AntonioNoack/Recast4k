@@ -27,8 +27,11 @@ import java.util.*
 
 class PathQueue(private val config: CrowdConfig) {
     private val queue: Deque<PathQuery> = LinkedList()
+
+    /**
+     * Update path request until there is nothing to update or up to maxIters pathfinder iterations has beenconsumed.
+     * */
     fun update(navMesh: NavMesh) {
-        // Update path request until there is nothing to update or up to maxIters pathfinder iterations has beenconsumed.
         var iterCount = config.maxFindPathIterations
         while (iterCount > 0) {
             val q = queue.poll() ?: break
@@ -36,7 +39,7 @@ class PathQueue(private val config: CrowdConfig) {
             if (q.result.status == Status.NULL) {
                 q.navQuery = NavMeshQuery(navMesh)
                 q.result.status = q.navQuery!!.initSlicedFindPath(
-                    q.startRef, q.endRef, q.startPos, q.endPos, q.filter!!, 0
+                    q.startRef, q.endRef, q.startPos, q.endPos, q.filter, 0
                 )
             }
             // Handle query in progress.
@@ -57,11 +60,9 @@ class PathQueue(private val config: CrowdConfig) {
     }
 
     fun request(
-        startRef: Long,
-        endRef: Long,
-        startPos: Vector3f,
-        endPos: Vector3f,
-        filter: QueryFilter?
+        startRef: Long, endRef: Long,
+        startPos: Vector3f, endPos: Vector3f,
+        filter: QueryFilter
     ): PathQueryResult? {
         if (queue.size >= config.pathQueueSize) return null
         val q = PathQuery()

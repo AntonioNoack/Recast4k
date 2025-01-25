@@ -69,7 +69,6 @@ class DynamicNavMesh(voxelFile: VoxelFile) {
         navMeshParams.origin.z = voxelFile.bounds[2]
         navMeshParams.tileWidth = voxelFile.cellSize * voxelFile.tileSizeX
         navMeshParams.tileHeight = voxelFile.cellSize * voxelFile.tileSizeZ
-        navMeshParams.maxTiles = voxelFile.tiles.size
         navMeshParams.maxPolys = 0x8000
         voxelFile.tiles.forEach(Consumer { t: VoxelTile ->
             tiles[lookupKey(t.tileX.toLong(), t.tileZ.toLong())] = DynamicTile(t)

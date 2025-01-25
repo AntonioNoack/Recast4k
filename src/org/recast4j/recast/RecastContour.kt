@@ -610,19 +610,19 @@ object RecastContour {
         }
     }
 
-    /// @par
-    ///
-    /// The raw contours will match the region outlines exactly. The @p maxError and @p maxEdgeLen
-    /// parameters control how closely the simplified contours will match the raw contours.
-    ///
-    /// Simplified contours are generated such that the vertices for portals between areas match up.
-    /// (They are considered mandatory vertices.)
-    ///
-    /// Setting @p maxEdgeLength to zero will disabled the edge length feature.
-    ///
-    /// See the #rcConfig documentation for more information on the configuration parameters.
-    ///
-    /// @see rcAllocContourSet, rcCompactHeightfield, rcContourSet, rcConfig
+    /**
+     * The raw contours will match the region outlines exactly. The @p maxError and @p maxEdgeLen
+     * parameters control how closely the simplified contours will match the raw contours.
+     *
+     * Simplified contours are generated such that the vertices for portals between areas match up.
+     * (They are considered mandatory vertices.)
+     *
+     * Setting @p maxEdgeLength to zero will disabled the edge length feature.
+     *
+     * See the #rcConfig documentation for more information on the configuration parameters.
+     *
+     * @see rcAllocContourSet, rcCompactHeightfield, rcContourSet, rcConfig
+     */
     fun buildContours(
         ctx: Telemetry?,
         chf: CompactHeightfield,
@@ -634,7 +634,7 @@ object RecastContour {
         val h = chf.height
         val borderSize = chf.borderSize
         val cset = ContourSet()
-        ctx?.startTimer("CONTOURS")
+        ctx?.startTimer(TelemetryType.CONTOURS)
         cset.bmin.set(chf.bmin)
         cset.bmax.set(chf.bmax)
         if (borderSize > 0) {
@@ -650,7 +650,7 @@ object RecastContour {
         cset.borderSize = chf.borderSize
         cset.maxError = maxError
         val flags = IntArray(chf.spanCount)
-        ctx?.startTimer("CONTOURS_TRACE")
+        ctx?.startTimer(TelemetryType.CONTOURS_TRACE)
 
         // Mark boundaries.
         for (y in 0 until h) {
@@ -677,7 +677,7 @@ object RecastContour {
                 }
             }
         }
-        ctx?.stopTimer("CONTOURS_TRACE")
+        ctx?.stopTimer(TelemetryType.CONTOURS_TRACE)
         val vertices = IntArrayList(256)
         val simplified = IntArrayList(64)
         for (y in 0 until h) {
@@ -695,13 +695,13 @@ object RecastContour {
                     val area = chf.areas[i]
                     vertices.clear()
                     simplified.clear()
-                    ctx?.startTimer("CONTOURS_WALK")
+                    ctx?.startTimer(TelemetryType.CONTOURS_WALK)
                     walkContour(x, y, i, chf, flags, vertices)
-                    ctx?.stopTimer("CONTOURS_WALK")
-                    ctx?.startTimer("CONTOURS_SIMPLIFY")
+                    ctx?.stopTimer(TelemetryType.CONTOURS_WALK)
+                    ctx?.startTimer(TelemetryType.CONTOURS_SIMPLIFY)
                     simplifyContour(vertices, simplified, maxError, maxEdgeLen, buildFlags)
                     removeDegenerateSegments(simplified)
-                    ctx?.stopTimer("CONTOURS_SIMPLIFY")
+                    ctx?.stopTimer(TelemetryType.CONTOURS_SIMPLIFY)
 
                     // Store region->contour remap info.
                     // Create contour.
@@ -799,7 +799,7 @@ object RecastContour {
                 }
             }
         }
-        ctx?.stopTimer("CONTOURS")
+        ctx?.stopTimer(TelemetryType.CONTOURS)
         return cset
     }
 

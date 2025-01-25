@@ -19,14 +19,22 @@ freely, subject to the following restrictions:
 package org.recast4j.detour
 
 enum class Status {
-    NULL, FAILURE, SUCCESS, IN_PROGRESS, PARTIAL_RESULT, FAILURE_INVALID_PARAM;
+    NULL,
+    FAILURE,
+    SUCCESS,
+    IN_PROGRESS,
+    PARTIAL_RESULT,
+    FAILURE_INVALID_PARAM;
 
     val isFailed: Boolean
         get() = this == FAILURE || this == FAILURE_INVALID_PARAM
+
     val isInProgress: Boolean
         get() = this == IN_PROGRESS
+
     val isSuccess: Boolean
         get() = this == SUCCESS || this == PARTIAL_RESULT
+
     val isPartial: Boolean
         get() = this == PARTIAL_RESULT
 }

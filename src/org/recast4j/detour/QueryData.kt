@@ -21,13 +21,18 @@ package org.recast4j.detour
 import org.joml.Vector3f
 
 class QueryData {
+
     var status = Status.FAILURE
+
     var lastBestNode: Node? = null
     var lastBestNodeCost = 0f
+
     var startRef = 0L
     var endRef = 0L
+
     var startPos = Vector3f()
     var endPos = Vector3f()
+
     var filter: QueryFilter? = null
     var options = 0
     var raycastLimitSqr = 0f

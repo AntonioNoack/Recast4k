@@ -22,12 +22,12 @@ import org.recast4j.dynamic.DynamicNavMesh
 import org.recast4j.recast.AreaModification
 import org.recast4j.recast.RecastBuilder.RecastBuilderResult
 import org.recast4j.recast.RecastConfig
-import org.recast4j.recast.RecastConstants.PartitionType
+import org.recast4j.recast.PartitionType
 import java.nio.ByteOrder
 
 class VoxelFile {
     var version = 0
-    var partitionType: PartitionType? = PartitionType.WATERSHED
+    var partitionType: PartitionType = PartitionType.WATERSHED
     var filterLowHangingObstacles = true
     var filterLedgeSpans = true
     var filterWalkableLowHeightSpans = true
@@ -56,7 +56,7 @@ class VoxelFile {
 
     fun getConfig(
         tile: VoxelTile,
-        partitionType: PartitionType?,
+        partitionType: PartitionType,
         maxPolyVertices: Int,
         filterLowHangingObstacles: Boolean,
         filterLedgeSpans: Boolean,

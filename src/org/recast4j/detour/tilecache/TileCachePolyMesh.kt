@@ -21,8 +21,24 @@ package org.recast4j.detour.tilecache
 class TileCachePolyMesh(var nvp: Int) {
     var numVertices = 0
     var numPolygons = 0
-    lateinit var vertices: IntArray/// < Vertices of the mesh, 3 elements per vertex.
-    lateinit var polys: IntArray /// < Polygons of the mesh, nvp*2 elements per polygon.
-    lateinit var flags: IntArray /// < Per polygon flags.
-    lateinit var areas: IntArray /// < Area ID of polygons.
+
+    /**
+     * Vertices of the mesh, 3 elements per vertex.
+     * */
+    lateinit var vertices: IntArray
+
+    /**
+     * Polygons of the mesh, nvp*2 elements per polygon.
+     * */
+    lateinit var polys: IntArray
+
+    /**
+     * Per polygon flags.
+     * */
+    lateinit var flags: IntArray
+
+    /**
+     * Area ID of polygons.
+     * */
+    lateinit var areas: IntArray
 }

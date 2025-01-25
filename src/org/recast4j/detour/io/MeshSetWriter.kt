@@ -19,14 +19,10 @@ package org.recast4j.detour.io
 
 import org.recast4j.detour.NavMesh
 import java.io.ByteArrayOutputStream
-import java.io.IOException
 import java.io.OutputStream
 import java.nio.ByteOrder
 
-class MeshSetWriter : DetourWriter() {
-
-    private val writer = MeshDataWriter()
-    private val paramWriter = NavMeshParamWriter()
+object MeshSetWriter : DetourWriter() {
 
     fun write(stream: OutputStream, mesh: NavMesh, order: ByteOrder) {
         writeHeader(stream, mesh, order)
@@ -38,17 +34,17 @@ class MeshSetWriter : DetourWriter() {
         write(stream, NavMeshSetHeader.NAVMESHSET_VERSION_RECAST4J, order)
         val numTiles = mesh.allTiles.count { it.data != null }
         write(stream, numTiles, order)
-        paramWriter.write(stream, mesh.params, order)
+        NavMeshParamWriter.write(stream, mesh.params, order)
         write(stream, mesh.maxVerticesPerPoly, order)
     }
 
     private fun writeTiles(stream: OutputStream, mesh: NavMesh, order: ByteOrder) {
-        for(tile in mesh.allTiles) {
+        for (tile in mesh.allTiles) {
             if (tile.data == null) continue
             val tileHeader = NavMeshTileHeader()
             tileHeader.tileRef = mesh.getTileRef(tile)
             val baos = ByteArrayOutputStream()
-            writer.write(baos, tile.data!!, order)
+            MeshDataWriter.write(baos, tile.data!!, order)
             val ba = baos.toByteArray()
             tileHeader.dataSize = ba.size
             write(stream, tileHeader.tileRef, order)

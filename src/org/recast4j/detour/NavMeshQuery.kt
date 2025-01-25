@@ -29,16 +29,13 @@ import java.util.*
 import kotlin.math.min
 import kotlin.math.sqrt
 
-open class NavMeshQuery(
-    /// Gets the navigation mesh the query object is using.
-    /// @return The navigation mesh the query object is using.
-    val nav1: NavMesh
-) {
+open class NavMeshQuery(val nav1: NavMesh) {
 
     val nodePool = NodePool()
     val openList = PriorityQueue<Node> { n1, n2 -> n1.totalCost.compareTo(n2.totalCost) }
 
-    lateinit var queryData: QueryData /// < Sliced query state.
+    /** Sliced query state. */
+    lateinit var queryData: QueryData
 
     /**
      * Returns random location on navmesh. Polygons are chosen weighted by area. The search runs in linear related to
@@ -1121,10 +1118,12 @@ open class NavMeshQuery(
         return Result.of(queryData.status, iter)
     }
 
-    /// Finalizes and returns the results of a sliced path query.
-    /// @param[out] path An ordered list of polygon references representing the path. (Start to end.)
-    /// [(polyRef) * @p pathCount]
-    /// @returns The status flags for the query.
+    /**
+     * Finalizes and returns the results of a sliced path query.
+     * @param path An ordered list of polygon references representing the path. (Start to end.)
+     * [(polyRef) * @p pathCount]
+     * @returns The status flags for the query.
+     */
     open fun finalizeSlicedFindPath(): Result<LongArrayList> {
         if (queryData.status.isFailed) {
             // Reset query.
@@ -1151,13 +1150,15 @@ open class NavMeshQuery(
         return Result.of(status, path)
     }
 
-    /// Finalizes and returns the results of an incomplete sliced path query, returning the path to the furthest
-    /// polygon on the existing path that was visited during the search.
-    /// @param[in] existing An array of polygon references for the existing path.
-    /// @param[in] existingSize The number of polygon in the @p existing array.
-    /// @param[out] path An ordered list of polygon references representing the path. (Start to end.)
-    /// [(polyRef) * @p pathCount]
-    /// @returns The status flags for the query.
+    /**
+     * Finalizes and returns the results of an incomplete sliced path query, returning the path to the furthest
+     * polygon on the existing path that was visited during the search.
+     * @param existing An array of polygon references for the existing path.
+     * @param existingSize The number of polygon in the @p existing array.
+     * @param path An ordered list of polygon references representing the path. (Start to end.)
+     * [(polyRef) * @p pathCount]
+     * @returns The status flags for the query.
+     */
     open fun finalizeSlicedFindPathPartial(existing: LongArrayList): Result<LongArrayList> {
         if (existing.isEmpty()) {
             return Result.failure(LongArrayList.empty)
@@ -1259,31 +1260,32 @@ open class NavMeshQuery(
         return Status.IN_PROGRESS
     }
 
-    /// @par
-    /// Finds the straight path from the start to the end position within the polygon corridor.
-    ///
-    /// This method peforms what is often called 'string pulling'.
-    ///
-    /// The start position is clamped to the first polygon in the path, and the
-    /// end position is clamped to the last. So the start and end positions should
-    /// normally be within or very near the first and last polygons respectively.
-    ///
-    /// The returned polygon references represent the reference id of the polygon
-    /// that is entered at the associated path position. The reference id associated
-    /// with the end point will always be zero. This allows, for example, matching
-    /// off-mesh link points to their representative polygons.
-    ///
-    /// If the provided result buffers are too small for the entire result set,
-    /// they will be filled as far as possible from the start toward the end
-    /// position.
-    ///
-    /// @param[in] startPos Path start position. [(x, y, z)]
-    /// @param[in] endPos Path end position. [(x, y, z)]
-    /// @param[in] path An array of polygon references that represent the path corridor.
-    /// @param[out] straightPath Points describing the straight path. [(x, y, z) * @p straightPathCount].
-    /// @param[in] maxStraightPath The maximum number of points the straight path arrays can hold. [Limit: > 0]
-    /// @param[in] options Query options. (see: #dtStraightPathOptions)
-    /// @returns The status flags for the query.
+    /**
+     * Finds the straight path from the start to the end position within the polygon corridor.
+     *
+     * This method peforms what is often called 'string pulling'.
+     *
+     * The start position is clamped to the first polygon in the path, and the
+     * end position is clamped to the last. So the start and end positions should
+     * normally be within or very near the first and last polygons respectively.
+     *
+     * The returned polygon references represent the reference id of the polygon
+     * that is entered at the associated path position. The reference id associated
+     * with the end point will always be zero. This allows, for example, matching
+     * off-mesh link points to their representative polygons.
+     *
+     * If the provided result buffers are too small for the entire result set,
+     * they will be filled as far as possible from the start toward the end
+     * position.
+     *
+     * @param startPos Path start position. [(x, y, z)]
+     * @param endPos Path end position. [(x, y, z)]
+     * @param path An array of polygon references that represent the path corridor.
+     * @param straightPath Points describing the straight path. [(x, y, z) * @p straightPathCount].
+     * @param maxStraightPath The maximum number of points the straight path arrays can hold. [Limit: > 0]
+     * @param options Query options. (see: #dtStraightPathOptions)
+     * @returns The status flags for the query.
+     */
     fun findStraightPath(
         startPos: Vector3f, endPos: Vector3f, path: LongArrayList,
         maxStraightPath: Int, options: Int, tmp: PortalResult,
@@ -1465,32 +1467,32 @@ open class NavMeshQuery(
         return straightPath
     }
 
-    /// @par
-    ///
-    /// This method is optimized for small delta movement and a small number of
-    /// polygons. If used for too great a distance, the result set will form an
-    /// incomplete path.
-    ///
-    /// @p resultPos will equal the @p endPos if the end is reached.
-    /// Otherwise the closest reachable position will be returned.
-    ///
-    /// @p resultPos is not projected onto the surface of the navigation
-    /// mesh. Use #getPolyHeight if this is needed.
-    ///
-    /// This method treats the end position in the same manner as
-    /// the #raycast method. (As a 2D point.) See that method's documentation
-    /// for details.
-    ///
-    /// If the @p visited array is too small to hold the entire result set, it will
-    /// be filled as far as possible from the start position toward the end
-    /// position.
-    ///
-    /// Moves from the start to the end position constrained to the navigation mesh.
-    /// @param[in] startRef The reference id of the start polygon.
-    /// @param[in] startPos A position of the mover within the start polygon. [(x, y, x)]
-    /// @param[in] endPos The desired end position of the mover. [(x, y, z)]
-    /// @param[in] filter The polygon filter to apply to the query.
-    /// @returns Path
+    /**
+     * This method is optimized for small delta movement and a small number of
+     * polygons. If used for too great a distance, the result set will form an
+     * incomplete path.
+     *
+     * @p resultPos will equal the @p endPos if the end is reached.
+     * Otherwise the closest reachable position will be returned.
+     *
+     * @p resultPos is not projected onto the surface of the navigation
+     * mesh. Use #getPolyHeight if this is needed.
+     *
+     * This method treats the end position in the same manner as
+     * the #raycast method. (As a 2D point.) See that method's documentation
+     * for details.
+     *
+     * If the @p visited array is too small to hold the entire result set, it will
+     * be filled as far as possible from the start position toward the end
+     * position.
+     *
+     * Moves from the start to the end position constrained to the navigation mesh.
+     * @param startRef The reference id of the start polygon.
+     * @param startPos A position of the mover within the start polygon. [(x, y, x)]
+     * @param endPos The desired end position of the mover. [(x, y, z)]
+     * @param filter The polygon filter to apply to the query.
+     * @returns Path
+     */
     fun moveAlongSurface(
         startRef: Long, startPos: Vector3f, endPos: Vector3f,
         filter: QueryFilter, tinyNodePool: NodePool,
@@ -1753,58 +1755,58 @@ open class NavMeshQuery(
         return left.lerp(right, t)
     }
 
-    /// @par
-    ///
-    /// This method is meant to be used for quick, short distance checks.
-    ///
-    /// If the path array is too small to hold the result, it will be filled as
-    /// far as possible from the start position toward the end position.
-    ///
-    /// <b>Using the Hit Parameter t of RaycastHit</b>
-    ///
-    /// If the hit parameter is a very high value (FLT_MAX), then the ray has hit
-    /// the end position. In this case the path represents a valid corridor to the
-    /// end position, and the value of @p hitNormal is undefined.
-    ///
-    /// If the hit parameter is zero, then the start position is on the wall that
-    /// was hit, and the value of @p hitNormal is undefined.
-    ///
-    /// If 0 < t < 1.0 then the following applies:
-    ///
-    /// @code
-    /// distanceToHitBorder = distanceToEndPosition * t
-    /// hitPoint = startPos + (endPos - startPos) * t
-    /// @endcode
-    ///
-    /// <b>Use Case Restriction</b>
-    ///
-    /// The raycast ignores the y-value of the end position. (2D check.) This
-    /// places significant limits on how it can be used. For example:
-    ///
-    /// Consider a scene where there is a main floor with a second floor balcony
-    /// that hangs over the main floor. So the first floor mesh extends below the
-    /// balcony mesh. The start position is somewhere on the first floor. The end
-    /// position is on the balcony.
-    ///
-    /// The raycast will search toward the end position along the first floor mesh.
-    /// If it reaches the end position's xz-coordinates it will indicate FLT_MAX
-    /// (no wall hit), meaning it reached the end position. This is one example of why
-    /// this method is meant for short distance checks.
-    ///
-    /// Casts a 'walkability' ray along the surface of the navigation mesh from
-    /// the start position toward the end position.
-    /// @note A wrapper around raycast(..., RaycastHit*). Retained for backward compatibility.
-    /// @param[in] startRef The reference id of the start polygon.
-    /// @param[in] startPos A position within the start polygon representing
-    /// the start of the ray. [(x, y, z)]
-    /// @param[in] endPos The position to cast the ray toward. [(x, y, z)]
-    /// @param[out] t The hit parameter. (FLT_MAX if no wall hit.)
-    /// @param[out] hitNormal The normal of the nearest wall hit. [(x, y, z)]
-    /// @param[in] filter The polygon filter to apply to the query.
-    /// @param[out] path The reference ids of the visited polygons. [opt]
-    /// @param[out] pathCount The number of visited polygons. [opt]
-    /// @param[in] maxPath The maximum number of polygons the @p path array can hold.
-    /// @returns The status flags for the query.
+    /**
+     * This method is meant to be used for quick, short distance checks.
+     *
+     * If the path array is too small to hold the result, it will be filled as
+     * far as possible from the start position toward the end position.
+     *
+     * <b>Using the Hit Parameter t of RaycastHit</b>
+     *
+     * If the hit parameter is a very high value (FLT_MAX), then the ray has hit
+     * the end position. In this case the path represents a valid corridor to the
+     * end position, and the value of @p hitNormal is undefined.
+     *
+     * If the hit parameter is zero, then the start position is on the wall that
+     * was hit, and the value of @p hitNormal is undefined.
+     *
+     * If 0 < t < 1.0 then the following applies:
+     *
+     * @code
+     * distanceToHitBorder = distanceToEndPosition * t
+     * hitPoint = startPos + (endPos - startPos) * t
+     * @endcode
+     *
+     * <b>Use Case Restriction</b>
+     *
+     * The raycast ignores the y-value of the end position. (2D check.) This
+     * places significant limits on how it can be used. For example:
+     *
+     * Consider a scene where there is a main floor with a second floor balcony
+     * that hangs over the main floor. So the first floor mesh extends below the
+     * balcony mesh. The start position is somewhere on the first floor. The end
+     * position is on the balcony.
+     *
+     * The raycast will search toward the end position along the first floor mesh.
+     * If it reaches the end position's xz-coordinates it will indicate FLT_MAX
+     * (no wall hit), meaning it reached the end position. This is one example of why
+     * this method is meant for short distance checks.
+     *
+     * Casts a 'walkability' ray along the surface of the navigation mesh from
+     * the start position toward the end position.
+     * @note A wrapper around raycast(..., RaycastHit*). Retained for backward compatibility.
+     * @param startRef The reference id of the start polygon.
+     * @param startPos A position within the start polygon representing
+     * the start of the ray. [(x, y, z)]
+     * @param endPos The position to cast the ray toward. [(x, y, z)]
+     * @param t The hit parameter. (FLT_MAX if no wall hit.)
+     * @param hitNormal The normal of the nearest wall hit. [(x, y, z)]
+     * @param filter The polygon filter to apply to the query.
+     * @param path The reference ids of the visited polygons. [opt]
+     * @param pathCount The number of visited polygons. [opt]
+     * @param maxPath The maximum number of polygons the @p path array can hold.
+     * @returns The status flags for the query.
+     */
     fun raycast(
         startRef: Long, startPos: Vector3f, endPos: Vector3f, filter: QueryFilter, options: Int,
         prevRef: Long
@@ -2009,50 +2011,50 @@ open class NavMeshQuery(
         return Result.success(hit)
     }
 
-    /// @par
-    ///
-    /// At least one result array must be provided.
-    ///
-    /// The order of the result set is from least to highest cost to reach the polygon.
-    ///
-    /// A common use case for this method is to perform Dijkstra searches.
-    /// Candidate polygons are found by searching the graph beginning at the start polygon.
-    ///
-    /// If a polygon is not found via the graph search, even if it intersects the
-    /// search circle, it will not be included in the result set. For example:
-    ///
-    /// polyA is the start polygon.
-    /// polyB shares an edge with polyA. (Is adjacent.)
-    /// polyC shares an edge with polyB, but not with polyA
-    /// Even if the search circle overlaps polyC, it will not be included in the
-    /// result set unless polyB is also in the set.
-    ///
-    /// The value of the center point is used as the start position for cost
-    /// calculations. It is not projected onto the surface of the mesh, so its
-    /// y-value will effect the costs.
-    ///
-    /// Intersection tests occur in 2D. All polygons and the search circle are
-    /// projected onto the xz-plane. So the y-value of the center point does not
-    /// effect intersection tests.
-    ///
-    /// If the result arrays are to small to hold the entire result set, they will be
-    /// filled to capacity.
-    ///
-    /// @}
-    /// @name Dijkstra Search Functions
-    /// @{
-    /// Finds the polygons along the navigation graph that touch the specified circle.
-    /// @param[in] startRef The reference id of the polygon where the search starts.
-    /// @param[in] centerPos The center of the search circle. [(x, y, z)]
-    /// @param[in] radius The radius of the search circle.
-    /// @param[in] filter The polygon filter to apply to the query.
-    /// @param[out] resultRef The reference ids of the polygons touched by the circle. [opt]
-    /// @param[out] resultParent The reference ids of the parent polygons for each result.
-    /// Zero if a result polygon has no parent. [opt]
-    /// @param[out] resultCost The search cost from @p centerPos to the polygon. [opt]
-    /// @param[out] resultCount The number of polygons found. [opt]
-    /// @param[in] maxResult The maximum number of polygons the result arrays can hold.
-    /// @returns The status flags for the query.
+    /**
+     * At least one result array must be provided.
+     *
+     * The order of the result set is from least to highest cost to reach the polygon.
+     *
+     * A common use case for this method is to perform Dijkstra searches.
+     * Candidate polygons are found by searching the graph beginning at the start polygon.
+     *
+     * If a polygon is not found via the graph search, even if it intersects the
+     * search circle, it will not be included in the result set. For example:
+     *
+     * polyA is the start polygon.
+     * polyB shares an edge with polyA. (Is adjacent.)
+     * polyC shares an edge with polyB, but not with polyA
+     * Even if the search circle overlaps polyC, it will not be included in the
+     * result set unless polyB is also in the set.
+     *
+     * The value of the center point is used as the start position for cost
+     * calculations. It is not projected onto the surface of the mesh, so its
+     * y-value will effect the costs.
+     *
+     * Intersection tests occur in 2D. All polygons and the search circle are
+     * projected onto the xz-plane. So the y-value of the center point does not
+     * effect intersection tests.
+     *
+     * If the result arrays are to small to hold the entire result set, they will be
+     * filled to capacity.
+     *
+     * @}
+     * @name Dijkstra Search Functions
+     * @{
+     * Finds the polygons along the navigation graph that touch the specified circle.
+     * @param startRef The reference id of the polygon where the search starts.
+     * @param centerPos The center of the search circle. [(x, y, z)]
+     * @param radius The radius of the search circle.
+     * @param filter The polygon filter to apply to the query.
+     * @param resultRef The reference ids of the polygons touched by the circle. [opt]
+     * @param resultParent The reference ids of the parent polygons for each result.
+     * Zero if a result polygon has no parent. [opt]
+     * @param resultCost The search cost from @p centerPos to the polygon. [opt]
+     * @param resultCount The number of polygons found. [opt]
+     * @param maxResult The maximum number of polygons the result arrays can hold.
+     * @returns The status flags for the query.
+     */
     fun findPolysAroundCircle(
         startRef: Long, centerPos: Vector3f, radius: Float,
         filter: QueryFilter
@@ -2178,41 +2180,41 @@ open class NavMeshQuery(
         return Result.success(FindPolysAroundResult(resultRef, resultParent, resultCost))
     }
 
-    /// @par
-    ///
-    /// The order of the result set is from least to highest cost.
-    ///
-    /// At least one result array must be provided.
-    ///
-    /// A common use case for this method is to perform Dijkstra searches.
-    /// Candidate polygons are found by searching the graph beginning at the start
-    /// polygon.
-    ///
-    /// The same intersection test restrictions that apply to findPolysAroundCircle()
-    /// method apply to this method.
-    ///
-    /// The 3D centroid of the search polygon is used as the start position for cost
-    /// calculations.
-    ///
-    /// Intersection tests occur in 2D. All polygons are projected onto the
-    /// xz-plane. So the y-values of the vertices do not effect intersection tests.
-    ///
-    /// If the result arrays are is too small to hold the entire result set, they will
-    /// be filled to capacity.
-    ///
-    /// Finds the polygons along the naviation graph that touch the specified convex polygon.
-    /// @param[in] startRef The reference id of the polygon where the search starts.
-    /// @param[in] vertices The vertices describing the convex polygon. (CCW)
-    /// [(x, y, z) * @p nvertices]
-    /// @param[in] nvertices The number of vertices in the polygon.
-    /// @param[in] filter The polygon filter to apply to the query.
-    /// @param[out] resultRef The reference ids of the polygons touched by the search polygon. [opt]
-    /// @param[out] resultParent The reference ids of the parent polygons for each result. Zero if a
-    /// result polygon has no parent. [opt]
-    /// @param[out] resultCost The search cost from the centroid point to the polygon. [opt]
-    /// @param[out] resultCount The number of polygons found.
-    /// @param[in] maxResult The maximum number of polygons the result arrays can hold.
-    /// @returns The status flags for the query.
+    /**
+     * The order of the result set is from least to highest cost.
+     *
+     * At least one result array must be provided.
+     *
+     * A common use case for this method is to perform Dijkstra searches.
+     * Candidate polygons are found by searching the graph beginning at the start
+     * polygon.
+     *
+     * The same intersection test restrictions that apply to findPolysAroundCircle()
+     * method apply to this method.
+     *
+     * The 3D centroid of the search polygon is used as the start position for cost
+     * calculations.
+     *
+     * Intersection tests occur in 2D. All polygons are projected onto the
+     * xz-plane. So the y-values of the vertices do not effect intersection tests.
+     *
+     * If the result arrays are is too small to hold the entire result set, they will
+     * be filled to capacity.
+     *
+     * Finds the polygons along the naviation graph that touch the specified convex polygon.
+     * @param startRef The reference id of the polygon where the search starts.
+     * @param vertices The vertices describing the convex polygon. (CCW)
+     * [(x, y, z) * @p nvertices]
+     * @param nvertices The number of vertices in the polygon.
+     * @param filter The polygon filter to apply to the query.
+     * @param resultRef The reference ids of the polygons touched by the search polygon. [opt]
+     * @param resultParent The reference ids of the parent polygons for each result. Zero if a
+     * result polygon has no parent. [opt]
+     * @param resultCost The search cost from the centroid point to the polygon. [opt]
+     * @param resultCount The number of polygons found.
+     * @param maxResult The maximum number of polygons the result arrays can hold.
+     * @returns The status flags for the query.
+     */
     fun findPolysAroundShape(startRef: Long, vertices: FloatArray, filter: QueryFilter): Result<FindPolysAroundResult> {
         // Validate input
         val nvertices = vertices.size / 3
@@ -2345,33 +2347,33 @@ open class NavMeshQuery(
         return Result.success(FindPolysAroundResult(resultRef, resultParent, resultCost))
     }
 
-    /// @par
-    ///
-    /// This method is optimized for a small search radius and small number of result polygons.
-    ///
-    /// Candidate polygons are found by searching the navigation graph beginning at the start polygon.
-    ///
-    /// The same intersection test restrictions that apply to the findPolysAroundCircle method applies to this method.
-    ///
-    /// The value of the center point is used as the start point for cost calculations.
-    /// It is not projected onto the surface of the mesh, so its y-value will effect the costs.
-    ///
-    /// Intersection tests occur in 2D. All polygons and the search circle are
-    /// projected onto the xz-plane. So the y-value of the center point does not effect intersection tests.
-    ///
-    /// If the result arrays are is too small to hold the entire result set, they will be filled to capacity.
-    ///
-    /// Finds the non-overlapping navigation polygons in the local neighbourhood around the center position.
-    /// @param[in] startRef The reference id of the polygon where the search starts.
-    /// @param[in] centerPos The center of the query circle. [(x, y, z)]
-    /// @param[in] radius The radius of the query circle.
-    /// @param[in] filter The polygon filter to apply to the query.
-    /// @param[out] resultRef The reference ids of the polygons touched by the circle.
-    /// @param[out] resultParent The reference ids of the parent polygons for each result.
-    /// Zero if a result polygon has no parent. [opt]
-    /// @param[out] resultCount The number of polygons found.
-    /// @param[in] maxResult The maximum number of polygons the result arrays can hold.
-    /// @returns The status flags for the query.
+    /**
+     * This method is optimized for a small search radius and small number of result polygons.
+     *
+     * Candidate polygons are found by searching the navigation graph beginning at the start polygon.
+     *
+     * The same intersection test restrictions that apply to the findPolysAroundCircle method applies to this method.
+     *
+     * The value of the center point is used as the start point for cost calculations.
+     * It is not projected onto the surface of the mesh, so its y-value will effect the costs.
+     *
+     * Intersection tests occur in 2D. All polygons and the search circle are
+     * projected onto the xz-plane. So the y-value of the center point does not effect intersection tests.
+     *
+     * If the result arrays are is too small to hold the entire result set, they will be filled to capacity.
+     *
+     * Finds the non-overlapping navigation polygons in the local neighbourhood around the center position.
+     * @param startRef The reference id of the polygon where the search starts.
+     * @param centerPos The center of the query circle. [(x, y, z)]
+     * @param radius The radius of the query circle.
+     * @param filter The polygon filter to apply to the query.
+     * @param resultRef The reference ids of the polygons touched by the circle.
+     * @param resultParent The reference ids of the parent polygons for each result.
+     * Zero if a result polygon has no parent. [opt]
+     * @param resultCount The number of polygons found.
+     * @param maxResult The maximum number of polygons the result arrays can hold.
+     * @returns The status flags for the query.
+     */
     fun findLocalNeighbourhood(
         startRef: Long, centerPos: Vector3f, radius: Float,
         filter: QueryFilter,
@@ -2531,26 +2533,28 @@ open class NavMeshQuery(
         ints.add(idx, SegInterval(ref, tmin, tmax))
     }
 
-    /// @par
-    ///
-    /// If the @p segmentRefs parameter is provided, then all polygon segments will be returned.
-    /// Otherwise only the wall segments are returned.
-    ///
-    /// A segment that is normally a portal will be included in the result set as a
-    /// wall if the @p filter results in the neighbor polygon becoomming impassable.
-    ///
-    /// The @p segmentVertices and @p segmentRefs buffers should normally be sized for the
-    /// maximum segments per polygon of the source navigation mesh.
-    ///
-    /// Returns the segments for the specified polygon, optionally including portals.
-    /// @param[in] ref The reference id of the polygon.
-    /// @param[in] filter The polygon filter to apply to the query.
-    /// @param[out] segmentVertices The segments. [(ax, ay, az, bx, by, bz) * segmentCount]
-    /// @param[out] segmentRefs The reference ids of each segment's neighbor polygon.
-    /// Or zero if the segment is a wall. [opt] [(parentRef) * @p segmentCount]
-    /// @param[out] segmentCount The number of segments returned.
-    /// @param[in] maxSegments The maximum number of segments the result arrays can hold.
-    /// @returns The status flags for the query.
+    /**
+     * @par
+     *
+     * If the @p segmentRefs parameter is provided, then all polygon segments will be returned.
+     * Otherwise only the wall segments are returned.
+     *
+     * A segment that is normally a portal will be included in the result set as a
+     * wall if the @p filter results in the neighbor polygon becoomming impassable.
+     *
+     * The @p segmentVertices and @p segmentRefs buffers should normally be sized for the
+     * maximum segments per polygon of the source navigation mesh.
+     *
+     * Returns the segments for the specified polygon, optionally including portals.
+     * @param ref The reference id of the polygon.
+     * @param filter The polygon filter to apply to the query.
+     * @param segmentVertices The segments. [(ax, ay, az, bx, by, bz) * segmentCount]
+     * @param segmentRefs The reference ids of each segment's neighbor polygon.
+     * Or zero if the segment is a wall. [opt] [(parentRef) * @p segmentCount]
+     * @param segmentCount The number of segments returned.
+     * @param maxSegments The maximum number of segments the result arrays can hold.
+     * @returns The status flags for the query.
+     */
     fun getPolyWallSegments(
         ref: Long,
         storePortals: Boolean,
@@ -2649,26 +2653,26 @@ open class NavMeshQuery(
         return segmentVertices
     }
 
-    /// @par
-    ///
-    /// @p hitPos is not adjusted using the height detail data.
-    ///
-    /// @p hitDist will equal the search radius if there is no wall within the
-    /// radius. In this case the values of @p hitPos and @p hitNormal are
-    /// undefined.
-    ///
-    /// The normal will become unpredicable if @p hitDist is a very small number.
-    ///
-    /// Finds the distance from the specified position to the nearest polygon wall.
-    /// @param[in] startRef The reference id of the polygon containing @p centerPos.
-    /// @param[in] centerPos The center of the search circle. [(x, y, z)]
-    /// @param[in] maxRadius The radius of the search circle.
-    /// @param[in] filter The polygon filter to apply to the query.
-    /// @param[out] hitDist The distance to the nearest wall from @p centerPos.
-    /// @param[out] hitPos The nearest position on the wall that was hit. [(x, y, z)]
-    /// @param[out] hitNormal The normalized ray formed from the wall point to the
-    /// source point. [(x, y, z)]
-    /// @returns The status flags for the query.
+    /**
+     * @p hitPos is not adjusted using the height detail data.
+     *
+     * @p hitDist will equal the search radius if there is no wall within the
+     * radius. In this case the values of @p hitPos and @p hitNormal are
+     * undefined.
+     *
+     * The normal will become unpredicable if @p hitDist is a very small number.
+     *
+     * Finds the distance from the specified position to the nearest polygon wall.
+     * @param startRef The reference id of the polygon containing @p centerPos.
+     * @param centerPos The center of the search circle. [(x, y, z)]
+     * @param maxRadius The radius of the search circle.
+     * @param filter The polygon filter to apply to the query.
+     * @param hitDist The distance to the nearest wall from @p centerPos.
+     * @param hitPos The nearest position on the wall that was hit. [(x, y, z)]
+     * @param hitNormal The normalized ray formed from the wall point to the
+     * source point. [(x, y, z)]
+     * @returns The status flags for the query.
+     */
     open fun findDistanceToWall(
         startRef: Long, centerPos: Vector3f,
         maxRadius: Float,
@@ -2855,9 +2859,11 @@ open class NavMeshQuery(
         return Result.success(FindDistanceToWallResult(sqrt(radiusSqr), hitPos, hitNormal))
     }
 
-    /// Returns true if the polygon reference is valid and passes the filter restrictions.
-    /// @param[in] ref The polygon reference to check.
-    /// @param[in] filter The filter to apply.
+    /**
+     * Returns true if the polygon reference is valid and passes the filter restrictions.
+     * @param ref The polygon reference to check.
+     * @param filter The filter to apply.
+     */
     fun isValidPolyRef(ref: Long, filter: QueryFilter): Boolean {
         val tile = nav1.getTileByRef(ref) ?: return false
         val poly = nav1.getPolyByRef(ref, tile) ?: return false

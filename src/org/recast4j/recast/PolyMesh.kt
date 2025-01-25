@@ -43,6 +43,7 @@ class PolyMesh {
      * The area id assigned to each polygon. [Length: #maxpolys]
      */
     lateinit var areaIds: IntArray
+
     var numVertices = 0
     var numPolygons = 0
     var maxVerticesPerPolygon = 0

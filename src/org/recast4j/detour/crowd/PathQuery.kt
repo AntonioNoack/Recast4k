@@ -27,7 +27,7 @@ class PathQuery {
     var endPos = Vector3f()
     var startRef = 0L
     var endRef = 0L
-    var filter: QueryFilter? = null
+    lateinit var filter: QueryFilter
     val result = PathQueryResult()
     var navQuery: NavMeshQuery? = null
 }

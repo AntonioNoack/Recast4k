@@ -21,15 +21,20 @@ import org.recast4j.LongArrayList
 import kotlin.math.max
 
 class CrowdTelemetry {
+    companion object {
+        private const val TIMING_SAMPLES = 10
+        private val size = CrowdTelemetryType.values().size
+    }
+
     var maxTimeToEnqueueRequest = 0f
     var maxTimeToFindPath = 0f
-    val executionTimings = HashMap<String, Long>()
+    val executionTimings = LongArray(size)
+    private val executionTimingSamples = Array(size) { LongArrayList(TIMING_SAMPLES) }
 
-    private val executionTimingSamples: MutableMap<String, LongArrayList> = HashMap()
     fun start() {
         maxTimeToEnqueueRequest = 0f
         maxTimeToFindPath = 0f
-        executionTimings.clear()
+        executionTimings.fill(0)
     }
 
     fun recordMaxTimeToEnqueueRequest(time: Float) {
@@ -40,13 +45,14 @@ class CrowdTelemetry {
         maxTimeToFindPath = max(maxTimeToFindPath, time)
     }
 
-    fun start(name: String) {
-        executionTimings[name] = System.nanoTime()
+    fun start(type: CrowdTelemetryType) {
+        executionTimings[type.ordinal] = System.nanoTime()
     }
 
-    fun stop(name: String) {
-        val duration = System.nanoTime() - executionTimings[name]!!
-        val s = executionTimingSamples.computeIfAbsent(name) { LongArrayList() }
+    fun stop(type: CrowdTelemetryType) {
+        val id = type.ordinal
+        val duration = System.nanoTime() - executionTimings[id]
+        val s = executionTimingSamples[id]
         if (s.size == TIMING_SAMPLES) {
             s.removeAt(0)
         }
@@ -55,10 +61,6 @@ class CrowdTelemetry {
         for (i in 0 until s.size) {
             sum += s[i]
         }
-        executionTimings[name] = sum / max(s.size, 1)
-    }
-
-    companion object {
-        private const val TIMING_SAMPLES = 10
+        executionTimings[id] = sum / max(s.size, 1)
     }
 }

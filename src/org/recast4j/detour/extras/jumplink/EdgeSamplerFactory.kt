@@ -5,7 +5,7 @@ import org.recast4j.Vectors
 import kotlin.math.ceil
 import kotlin.math.max
 
-internal class EdgeSamplerFactory {
+internal object EdgeSamplerFactory {
     operator fun get(cfg: JumpLinkBuilderConfig, type: JumpLinkType, edge: Edge): EdgeSampler {
         return when (type) {
             JumpLinkType.EDGE_JUMP -> initEdgeJumpSampler(cfg, edge)
@@ -38,7 +38,7 @@ internal class EdgeSamplerFactory {
     }
 
     private fun initClimbDownSampler(cfg: JumpLinkBuilderConfig, edge: Edge): EdgeSampler {
-        val es = EdgeSampler(edge, ClimbTrajectory())
+        val es = EdgeSampler(edge, ClimbTrajectory)
         es.start.height = cfg.agentClimb * 2
         val offset = Vector3f()
         trans2d(offset, es.az, es.ay, cfg.startDistance, -cfg.agentClimb)

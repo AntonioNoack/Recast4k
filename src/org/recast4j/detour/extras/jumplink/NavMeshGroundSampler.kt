@@ -6,7 +6,7 @@ import org.recast4j.recast.RecastBuilder.RecastBuilderResult
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
-internal class NavMeshGroundSampler : AbstractGroundSampler() {
+internal object NavMeshGroundSampler : AbstractGroundSampler() {
     private val filter: QueryFilter = NoOpFilter()
 
     private class NoOpFilter : QueryFilter {
@@ -16,20 +16,12 @@ internal class NavMeshGroundSampler : AbstractGroundSampler() {
         }
 
         override fun getCost(
-            pa: Vector3f,
-            pb: Vector3f,
-            prevRef: Long,
-            prevTile: MeshTile?,
-            prevPoly: Poly?,
-            curRef: Long,
-            curTile: MeshTile?,
-            curPoly: Poly?,
-            nextRef: Long,
-            nextTile: MeshTile?,
-            nextPoly: Poly?
-        ): Float {
-            return 0f
-        }
+            pa: Vector3f, pb: Vector3f,
+            prevRef: Long, prevTile: MeshTile?, prevPoly: Poly?,
+            curRef: Long, curTile: MeshTile?, curPoly: Poly?,
+            nextRef: Long, nextTile: MeshTile?, nextPoly: Poly?
+        ): Float = 0f
+
     }
 
     override fun sample(cfg: JumpLinkBuilderConfig, result: RecastBuilderResult, es: EdgeSampler) {
@@ -84,11 +76,9 @@ internal class NavMeshGroundSampler : AbstractGroundSampler() {
         navMeshQuery.queryPolygons(pt, halfExtents, filter, object : PolyQuery {
             override fun process(tile: MeshTile, poly: Poly, ref: Long) {
                 val y = navMeshQuery.getPolyHeight(ref, pt)
-                if (java.lang.Float.isFinite(y)) {
-                    if (y > minHeight.get() && y < maxHeight) {
-                        minHeight.set(y)
-                        found.set(true)
-                    }
+                if (y.isFinite() && y > minHeight.get() && y < maxHeight) {
+                    minHeight.set(y)
+                    found.set(true)
                 }
             }
         })

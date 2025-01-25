@@ -3,25 +3,23 @@ package org.recast4j
 import kotlin.math.max
 import kotlin.math.min
 
-class LongArrayList(cap: Int = 16) {
+class LongArrayList(var values: LongArray) {
 
-    var values = LongArray(cap)
     var size = 0
 
+    constructor(cap: Int = 16) : this(LongArray(cap))
     constructor(src: LongArrayList) : this(src.size) {
         System.arraycopy(src.values, 0, values, 0, src.size)
         size = src.size
     }
 
-    fun ensureCapacity(size: Int) {
-        ensureExtra(size - this.size)
+    fun ensureExtra(extra: Int) {
+        ensureCapacity(size + extra)
     }
 
-    fun ensureExtra(extra: Int) {
-        if (size + extra >= values.size) {
-            val data = LongArray(max(values.size * 2, max(size + extra, 16)))
-            System.arraycopy(values, 0, data, 0, size)
-            this.values = data
+    private fun ensureCapacity(size: Int) {
+        if (values.size < size) {
+            values = values.copyOf(max(values.size * 2, max(size, 16)))
         }
     }
 
@@ -120,10 +118,7 @@ class LongArrayList(cap: Int = 16) {
     }
 
     fun subList(startIndex: Int, endIndex: Int): LongArrayList {
-        val child = LongArrayList(endIndex - startIndex)
-        System.arraycopy(values, startIndex, child.values, 0, endIndex - startIndex)
-        child.size = size
-        return child
+        return LongArrayList(values.copyOfRange(startIndex, endIndex))
     }
 
     companion object {

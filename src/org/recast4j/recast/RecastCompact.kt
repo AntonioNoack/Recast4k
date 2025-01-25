@@ -40,13 +40,19 @@ object RecastCompact {
         ctx: Telemetry?, walkableHeight: Int, walkableClimb: Int,
         hf: Heightfield
     ): CompactHeightfield {
-        ctx?.startTimer("BUILD_COMPACTHEIGHTFIELD")
+        ctx?.startTimer(TelemetryType.BUILD_COMPACTHEIGHTFIELD)
         val w = hf.width
         val h = hf.height
         val spanCount = getHeightFieldSpanCount(hf)
-        val chf = CompactHeightfield(w, h, spanCount)
+        val result = CompactHeightfield(w, h, spanCount)
+        fillInHeader(result, hf, walkableHeight, walkableClimb)
+        fillInCellsAndSpans(result, w, h, hf)
+        findNeighborConnections(result, w, h, walkableHeight, walkableClimb)
+        ctx?.stopTimer(TelemetryType.BUILD_COMPACTHEIGHTFIELD)
+        return result
+    }
 
-        // Fill in header.
+    private fun fillInHeader(chf: CompactHeightfield, hf: Heightfield, walkableHeight: Int, walkableClimb: Int) {
         chf.borderSize = hf.borderSize
         chf.walkableHeight = walkableHeight
         chf.walkableClimb = walkableClimb
@@ -56,7 +62,9 @@ object RecastCompact {
         chf.bmax.y = chf.bmax.y + walkableHeight * hf.cellHeight
         chf.cellSize = hf.cellSize
         chf.cellHeight = hf.cellHeight
-        // Fill in cells and spans.
+    }
+
+    private fun fillInCellsAndSpans(chf: CompactHeightfield, w: Int, h: Int, hf: Heightfield) {
         var idx = 0
         for (y in 0 until h) {
             for (x in 0 until w) {
@@ -79,8 +87,12 @@ object RecastCompact {
                 }
             }
         }
+    }
 
-        // Find neighbour connections.
+    private fun findNeighborConnections(
+        chf: CompactHeightfield, w: Int, h: Int,
+        walkableHeight: Int, walkableClimb: Int
+    ) {
         var tooHighNeighbour = 0
         for (y in 0 until h) {
             for (x in 0 until w) {
@@ -88,46 +100,52 @@ object RecastCompact {
                 for (i in chf.index[c] until chf.endIndex[c]) {
                     val s = chf.spans[i]
                     for (dir in 0..3) {
-                        setCon(s, dir, RC_NOT_CONNECTED)
-                        val nx = x + getDirOffsetX(dir)
-                        val ny = y + getDirOffsetY(dir)
-                        // First check, that the neighbour cell is in bounds.
-                        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue
-
-                        // Iterate over all neighbour spans and check if any of the is
-                        // accessible from current cell.
-                        val nc = nx + ny * w
-                        val ncIndex = chf.index[nc]
-                        for (k in ncIndex until chf.endIndex[nc]) {
-                            val ns = chf.spans[k]
-                            val bot = max(s.y, ns.y)
-                            val top = min(s.y + s.height, ns.y + ns.height)
-
-                            // Check, that the gap between the spans is walkable,
-                            // and that the climb height between the gaps is not too high.
-                            if (top - bot >= walkableHeight && abs(ns.y - s.y) <= walkableClimb) {
-                                // Mark direction as walkable.
-                                val lidx = k - ncIndex
-                                if (lidx < 0 || lidx > MAX_LAYERS) {
-                                    tooHighNeighbour = max(tooHighNeighbour, lidx)
-                                    continue
-                                }
-                                setCon(s, dir, lidx)
-                                break
-                            }
-                        }
+                        val thn = findNeighborConnections(chf, w, h, walkableHeight, walkableClimb, y, x, s, dir)
+                        tooHighNeighbour = max(tooHighNeighbour, thn)
                     }
                 }
             }
         }
         if (tooHighNeighbour > MAX_LAYERS) {
-            throw RuntimeException(
-                "rcBuildCompactHeightfield: Heightfield has too many layers " + tooHighNeighbour
-                        + " (max: " + MAX_LAYERS + ")"
-            )
+            throw RuntimeException("rcBuildCompactHeightfield: Heightfield has too many layers $tooHighNeighbour (max: $MAX_LAYERS)")
         }
-        ctx?.stopTimer("BUILD_COMPACTHEIGHTFIELD")
-        return chf
+    }
+
+    private fun findNeighborConnections(
+        chf: CompactHeightfield, w: Int, h: Int,
+        walkableHeight: Int, walkableClimb: Int,
+        y: Int, x: Int, s: CompactSpan, dir: Int
+    ): Int {
+        var tooHighNeighbour = 0
+        setCon(s, dir, RC_NOT_CONNECTED)
+        val nx = x + getDirOffsetX(dir)
+        val ny = y + getDirOffsetY(dir)
+        // First check, that the neighbour cell is in bounds.
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) return 0
+
+        // Iterate over all neighbour spans and check if any of the is
+        // accessible from current cell.
+        val nc = nx + ny * w
+        val ncIndex = chf.index[nc]
+        for (k in ncIndex until chf.endIndex[nc]) {
+            val ns = chf.spans[k]
+            val bot = max(s.y, ns.y)
+            val top = min(s.y + s.height, ns.y + ns.height)
+
+            // Check, that the gap between the spans is walkable,
+            // and that the climb height between the gaps is not too high.
+            if (top - bot >= walkableHeight && abs(ns.y - s.y) <= walkableClimb) {
+                // Mark direction as walkable.
+                val lidx = k - ncIndex
+                if (lidx < 0 || lidx > MAX_LAYERS) {
+                    tooHighNeighbour = max(tooHighNeighbour, lidx)
+                    continue
+                }
+                setCon(s, dir, lidx)
+                break
+            }
+        }
+        return tooHighNeighbour
     }
 
     private fun getHeightFieldSpanCount(hf: Heightfield): Int {

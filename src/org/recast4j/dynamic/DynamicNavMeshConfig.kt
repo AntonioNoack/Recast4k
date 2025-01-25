@@ -17,7 +17,7 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.dynamic
 
-import org.recast4j.recast.RecastConstants.PartitionType
+import org.recast4j.recast.PartitionType
 
 class DynamicNavMeshConfig internal constructor(
     val useTiles: Boolean,

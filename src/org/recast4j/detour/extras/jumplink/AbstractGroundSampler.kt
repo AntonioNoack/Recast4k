@@ -28,9 +28,9 @@ internal abstract class AbstractGroundSampler : GroundSampler {
         for (i in 0 until numSamples) {
             val u = i / (numSamples - 1).toFloat()
             val s = seg.samples!![i]
-            seg.p.lerp(seg.q, u, s.p)
-            val (first, second) = heightFunc(s.p, seg.height)
-            s.p.y = second
+            seg.p.lerp(seg.q, u, s.position)
+            val (first, second) = heightFunc(s.position, seg.height)
+            s.position.y = second
             if (!first) continue
             s.validHeight = true
         }

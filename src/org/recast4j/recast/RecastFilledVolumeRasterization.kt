@@ -36,7 +36,7 @@ object RecastFilledVolumeRasterization {
         flagMergeThr: Int,
         ctx: Telemetry?
     ) {
-        ctx?.startTimer("RASTERIZE_SPHERE")
+        ctx?.startTimer(TelemetryType.RASTERIZE_SPHERE)
         val bounds = floatArrayOf(
             center.x - radius, center.y - radius, center.z - radius,
             center.x + radius, center.y + radius, center.z + radius
@@ -44,14 +44,14 @@ object RecastFilledVolumeRasterization {
         rasterizationFilledShape(
             hf, bounds, area, flagMergeThr
         ) { rectangle: FloatArray -> intersectSphere(rectangle, center, radius * radius) }
-        ctx?.stopTimer("RASTERIZE_SPHERE")
+        ctx?.stopTimer(TelemetryType.RASTERIZE_SPHERE)
     }
 
     fun rasterizeCapsule(
         hf: Heightfield, start: Vector3f, end: Vector3f, radius: Float, area: Int, flagMergeThr: Int,
         ctx: Telemetry?
     ) {
-        ctx?.startTimer("RASTERIZE_CAPSULE")
+        ctx?.startTimer(TelemetryType.RASTERIZE_CAPSULE)
         val bounds = floatArrayOf(
             min(start.x, end.x) - radius, min(start.y, end.y) - radius,
             min(start.z, end.z) - radius, max(start.x, end.x) + radius, max(start.y, end.y) + radius,
@@ -61,14 +61,14 @@ object RecastFilledVolumeRasterization {
         rasterizationFilledShape(
             hf, bounds, area, flagMergeThr
         ) { rectangle: FloatArray -> intersectCapsule(rectangle, start, end, axis, radius * radius) }
-        ctx?.stopTimer("RASTERIZE_CAPSULE")
+        ctx?.stopTimer(TelemetryType.RASTERIZE_CAPSULE)
     }
 
     fun rasterizeCylinder(
         hf: Heightfield, start: Vector3f, end: Vector3f, radius: Float, area: Int, flagMergeThr: Int,
         ctx: Telemetry?
     ) {
-        ctx?.startTimer("RASTERIZE_CYLINDER")
+        ctx?.startTimer(TelemetryType.RASTERIZE_CYLINDER)
         val bounds = floatArrayOf(
             min(start.x, end.x) - radius, min(start.y, end.y) - radius, min(start.z, end.z) - radius,
             max(start.x, end.x) + radius, max(start.y, end.y) + radius, max(start.z, end.z) + radius
@@ -77,7 +77,7 @@ object RecastFilledVolumeRasterization {
         rasterizationFilledShape(
             hf, bounds, area, flagMergeThr
         ) { rectangle: FloatArray -> intersectCylinder(rectangle, start, end, axis, radius * radius) }
-        ctx?.stopTimer("RASTERIZE_CYLINDER")
+        ctx?.stopTimer(TelemetryType.RASTERIZE_CYLINDER)
     }
 
     fun rasterizeBox(
@@ -88,7 +88,7 @@ object RecastFilledVolumeRasterization {
         flagMergeThr: Int,
         ctx: Telemetry?
     ) {
-        ctx?.startTimer("RASTERIZE_BOX")
+        ctx?.startTimer(TelemetryType.RASTERIZE_BOX)
         val normals = arrayOf(
             Vector3f(halfEdges[0]),
             Vector3f(halfEdges[1]),
@@ -144,7 +144,7 @@ object RecastFilledVolumeRasterization {
                 planes
             )
         }
-        ctx?.stopTimer("RASTERIZE_BOX")
+        ctx?.stopTimer(TelemetryType.RASTERIZE_BOX)
     }
 
     fun rasterizeConvex(
@@ -155,7 +155,7 @@ object RecastFilledVolumeRasterization {
         flagMergeThr: Int,
         ctx: Telemetry?
     ) {
-        ctx?.startTimer("RASTERIZE_CONVEX")
+        ctx?.startTimer(TelemetryType.RASTERIZE_CONVEX)
         val bounds = floatArrayOf(vertices[0], vertices[1], vertices[2], vertices[0], vertices[1], vertices[2])
         run {
             var i = 0
@@ -223,7 +223,7 @@ object RecastFilledVolumeRasterization {
         rasterizationFilledShape(
             hf, bounds, area, flagMergeThr
         ) { rectangle: FloatArray -> intersectConvex(rectangle, triangles, vertices, planes, triBounds) }
-        ctx?.stopTimer("RASTERIZE_CONVEX")
+        ctx?.stopTimer(TelemetryType.RASTERIZE_CONVEX)
     }
 
     private fun plane(planes: Array<FloatArray>, p: Int, v1: Vector3f, v2: Vector3f, vertices: FloatArray, vert: Int) {

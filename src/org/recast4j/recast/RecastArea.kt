@@ -25,17 +25,19 @@ import kotlin.math.max
 import kotlin.math.min
 
 class RecastArea {
-    /// @par
-    ///
-    /// This filter is usually applied after applying area id's using functions
-    /// such as #rcMarkBoxArea, #rcMarkConvexPolyArea, and #rcMarkCylinderArea.
-    ///
-    /// @see rcCompactHeightfield
+
+    /**
+     * This filter is usually applied after applying area id's using functions
+     * such as #rcMarkBoxArea, #rcMarkConvexPolyArea, and #rcMarkCylinderArea.
+     *
+     * @see rcCompactHeightfield
+     */
     fun medianFilterWalkableArea(ctx: Telemetry?, chf: CompactHeightfield): Boolean {
         val w = chf.width
         val h = chf.height
-        ctx?.startTimer("MEDIAN_AREA")
+        ctx?.startTimer(TelemetryType.MEDIAN_AREA)
         val areas = IntArray(chf.spanCount)
+        val nei = IntArray(9)
         for (y in 0 until h) {
             for (x in 0 until w) {
                 val c = x + y * w
@@ -45,32 +47,37 @@ class RecastArea {
                         areas[i] = chf.areas[i]
                         continue
                     }
-                    val nei = IntArray(9)
-                    for (j in 0..8) nei[j] = chf.areas[i]
+                    nei.fill(chf.areas[i])
                     for (dir in 0..3) {
-                        if (RecastCommon.getCon(s, dir) != RecastConstants.RC_NOT_CONNECTED) {
-                            val ax = x + RecastCommon.getDirOffsetX(dir)
-                            val ay = y + RecastCommon.getDirOffsetY(dir)
-                            val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, dir)
-                            if (chf.areas[ai] != RecastConstants.RC_NULL_AREA) nei[dir * 2] = chf.areas[ai]
-                            val asp = chf.spans[ai]
-                            val dir2 = dir + 1 and 0x3
-                            if (RecastCommon.getCon(asp, dir2) != RecastConstants.RC_NOT_CONNECTED) {
-                                val ax2 = ax + RecastCommon.getDirOffsetX(dir2)
-                                val ay2 = ay + RecastCommon.getDirOffsetY(dir2)
-                                val ai2 = chf.index[ax2 + ay2 * w] + RecastCommon.getCon(asp, dir2)
-                                if (chf.areas[ai2] != RecastConstants.RC_NULL_AREA) nei[dir * 2 + 1] = chf.areas[ai2]
-                            }
-                        }
+                        medianFilterWalkableArea(chf, s, dir, x, y, w, nei)
                     }
                     Arrays.sort(nei)
-                    areas[i] = nei[4]
+                    areas[i] = nei[4] // median
                 }
             }
         }
         System.arraycopy(areas, 0, chf.areas, 0, chf.spanCount)
-        ctx?.stopTimer("MEDIAN_AREA")
+        ctx?.stopTimer(TelemetryType.MEDIAN_AREA)
         return true
+    }
+
+    fun medianFilterWalkableArea(
+        chf: CompactHeightfield, s: CompactSpan,
+        dir: Int, x: Int, y: Int, w: Int, nei: IntArray
+    ) {
+        if (RecastCommon.getCon(s, dir) == RecastConstants.RC_NOT_CONNECTED) return
+        val ax = x + RecastCommon.getDirOffsetX(dir)
+        val ay = y + RecastCommon.getDirOffsetY(dir)
+        val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, dir)
+        if (chf.areas[ai] != RecastConstants.RC_NULL_AREA) nei[dir * 2] = chf.areas[ai]
+        val asp = chf.spans[ai]
+        val dir2 = dir + 1 and 0x3
+        if (RecastCommon.getCon(asp, dir2) != RecastConstants.RC_NOT_CONNECTED) {
+            val ax2 = ax + RecastCommon.getDirOffsetX(dir2)
+            val ay2 = ay + RecastCommon.getDirOffsetY(dir2)
+            val ai2 = chf.index[ax2 + ay2 * w] + RecastCommon.getCon(asp, dir2)
+            if (chf.areas[ai2] != RecastConstants.RC_NULL_AREA) nei[dir * 2 + 1] = chf.areas[ai2]
+        }
     }
 
     fun markBoxArea(
@@ -81,7 +88,7 @@ class RecastArea {
         chf: CompactHeightfield
     ) {
         // The value of spacial parameters are in world units.
-        ctx?.startTimer("MARK_BOX_AREA")
+        ctx?.startTimer(TelemetryType.MARK_BOX_AREA)
         var minx = ((bmin.x - chf.bmin.x) / chf.cellSize).toInt()
         val miny = ((bmin.y - chf.bmin.y) / chf.cellHeight).toInt()
         var minz = ((bmin.z - chf.bmin.z) / chf.cellSize).toInt()
@@ -98,24 +105,26 @@ class RecastArea {
                 for (i in chf.index[c] until chf.endIndex[c]) {
                     val s = chf.spans[i]
                     if (s.y in miny..maxy) {
-                        if (chf.areas[i] != RecastConstants.RC_NULL_AREA) chf.areas[i] = areaMod.apply(chf.areas[i])
+                        if (chf.areas[i] != RecastConstants.RC_NULL_AREA) {
+                            chf.areas[i] = areaMod.apply(chf.areas[i])
+                        }
                     }
                 }
             }
         }
-        ctx?.stopTimer("MARK_BOX_AREA")
+        ctx?.stopTimer(TelemetryType.MARK_BOX_AREA)
     }
 
-    /// @par
-    ///
-    /// The value of spacial parameters are in world units.
-    ///
-    /// @see rcCompactHeightfield, rcMedianFilterWalkableArea
+    /**
+     * The value of spacial parameters are in world units.
+     *
+     * @see rcCompactHeightfield, rcMedianFilterWalkableArea
+     */
     fun markCylinderArea(
         ctx: Telemetry?, pos: Vector3f, r: Float, h: Float, areaMod: AreaModification,
         chf: CompactHeightfield
     ) {
-        ctx?.startTimer("MARK_CYLINDER_AREA")
+        ctx?.startTimer(TelemetryType.MARK_CYLINDER_AREA)
         val bmin = Vector3f()
         val bmax = Vector3f()
         bmin.x = pos.x - r
@@ -155,7 +164,7 @@ class RecastArea {
                 }
             }
         }
-        ctx?.stopTimer("MARK_CYLINDER_AREA")
+        ctx?.stopTimer(TelemetryType.MARK_CYLINDER_AREA)
     }
 
     companion object {
@@ -166,7 +175,7 @@ class RecastArea {
         fun erodeWalkableArea(ctx: Telemetry?, radius: Int, chf: CompactHeightfield) {
             val w = chf.width
             val h = chf.height
-            ctx?.startTimer("ERODE_AREA")
+            ctx?.startTimer(TelemetryType.ERODE_AREA)
             val dist = IntArray(chf.spanCount)
             Arrays.fill(dist, 255)
             // Mark boundary cells.
@@ -195,7 +204,6 @@ class RecastArea {
                     }
                 }
             }
-            var nd: Int
 
             // Pass 1
             for (y in 0 until h) {
@@ -209,7 +217,7 @@ class RecastArea {
                             val ay = y + RecastCommon.getDirOffsetY(0)
                             val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 0)
                             val asp = chf.spans[ai]
-                            nd = min(dist[ai] + 2, 255)
+                            var nd = min(dist[ai] + 2, 255)
                             if (nd < dist[i]) dist[i] = nd
 
                             // (-1,-1)
@@ -227,7 +235,7 @@ class RecastArea {
                             val ay = y + RecastCommon.getDirOffsetY(3)
                             val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 3)
                             val asp = chf.spans[ai]
-                            nd = min(dist[ai] + 2, 255)
+                            var nd = min(dist[ai] + 2, 255)
                             if (nd < dist[i]) dist[i] = nd
 
                             // (1,-1)
@@ -255,7 +263,7 @@ class RecastArea {
                             val ay = y + RecastCommon.getDirOffsetY(2)
                             val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 2)
                             val asp = chf.spans[ai]
-                            nd = min(dist[ai] + 2, 255)
+                            var nd = min(dist[ai] + 2, 255)
                             if (nd < dist[i]) dist[i] = nd
 
                             // (1,1)
@@ -273,7 +281,7 @@ class RecastArea {
                             val ay = y + RecastCommon.getDirOffsetY(1)
                             val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 1)
                             val asp = chf.spans[ai]
-                            nd = min(dist[ai] + 2, 255)
+                            var nd = min(dist[ai] + 2, 255)
                             if (nd < dist[i]) dist[i] = nd
 
                             // (-1,1)
@@ -290,7 +298,7 @@ class RecastArea {
             }
             val thr = radius * 2
             for (i in 0 until chf.spanCount) if (dist[i] < thr) chf.areas[i] = RecastConstants.RC_NULL_AREA
-            ctx?.stopTimer("ERODE_AREA")
+            ctx?.stopTimer(TelemetryType.ERODE_AREA)
         }
 
         fun pointInPoly(vertices: FloatArray, p: Vector3f): Boolean {
@@ -300,22 +308,25 @@ class RecastArea {
             i = 0
             j = vertices.size - 3
             while (i < vertices.size) {
-                if (vertices[i + 2] > p.z != vertices[j + 2] > p.z && p.x < (vertices[j] - vertices[i]) * (p.z - vertices[i + 2]) / (vertices[j + 2] - vertices[i + 2]) + vertices[i]) c =
-                    !c
+                if (vertices[i + 2] > p.z != vertices[j + 2] > p.z &&
+                    p.x < (vertices[j] - vertices[i]) * (p.z - vertices[i + 2]) / (vertices[j + 2] - vertices[i + 2]) + vertices[i]
+                ) {
+                    c = !c
+                }
                 j = i
                 i += 3
             }
             return c
         }
 
-        /// @par
-        ///
-        /// The value of spacial parameters are in world units.
-        ///
-        /// The y-values of the polygon vertices are ignored. So the polygon is effectively
-        /// projected onto the xz-plane at @p hmin, then extruded to @p hmax.
-        ///
-        /// @see rcCompactHeightfield, rcMedianFilterWalkableArea
+        /**
+         * The value of spacial parameters are in world units.
+         *
+         * The y-values of the polygon vertices are ignored. So the polygon is effectively
+         * projected onto the xz-plane at @p hmin, then extruded to @p hmax.
+         *
+         * @see rcCompactHeightfield, rcMedianFilterWalkableArea
+         */
         fun markConvexPolyArea(
             ctx: Telemetry?,
             vertices: FloatArray,
@@ -324,7 +335,7 @@ class RecastArea {
             areaMod: AreaModification,
             chf: CompactHeightfield
         ) {
-            ctx?.startTimer("MARK_CONVEXPOLY_AREA")
+            ctx?.startTimer(TelemetryType.MARK_CONVEXPOLY_AREA)
             val bmin = Vector3f()
             val bmax = Vector3f()
             bmin.set(vertices, 0)
@@ -367,7 +378,7 @@ class RecastArea {
                     }
                 }
             }
-            ctx?.stopTimer("MARK_CONVEXPOLY_AREA")
+            ctx?.stopTimer(TelemetryType.MARK_CONVEXPOLY_AREA)
         }
     }
 }

@@ -210,7 +210,7 @@ class PathCorridor {
      * If the target is within range, it will be the last corner and have a polygon reference id of zero.
      *
      * @return Corners
-     * @param[in] navquery The query object used to build the corridor.
+     * @param navquery The query object used to build the corridor.
      */
     fun findCorners(
         maxCorners: Int, navquery: NavMeshQuery, tmp: NavMeshQuery.PortalResult,
@@ -313,9 +313,9 @@ class PathCorridor {
      * @param query The query object used to build the corridor.
      * @param filter   The filter to apply to the operation.
      */
-    fun optimizePathTopology(query: NavMeshQuery, filter: QueryFilter?, maxIterations: Int) {
+    fun optimizePathTopology(query: NavMeshQuery, filter: QueryFilter, maxIterations: Int) {
         if (path.size < 3) return
-        query.initSlicedFindPath(path[0], path[path.size - 1], pos, target, filter!!, 0)
+        query.initSlicedFindPath(path[0], path[path.size - 1], pos, target, filter, 0)
         query.updateSlicedFindPath(maxIterations)
         val fpr = query.finalizeSlicedFindPathPartial(path)
         if (fpr.succeeded() && fpr.result!!.size > 0) {
