@@ -24,6 +24,7 @@ import org.recast4j.Vectors.ilog2
 import org.recast4j.Vectors.nextPow2
 import org.recast4j.Vectors.overlapBounds
 import org.recast4j.detour.NavMesh
+import org.recast4j.detour.NavMesh.Companion.computeTileHash
 import org.recast4j.detour.NavMeshBuilder.createNavMeshData
 import org.recast4j.detour.NavMeshDataCreateParams
 import org.recast4j.detour.tilecache.TileCacheObstacle.TileCacheObstacleType
@@ -36,17 +37,9 @@ class TileCache(
     val params: TileCacheParams, private val storageParams: TileCacheStorageParams, val navMesh: NavMesh,
     private val tmProcess: TileCacheMeshProcess?
 ) {
-    /** Tile hash lookup size (must be pot).  */
-    var tileLutSize: Int
-
-    /**  Tile hash lookup mask.  */
-    var tileLutMask: Int
 
     /** Tile hash lookup.  */
-    private val posLookup: Array<CompressedTile?>
-
-    /** Freelist of tiles.  */
-    private var nextFreeTile: CompressedTile? = null
+    private val posLookup = HashMap<Long, CompressedTile>()
 
     private val tiles: Array<CompressedTile?>
 
@@ -97,18 +90,7 @@ class TileCache(
     }
 
     init {
-        tileLutSize = nextPow2(params.maxTiles / 4)
-        if (tileLutSize == 0) {
-            tileLutSize = 1
-        }
-        tileLutMask = tileLutSize - 1
         tiles = arrayOfNulls(params.maxTiles)
-        posLookup = arrayOfNulls(tileLutSize)
-        for (i in params.maxTiles - 1 downTo 0) {
-            tiles[i] = CompressedTile(i)
-            tiles[i]!!.next = nextFreeTile
-            nextFreeTile = tiles[i]
-        }
         numTileBitsInTileID = ilog2(nextPow2(params.maxTiles))
         numSaltBitsInTileID = min(31, 32 - numTileBitsInTileID)
         if (numSaltBitsInTileID < 10) {
@@ -129,10 +111,10 @@ class TileCache(
         val tiles = LongArrayList()
 
         // Find tile based on hash.
-        val h = NavMesh.computeTileHash(tx, ty, tileLutMask)
+        val h = computeTileHash(tx, ty)
         var tile = posLookup[h]
         while (tile != null) {
-            if (tile.header != null && tile.header!!.tx == tx && tile.header!!.ty == ty) {
+            if (tile.tx == tx && tile.ty == ty) {
                 tiles.add(getTileRef(tile))
             }
             tile = tile.next
@@ -142,10 +124,9 @@ class TileCache(
 
     fun getTileAt(tx: Int, ty: Int, tlayer: Int): CompressedTile? {
         // Find tile based on hash.
-        val h = NavMesh.computeTileHash(tx, ty, tileLutMask)
-        var tile = posLookup[h]
+        var tile = posLookup[computeTileHash(tx, ty)]
         while (tile != null) {
-            if (tile.header != null && tile.header!!.tx == tx && tile.header!!.ty == ty && tile.header!!.tlayer == tlayer) {
+            if (tile.tx == tx && tile.ty == ty && tile.tlayer == tlayer) {
                 return tile
             }
             tile = tile.next
@@ -177,35 +158,21 @@ class TileCache(
     }
 
     @Throws(IOException::class)
-    fun addTile(data: ByteArray?, flags: Int): Long {
+    fun addTile(data: ByteArray, flags: Int): Long {
         // Make sure the data is in right format.
         val buf = ByteBuffer.wrap(data)
         buf.order(storageParams.byteOrder)
-        val header = tileReader.read(buf, storageParams.cCompatibility)
+        // todo assign proper index...
+        val tile = tileReader.read(buf, storageParams.cCompatibility, CompressedTile(0))
         // Make sure the location is free.
-        if (getTileAt(header.tx, header.ty, header.tlayer) != null) {
+        if (getTileAt(tile.tx, tile.ty, tile.tlayer) != null) {
             return 0
         }
-        // Allocate a tile.
-        var tile: CompressedTile? = null
-        if (nextFreeTile != null) {
-            tile = nextFreeTile
-            nextFreeTile = tile!!.next
-            tile.next = null
-        }
-
-        // Make sure we could allocate a tile.
-        if (tile == null) {
-            throw RuntimeException("Out of storage")
-        }
-
         // Insert tile into the position lut.
-        val h = NavMesh.computeTileHash(header.tx, header.ty, tileLutMask)
-        tile.next = posLookup[h]
-        posLookup[h] = tile
+        val h = computeTileHash(tile.tx, tile.ty)
+        tile.next = posLookup.put(h, tile)
 
         // Init tile.
-        tile.header = header
         tile.data = data
         tile.compressed = align4(buf.position())
         tile.flags = flags
@@ -231,22 +198,7 @@ class TileCache(
         }
 
         // Remove tile from hash lookup.
-        val h = NavMesh.computeTileHash(tile.header!!.tx, tile.header!!.ty, tileLutMask)
-        var prev: CompressedTile? = null
-        var cur = posLookup[h]
-        while (cur != null) {
-            if (cur === tile) {
-                if (prev != null) {
-                    prev.next = cur.next
-                } else {
-                    posLookup[h] = cur.next
-                }
-                break
-            }
-            prev = cur
-            cur = cur.next
-        }
-        tile.header = null
+        posLookup.remove(computeTileHash(tile.tx, tile.ty))
         tile.data = null
         tile.compressed = 0
         tile.flags = 0
@@ -256,10 +208,6 @@ class TileCache(
         if (tile.salt == 0) {
             tile.salt++
         }
-
-        // Add to free list.
-        tile.next = nextFreeTile
-        nextFreeTile = tile
     }
 
     /**
@@ -351,7 +299,7 @@ class TileCache(
                 while (i < l) {
                     val t = tiles[i]
                     val tile = this.tiles[decodeTileIdTile(t)]
-                    calcTightTileBounds(tile!!.header!!, tbmin, tbmax)
+                    calcTightTileBounds(tile!!, tbmin, tbmax)
                     if (overlapBounds(bmin, bmax, tbmin, tbmax)) {
                         results.add(t)
                     }
@@ -480,14 +428,14 @@ class TileCache(
                 when (ob.type) {
                     TileCacheObstacleType.CYLINDER -> {
                         builder.markCylinderArea(
-                            layer, tile.header!!.bmin, params.cellSize, params.cellHeight, ob.pos, ob.radius,
+                            layer, tile.bmin, params.cellSize, params.cellHeight, ob.pos, ob.radius,
                             ob.height, 0
                         )
                     }
                     TileCacheObstacleType.BOX -> {
                         builder.markBoxArea(
                             layer,
-                            tile.header!!.bmin,
+                            tile.bmin,
                             params.cellSize,
                             params.cellHeight,
                             ob.bmin,
@@ -497,7 +445,7 @@ class TileCache(
                     }
                     TileCacheObstacleType.ORIENTED_BOX -> {
                         builder.markBoxArea(
-                            layer, tile.header!!.bmin, params.cellSize, params.cellHeight, ob.center, ob.extents,
+                            layer, tile.bmin, params.cellSize, params.cellHeight, ob.center, ob.extents,
                             ob.rotAux, 0
                         )
                     }
@@ -514,7 +462,7 @@ class TileCache(
         val polyMesh = builder.buildTileCachePolyMesh(contours, navMesh.maxVerticesPerPoly)
         // Early out if the mesh tile is empty.
         if (polyMesh.numPolygons == 0) {
-            navMesh.removeTile(navMesh.getTileRefAt(tile.header!!.tx, tile.header!!.ty, tile.header!!.tlayer))
+            navMesh.removeTile(navMesh.getTileRefAt(tile.tx, tile.ty, tile.tlayer))
             return
         }
         val params = NavMeshDataCreateParams()
@@ -528,18 +476,18 @@ class TileCache(
         params.walkableHeight = this.params.walkableHeight
         params.walkableRadius = this.params.walkableRadius
         params.walkableClimb = this.params.walkableClimb
-        params.tileX = tile.header!!.tx
-        params.tileZ = tile.header!!.ty
-        params.tileLayer = tile.header!!.tlayer
+        params.tileX = tile.tx
+        params.tileZ = tile.ty
+        params.tileLayer = tile.tlayer
         params.cellSize = this.params.cellSize
         params.cellHeight = this.params.cellHeight
         params.buildBvTree = false
-        params.bmin = tile.header!!.bmin
-        params.bmax = tile.header!!.bmax
+        params.bmin = tile.bmin
+        params.bmax = tile.bmax
         tmProcess?.process(params)
         val meshData = createNavMeshData(params)
         // Remove existing tile.
-        navMesh.removeTile(navMesh.getTileRefAt(tile.header!!.tx, tile.header!!.ty, tile.header!!.tlayer))
+        navMesh.removeTile(navMesh.getTileRefAt(tile.tx, tile.ty, tile.tlayer))
         // Add new tile, or leave the location empty. if (navData) { // Let the
         if (meshData != null) {
             navMesh.addTile(meshData, 0, 0)

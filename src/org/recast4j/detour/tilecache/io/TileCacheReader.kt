@@ -31,7 +31,6 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 class TileCacheReader {
-    private val paramReader = NavMeshParamReader()
     fun read(s: InputStream, maxVertPerPoly: Int, meshProcessor: TileCacheMeshProcess?): TileCache {
         val bb = IOUtils.toByteBuffer(s)
         return read(bb, maxVertPerPoly, meshProcessor)
@@ -39,7 +38,7 @@ class TileCacheReader {
 
     fun read(bb: ByteBuffer, maxVertPerPoly: Int, meshProcessor: TileCacheMeshProcess?): TileCache {
         val header = TileCacheSetHeader()
-        header.magic = bb.int
+        header.magic = bb.getInt()
         if (header.magic != TileCacheSetHeader.TILECACHESET_MAGIC) {
             header.magic = IOUtils.swapEndianness(header.magic)
             if (header.magic != TileCacheSetHeader.TILECACHESET_MAGIC) {
@@ -47,22 +46,22 @@ class TileCacheReader {
             }
             bb.order(if (bb.order() == ByteOrder.BIG_ENDIAN) ByteOrder.LITTLE_ENDIAN else ByteOrder.BIG_ENDIAN)
         }
-        header.version = bb.int
+        header.version = bb.getInt()
         if (header.version != TileCacheSetHeader.TILECACHESET_VERSION) {
             if (header.version != TileCacheSetHeader.TILECACHESET_VERSION_RECAST4J) {
                 throw IOException("Invalid version")
             }
         }
         val cCompatibility = header.version == TileCacheSetHeader.TILECACHESET_VERSION
-        header.numTiles = bb.int
-        header.meshParams = paramReader.read(bb)
+        header.numTiles = bb.getInt()
+        header.meshParams =  NavMeshParamReader.read(bb)
         header.cacheParams = readCacheParams(bb)
         val mesh = NavMesh(header.meshParams, maxVertPerPoly)
         val tc = TileCache(header.cacheParams, TileCacheStorageParams(bb.order(), cCompatibility), mesh, meshProcessor)
         // Read tiles.
         for (i in 0 until header.numTiles) {
-            val tileRef = bb.int.toLong()
-            val dataSize = bb.int
+            val tileRef = bb.getInt().toLong()
+            val dataSize = bb.getInt()
             if (tileRef == 0L || dataSize == 0) {
                 break
             }
@@ -81,14 +80,14 @@ class TileCacheReader {
         params.orig.set(bb.float, bb.float, bb.float)
         params.cellSize = bb.float
         params.cellHeight = bb.float
-        params.width = bb.int
-        params.height = bb.int
+        params.width = bb.getInt()
+        params.height = bb.getInt()
         params.walkableHeight = bb.float
         params.walkableRadius = bb.float
         params.walkableClimb = bb.float
         params.maxSimplificationError = bb.float
-        params.maxTiles = bb.int
-        params.maxObstacles = bb.int
+        params.maxTiles = bb.getInt()
+        params.maxObstacles = bb.getInt()
         return params
     }
 }

@@ -17,33 +17,16 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.io
 
-import org.recast4j.Vectors
 import org.recast4j.detour.NavMesh
-import org.recast4j.detour.NavMeshParams
 import java.io.IOException
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-class MeshSetReader {
-
-    private val meshReader = MeshDataReader()
-    private val paramReader = NavMeshParamReader()
+object MeshSetReader {
 
     fun read(input: InputStream, maxVertPerPoly: Int): NavMesh {
-        return read(IOUtils.toByteBuffer(input), maxVertPerPoly, false)
-    }
-
-    fun read(bb: ByteBuffer, maxVertPerPoly: Int): NavMesh {
-        return read(bb, maxVertPerPoly, false)
-    }
-
-    fun read32Bit(input: InputStream, maxVertPerPoly: Int): NavMesh {
-        return read(IOUtils.toByteBuffer(input), maxVertPerPoly, true)
-    }
-
-    fun read32Bit(bb: ByteBuffer, maxVertPerPoly: Int): NavMesh {
-        return read(bb, maxVertPerPoly, true)
+        return read(IOUtils.toByteBuffer(input), maxVertPerPoly)
     }
 
     fun read(input: InputStream): NavMesh {
@@ -51,17 +34,17 @@ class MeshSetReader {
     }
 
     fun read(bb: ByteBuffer): NavMesh {
-        return read(bb, -1, false)
+        return read(bb, -1)
     }
 
-    fun read(bb: ByteBuffer, maxVertPerPoly: Int, is32Bit: Boolean): NavMesh {
+    fun read(bb: ByteBuffer, maxVertPerPoly: Int): NavMesh {
         val header = readHeader(bb, maxVertPerPoly)
         if (header.maxVerticesPerPoly <= 0) {
             throw IOException("Invalid number of vertices per poly " + header.maxVerticesPerPoly)
         }
         val cCompatibility = header.version == NavMeshSetHeader.NAVMESHSET_VERSION
         val mesh = NavMesh(header.params, header.maxVerticesPerPoly)
-        readTiles(bb, is32Bit, header, cCompatibility, mesh)
+        readTiles(bb, header, cCompatibility, mesh)
         return mesh
     }
 
@@ -80,7 +63,7 @@ class MeshSetReader {
             throw IOException("Invalid version " + header.version)
         }
         header.numTiles = bb.int
-        header.params = paramReader.read(bb)
+        header.params = NavMeshParamReader.read(bb)
         header.maxVerticesPerPoly = maxVerticesPerPoly
         if (header.version == NavMeshSetHeader.NAVMESHSET_VERSION_RECAST4J) {
             header.maxVerticesPerPoly = bb.int
@@ -90,7 +73,6 @@ class MeshSetReader {
 
     private fun readTiles(
         bb: ByteBuffer,
-        is32Bit: Boolean,
         header: NavMeshSetHeader,
         cCompatibility: Boolean,
         mesh: NavMesh
@@ -98,34 +80,16 @@ class MeshSetReader {
         // Read tiles.
         for (i in 0 until header.numTiles) {
             val tileHeader = NavMeshTileHeader()
-            if (is32Bit) {
-                tileHeader.tileRef = convert32BitRef(bb.int, header.params)
-            } else {
-                tileHeader.tileRef = bb.long
-            }
+            tileHeader.tileRef = bb.long
             tileHeader.dataSize = bb.int
             if (tileHeader.tileRef == 0L || tileHeader.dataSize == 0) {
                 break
             }
-            if (cCompatibility && !is32Bit) {
-                bb.int // C struct padding
+            if (cCompatibility) {
+                bb.getInt() // C struct padding
             }
-            val data = meshReader.read(bb, mesh.maxVerticesPerPoly, is32Bit)
+            val data = MeshDataReader.read(bb, mesh.maxVerticesPerPoly)
             mesh.addTile(data, i, tileHeader.tileRef)
         }
-    }
-
-    private fun convert32BitRef(ref: Int, params: NavMeshParams): Long {
-        val m_tileBits = Vectors.ilog2(Vectors.nextPow2(params.maxTiles))
-        val m_polyBits = Vectors.ilog2(Vectors.nextPow2(params.maxPolys))
-        // Only allow 31 salt bits, since the salt mask is calculated using 32bit uint and it will overflow.
-        val m_saltBits = Math.min(31, 32 - m_tileBits - m_polyBits)
-        val saltMask = (1 shl m_saltBits) - 1
-        val tileMask = (1 shl m_tileBits) - 1
-        val polyMask = (1 shl m_polyBits) - 1
-        val salt = ref shr m_polyBits + m_tileBits and saltMask
-        val it = ref shr m_polyBits and tileMask
-        val ip = ref and polyMask
-        return NavMesh.encodePolyId(salt, it, ip)
     }
 }

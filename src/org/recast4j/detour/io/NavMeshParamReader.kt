@@ -3,14 +3,14 @@ package org.recast4j.detour.io
 import org.recast4j.detour.NavMeshParams
 import java.nio.ByteBuffer
 
-class NavMeshParamReader {
+object NavMeshParamReader {
     fun read(bb: ByteBuffer): NavMeshParams {
         val params = NavMeshParams()
-        params.origin.set(bb.float, bb.float, bb.float)
-        params.tileWidth = bb.float
-        params.tileHeight = bb.float
-        params.maxTiles = bb.int
-        params.maxPolys = bb.int
+        params.origin.set(bb.getFloat(), bb.getFloat(), bb.getFloat())
+        params.tileWidth = bb.getFloat()
+        params.tileHeight = bb.getFloat()
+        bb.getInt() // max tiles
+        params.maxPolys = bb.getInt()
         return params
     }
 }

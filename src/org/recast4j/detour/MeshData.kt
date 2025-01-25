@@ -24,12 +24,9 @@ import org.recast4j.Vectors
 import org.recast4j.detour.NavMeshBuilder.createNavMeshData
 import org.recast4j.detour.NavMeshBuilder.subdivide
 
-class MeshData {
+class MeshData : MeshHeader() {
 
-    /**
-     * The tile header.
-     */
-    var header: MeshHeader? = null
+    val header get() = this
 
     /**
      * The tile vertices. [Size: MeshHeader::vertCount]
@@ -71,24 +68,24 @@ class MeshData {
         fun build(params: NavMeshDataCreateParams?, tileX: Int, tileY: Int): MeshData? {
             val data = createNavMeshData(params!!)
             if (data != null) {
-                data.header!!.x = tileX
-                data.header!!.y = tileY
+                data.x = tileX
+                data.y = tileY
             }
             return data
         }
 
         fun build(data: MeshData) {
-            data.bvTree = Array(data.header!!.polyCount * 2) { BVNode() }
-            data.header!!.bvNodeCount =
+            data.bvTree = Array(data.polyCount * 2) { BVNode() }
+            data.bvNodeCount =
                 if (data.bvTree!!.isEmpty()) 0 else
-                    createBVTree(data, data.bvTree!!, data.header!!.bvQuantizationFactor)
+                    createBVTree(data, data.bvTree!!, data.bvQuantizationFactor)
         }
 
         private fun createBVTree(data: MeshData, BVNodes: Array<BVNode>, quantFactor: Float): Int {
-            val items = Array(data.header!!.polyCount) { BVNode() }
-            for (i in 0 until data.header!!.polyCount) {
-                val it = items[i]
-                it.index = i
+            val items = Array(data.polyCount) { BVNode() }
+            for (i in 0 until data.polyCount) {
+                val node = items[i]
+                node.index = i
                 val bmin = Vector3f()
                 bmin.set(data.vertices, data.polygons[i].vertices[0] * 3)
                 val bmax = Vector3f(bmin)
@@ -97,15 +94,20 @@ class MeshData {
                     NativeMath.min(bmin, data.vertices, idx)
                     NativeMath.max(bmax, data.vertices, idx)
                 }
-                val header = data.header!!
-                it.minX = Vectors.clamp(((bmin.x - header.bmin.x) * quantFactor).toInt(), 0, 0x7fffffff)
-                it.minY = Vectors.clamp(((bmin.y - header.bmin.y) * quantFactor).toInt(), 0, 0x7fffffff)
-                it.minZ = Vectors.clamp(((bmin.z - header.bmin.z) * quantFactor).toInt(), 0, 0x7fffffff)
-                it.maxX = Vectors.clamp(((bmax.x - header.bmin.x) * quantFactor).toInt(), 0, 0x7fffffff)
-                it.maxY = Vectors.clamp(((bmax.y - header.bmin.y) * quantFactor).toInt(), 0, 0x7fffffff)
-                it.maxZ = Vectors.clamp(((bmax.z - header.bmin.z) * quantFactor).toInt(), 0, 0x7fffffff)
+                val header = data
+                val headerMin = header.bmin
+                node.minX = quantitize(bmin.x, headerMin.x, quantFactor)
+                node.minY = quantitize(bmin.y, headerMin.y, quantFactor)
+                node.minZ = quantitize(bmin.z, headerMin.z, quantFactor)
+                node.maxX = quantitize(bmax.x, headerMin.x, quantFactor)
+                node.maxY = quantitize(bmax.y, headerMin.y, quantFactor)
+                node.maxZ = quantitize(bmax.z, headerMin.z, quantFactor)
             }
-            return subdivide(items, 0, data.header!!.polyCount, 0, BVNodes)
+            return subdivide(items, 0, data.polyCount, 0, BVNodes)
+        }
+
+        private fun quantitize(bmin: Float, headerMin: Float, quantFactor: Float): Int {
+            return Vectors.clamp(((bmin - headerMin) * quantFactor).toInt(), 0, 0x7fffffff)
         }
     }
 }

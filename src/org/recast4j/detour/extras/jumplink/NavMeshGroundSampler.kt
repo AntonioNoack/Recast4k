@@ -40,31 +40,33 @@ internal class NavMeshGroundSampler : AbstractGroundSampler() {
     }
 
     private fun createNavMesh(
-        r: RecastBuilderResult?,
+        r: RecastBuilderResult,
         agentRadius: Float,
         agentHeight: Float,
         agentClimb: Float
     ): NavMeshQuery {
+        val rMesh = r.mesh
+        val rMeshDetail = r.meshDetail!!
         val params = NavMeshDataCreateParams()
-        params.vertices = r!!.mesh.vertices
-        params.vertCount = r.mesh.numVertices
-        params.polys = r.mesh.polygons
-        params.polyAreas = r.mesh.areaIds
-        params.polyFlags = r.mesh.flags
-        params.polyCount = r.mesh.numPolygons
-        params.maxVerticesPerPolygon = r.mesh.maxVerticesPerPolygon
-        params.detailMeshes = r.meshDetail!!.subMeshes
-        params.detailVertices = r.meshDetail.vertices
-        params.detailVerticesCount = r.meshDetail.numVertices
-        params.detailTris = r.meshDetail.triangles
-        params.detailTriCount = r.meshDetail.numTriangles
+        params.vertices = rMesh.vertices
+        params.vertCount = rMesh.numVertices
+        params.polys = rMesh.polygons
+        params.polyAreas = rMesh.areaIds
+        params.polyFlags = rMesh.flags
+        params.polyCount = rMesh.numPolygons
+        params.maxVerticesPerPolygon = rMesh.maxVerticesPerPolygon
+        params.detailMeshes = rMeshDetail.subMeshes
+        params.detailVertices = rMeshDetail.vertices
+        params.detailVerticesCount = rMeshDetail.numVertices
+        params.detailTris = rMeshDetail.triangles
+        params.detailTriCount = rMeshDetail.numTriangles
         params.walkableRadius = agentRadius
         params.walkableHeight = agentHeight
         params.walkableClimb = agentClimb
-        params.bmin = r.mesh.bmin
-        params.bmax = r.mesh.bmax
-        params.cellSize = r.mesh.cellSize
-        params.cellHeight = r.mesh.cellHeight
+        params.bmin = rMesh.bmin
+        params.bmax = rMesh.bmax
+        params.cellSize = rMesh.cellSize
+        params.cellHeight = rMesh.cellHeight
         params.buildBvTree = true
         return NavMeshQuery(NavMesh(NavMeshBuilder.createNavMeshData(params)!!, params.maxVerticesPerPolygon, 0))
     }

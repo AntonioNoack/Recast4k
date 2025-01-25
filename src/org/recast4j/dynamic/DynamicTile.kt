@@ -21,6 +21,8 @@ import org.recast4j.detour.MeshData
 import org.recast4j.detour.NavMesh
 import org.recast4j.detour.NavMeshBuilder.createNavMeshData
 import org.recast4j.detour.NavMeshDataCreateParams
+import org.recast4j.detour.NavMeshDataCreateParams.Companion.f0
+import org.recast4j.detour.NavMeshDataCreateParams.Companion.i0
 import org.recast4j.dynamic.collider.Collider
 import org.recast4j.dynamic.io.VoxelTile
 import org.recast4j.recast.*
@@ -29,12 +31,15 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
 
 class DynamicTile(val voxelTile: VoxelTile) {
+
     var checkpoint: DynamicTileCheckpoint? = null
     var recastResult: RecastBuilderResult? = null
     var meshData: MeshData? = null
+
     private val colliders = ConcurrentHashMap<Long, Collider?>()
     private var dirty = true
     private var id = 0L
+
     fun build(
         builder: RecastBuilder,
         config: DynamicNavMeshConfig,
@@ -156,9 +161,9 @@ class DynamicTile(val voxelTile: VoxelTile) {
         params.cellHeight = cellHeight
         params.buildBvTree = true
         params.offMeshConCount = 0
-        params.offMeshConRad = FloatArray(0)
+        params.offMeshConRad = f0
         params.offMeshConVertices = params.offMeshConRad
-        params.offMeshConUserID = IntArray(0)
+        params.offMeshConUserID = i0
         params.offMeshConFlags = params.offMeshConUserID
         params.offMeshConAreas = params.offMeshConFlags
         params.offMeshConDir = params.offMeshConAreas

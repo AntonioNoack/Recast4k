@@ -20,24 +20,30 @@ package org.recast4j.detour.tilecache
 
 import org.joml.Vector3f
 
-class TileCacheLayerHeader {
-    var magic  = 0 /// < Data magic
-    var version=0 /// < Data version
+open class TileCacheLayerHeader {
+
+    var magic = 0 // < Data magic
+    var version = 0 // < Data version
+
     var tx = 0
     var ty = 0
     var tlayer = 0
     var bmin = Vector3f()
     var bmax = Vector3f()
+
+    // < Height min/max range
     var hmin = 0
-    var hmax = 0 /// < Height min/max range
+    var hmax = 0
 
+    // < Dimension of the layer.
     var width = 0
-    var height  = 0 /// < Dimension of the layer.
+    var height = 0
 
+    // < Usable sub-region.
     var minx = 0
     var maxx = 0
     var miny = 0
-    var maxy   = 0/// < Usable sub-region.
+    var maxy = 0
 
     companion object {
         const val DT_TILECACHE_MAGIC =

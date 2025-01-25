@@ -18,11 +18,22 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.tilecache
 
-class CompressedTile(val index: Int) {
-    var salt = 1/// < Counter describing modifications to the tile.
-    var header: TileCacheLayerHeader? = null
+class CompressedTile(val index: Int) : TileCacheLayerHeader() {
+    /**
+     * < Counter describing modifications to the tile.
+     * */
+    var salt = 1
+
     var data: ByteArray? = null
-    var compressed = 0// offset of compressed data
+
+    /**
+     * offset of compressed data
+     * */
+    var compressed = 0
     var flags = 0
+
+    /**
+     * tiles with same x and y, but different zs
+     * */
     var next: CompressedTile? = null
 }

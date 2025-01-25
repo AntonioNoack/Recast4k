@@ -59,10 +59,10 @@ object NavMeshBuilder {
     }
 
     fun subdivide(items: Array<BVNode>, iMin: Int, imax: Int, curBVNode: Int, BVNodes: Array<BVNode>): Int {
-        var curBVNode = curBVNode
+        var curBVNodeI = curBVNode
         val iNum = imax - iMin
-        val icur = curBVNode
-        val n = BVNodes[curBVNode++]
+        val icur = curBVNodeI
+        val n = BVNodes[curBVNodeI++]
         if (iNum == 1) {
             // Leaf
             val i = items[iMin]
@@ -84,14 +84,14 @@ object NavMeshBuilder {
             }
             val iSplit = iMin + iNum / 2
             // Left
-            curBVNode = subdivide(items, iMin, iSplit, curBVNode, BVNodes)
+            curBVNodeI = subdivide(items, iMin, iSplit, curBVNodeI, BVNodes)
             // Right
-            curBVNode = subdivide(items, iSplit, imax, curBVNode, BVNodes)
-            val iEscape = curBVNode - icur
+            curBVNodeI = subdivide(items, iSplit, imax, curBVNodeI, BVNodes)
+            val iEscape = curBVNodeI - icur
             // Negative index means escape.
             n.index = -iEscape
         }
-        return curBVNode
+        return curBVNodeI
     }
 
     private fun createBVTree(params: NavMeshDataCreateParams, BVNodes: Array<BVNode>): Int {
@@ -298,7 +298,7 @@ object NavMeshBuilder {
             }
         }
         val bvTreeSize = if (params.buildBvTree) params.polyCount * 2 else 0
-        val header = MeshHeader()
+        val header = MeshData()
         val navVertices = FloatArray(3 * totVertCount)
         val navPolys = Array(totPolyCount) { Poly(it, nvp) }
         val navDMeshes = Array(params.polyCount) { PolyDetail() }
@@ -472,20 +472,18 @@ object NavMeshBuilder {
                 con.rad = params.offMeshConRad[i]
                 con.flags = if (params.offMeshConDir[i] != 0) NavMesh.DT_OFFMESH_CON_BIDIR else 0
                 con.side = offMeshConClass[i * 2 + 1]
-                if (params.offMeshConUserID != null) con.userId = params.offMeshConUserID[i]
+                if (params.offMeshConUserID.isNotEmpty()) con.userId = params.offMeshConUserID[i]
                 n++
             }
         }
-        val nmd = MeshData()
-        nmd.header = header
-        nmd.vertices = navVertices
-        nmd.polygons = navPolys
-        nmd.detailMeshes = navDMeshes
-        nmd.detailVertices = navDVertices
-        nmd.detailTriangles = navDTris
-        nmd.bvTree = navBvtree
-        nmd.offMeshCons = offMeshCons
-        return nmd
+        header.vertices = navVertices
+        header.polygons = navPolys
+        header.detailMeshes = navDMeshes
+        header.detailVertices = navDVertices
+        header.detailTriangles = navDTris
+        header.bvTree = navBvtree
+        header.offMeshCons = offMeshCons
+        return header
     }
 
     private class CompareItemX : Comparator<BVNode> {

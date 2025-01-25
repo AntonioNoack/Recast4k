@@ -18,11 +18,74 @@ freely, subject to the following restrictions:
 */
 package org.recast4j.detour.tilecache
 
-class TileCacheLayer {
-    lateinit var header: TileCacheLayerHeader
-    var regCount = 0/// < Region count.
-    lateinit var heights: ShortArray // char
-    lateinit var areas: ShortArray // char
-    lateinit var cons: ShortArray // char
-    lateinit var regs: ShortArray // char
+class TileCacheLayer : TileCacheLayerHeader() {
+
+    /**
+     * region count
+     * */
+    var regCount = 0
+
+    private lateinit var heights: ByteArray // char
+    private lateinit var areas: ByteArray // char
+    private lateinit var cons: ByteArray // char
+    private lateinit var regs: ByteArray // char
+
+    fun init(gridSize: Int) {
+        heights = ByteArray(gridSize)
+        areas = ByteArray(gridSize)
+        cons = ByteArray(gridSize)
+        regs = ByteArray(gridSize)
+    }
+
+    fun getHeight(i: Int): Int {
+        return heights[i].toInt() and 0xff
+    }
+
+    fun setHeight(i: Int, v: Int) {
+        heights[i] = v.toByte()
+    }
+
+    fun getArea(i: Int): Int {
+        return areas[i].toInt() and 0xff
+    }
+
+    fun setArea(i: Int, v: Int) {
+        areas[i] = v.toByte()
+    }
+
+    fun getCon(i: Int): Int {
+        return cons[i].toInt() and 0xff
+    }
+
+    fun setCon(i: Int, v: Int) {
+        cons[i] = v.toByte()
+    }
+
+    fun getReg(i: Int): Int {
+        return regs[i].toInt() and 0xff
+    }
+
+    fun setReg(i: Int, v: Int) {
+        regs[i] = v.toByte()
+    }
+
+    fun setBytes(src: ByteArray, offset: Int, dst: ByteArray) {
+        System.arraycopy(src, offset, dst, 0, dst.size)
+    }
+
+    fun setHeights(values: ByteArray, offset: Int) {
+        setBytes(values, offset, heights)
+    }
+
+    fun setAreas(values: ByteArray, offset: Int) {
+        setBytes(values, offset, areas)
+    }
+
+    fun setCons(values: ByteArray, offset: Int) {
+        setBytes(values, offset, cons)
+    }
+
+    fun fillRegs(value: Int){
+        regs.fill(value.toByte())
+    }
 }

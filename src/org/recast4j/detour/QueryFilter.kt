@@ -23,16 +23,9 @@ import org.joml.Vector3f
 interface QueryFilter {
     fun passFilter(ref: Long, tile: MeshTile?, poly: Poly): Boolean
     fun getCost(
-        pa: Vector3f,
-        pb: Vector3f,
-        prevRef: Long,
-        prevTile: MeshTile?,
-        prevPoly: Poly?,
-        curRef: Long,
-        curTile: MeshTile?,
-        curPoly: Poly?,
-        nextRef: Long,
-        nextTile: MeshTile?,
-        nextPoly: Poly?
+        pa: Vector3f, pb: Vector3f,
+        prevRef: Long, prevTile: MeshTile?, prevPoly: Poly?,
+        curRef: Long, curTile: MeshTile?, curPoly: Poly?,
+        nextRef: Long, nextTile: MeshTile?, nextPoly: Poly?
     ): Float
 }

@@ -54,9 +54,8 @@ open class NavMeshQuery(
 
         var tile: MeshTile? = null
         var tsum = 0f
-        for (i in 0 until nav1.maxTiles) {
-            val t = nav1.getTile(i)
-            if (t?.data == null || t.data!!.header == null) {
+        for (t in nav1.allTiles) {
+            if (t.data == null || t.data == null) {
                 continue
             }
 
@@ -77,7 +76,7 @@ open class NavMeshQuery(
         val base = nav1.getPolyRefBase(tile)
         var areaSum = 0f
         val tileData = tile.data!!
-        for (i in 0 until tileData.header!!.polyCount) {
+        for (i in 0 until tileData.header.polyCount) {
             val p = tileData.polygons[i]
             // Do not return off-mesh connection polygons.
             if (p.type != Poly.DT_POLYTYPE_GROUND) {
@@ -454,9 +453,9 @@ open class NavMeshQuery(
         val data = tile.data!!
         if (data.bvTree != null) {
             var nodeIndex = 0
-            val tbmin = data.header!!.bmin
-            val tbmax = data.header!!.bmax
-            val qfac = data.header!!.bvQuantizationFactor
+            val tbmin = data.header.bmin
+            val tbmax = data.header.bmax
+            val qfac = data.header.bvQuantizationFactor
             // Calculate quantized box
             // dtClamp query box to world box.
             val minx = Vectors.clamp(qmin.x, tbmin.x, tbmax.x) - tbmin.x
@@ -478,7 +477,7 @@ open class NavMeshQuery(
             )
             // Traverse tree
             val base = nav1.getPolyRefBase(tile)
-            val end = data.header!!.bvNodeCount
+            val end = data.header.bvNodeCount
             while (nodeIndex < end) {
                 val node = data.bvTree!![nodeIndex]
                 val overlap: Boolean = Vectors.overlapQuantBounds(bmin, bmax, node)
@@ -500,7 +499,7 @@ open class NavMeshQuery(
             val bmin = Vector3f()
             val bmax = Vector3f()
             val base = nav1.getPolyRefBase(tile)
-            for (i in 0 until data.header!!.polyCount) {
+            for (i in 0 until data.polyCount) {
                 val p = data.polygons[i]
                 // Do not return off-mesh connection polygons.
                 if (p.type == Poly.DT_POLYTYPE_OFFMESH_CONNECTION) {
@@ -552,20 +551,32 @@ open class NavMeshQuery(
      * Finds tiles that overlap the search box.
      */
     fun queryTiles(center: Vector3f, halfExtents: Vector3f): List<MeshTile> {
-        if (!center.isFinite || !halfExtents.isFinite) return emptyList()
+
         val bmin = Vector3f(center).sub(halfExtents)
         val bmax = Vector3f(center).add(halfExtents)
-        val minx = nav1.calcTileLocX(bmin)
-        val miny = nav1.calcTileLocY(bmin)
-        val maxx = nav1.calcTileLocX(bmax)
-        val maxy = nav1.calcTileLocY(bmax)
-        val tiles = ArrayList<MeshTile>()
-        for (y in miny..maxy) {
-            for (x in minx..maxx) {
-                tiles.addAll(nav1.getTilesAt(x, y))
+
+        val minx = Math.max(nav1.calcTileLocX(bmin), -1_000_000_000)
+        val miny = Math.max(nav1.calcTileLocY(bmin), -1_000_000_000)
+        val maxx = Math.min(nav1.calcTileLocX(bmax), +1_000_000_000)
+        val maxy = Math.min(nav1.calcTileLocY(bmax), +1_000_000_000)
+
+        val numTiles = (maxx - minx) * (maxy - miny)
+        if (numTiles < nav1.numTiles) {
+            // it's more efficient to use indices
+            val tiles = ArrayList<MeshTile>()
+            for (y in miny..maxy) {
+                for (x in minx..maxx) {
+                    tiles.add(nav1.getTilesAt(x, y) ?: continue)
+                }
+            }
+            return tiles
+        } else {
+            // it's more efficient to just iterate everything
+            return nav1.allTiles.filter { tile ->
+                val data = tile.data
+                data != null && data.x in minx..maxx && data.y in miny..maxy
             }
         }
-        return tiles
     }
 
     /**
@@ -611,7 +622,7 @@ open class NavMeshQuery(
             // limiting to several times the character radius yields nice results. It is not sensitive
             // so it is enough to compute it from the first tile.
             val tile = nav1.getTileByRef(startRef)
-            val agentRadius = tile!!.data!!.header!!.walkableRadius
+            val agentRadius = tile!!.data!!.walkableRadius
             raycastLimitSqr = Vectors.sq(agentRadius * NavMesh.DT_RAY_CAST_LIMIT_PROPORTIONS)
         }
         if (startRef == endRef) {
@@ -875,7 +886,7 @@ open class NavMeshQuery(
             // limiting to several times the character radius yields nice results. It is not sensitive
             // so it is enough to compute it from the first tile.
             val tile = nav1.getTileByRef(startRef)
-            val agentRadius = tile!!.data!!.header!!.walkableRadius
+            val agentRadius = tile!!.data!!.walkableRadius
             queryData.raycastLimitSqr = Vectors.sq(agentRadius * NavMesh.DT_RAY_CAST_LIMIT_PROPORTIONS)
         }
         if (startRef == endRef) {
@@ -1605,24 +1616,28 @@ open class NavMeshQuery(
 
         visited.clear()
         if (bestNode != null) {
-            // Reverse the path.
-            var prev: Node? = null
-            var node = bestNode
-            do {
-                val next = tinyNodePool.getNodeAtIdx(node!!.parentIndex)
-                node.parentIndex = tinyNodePool.getNodeIdx(prev)
-                prev = node
-                node = next
-            } while (node != null)
-
-            // Store result
-            node = prev
-            do {
-                visited.add(node!!.polygonRef)
-                node = tinyNodePool.getNodeAtIdx(node.parentIndex)
-            } while (node != null)
+            reversePath(bestNode, tinyNodePool, visited)
         }
         return MoveAlongSurfaceResult(bestPos, visited)
+    }
+
+    private fun reversePath(bestNode: Node, tinyNodePool: NodePool, visited: LongArrayList) {
+        // Reverse the path.
+        var prev: Node? = null
+        var node: Node = bestNode
+        while (true) {
+            val next = tinyNodePool.getNodeAtIdx(node.parentIndex)
+            node.parentIndex = tinyNodePool.getNodeIdx(prev)
+            prev = node
+            node = next ?: break
+        }
+
+        // Store result
+        var nodeI = prev!!
+        while (true) {
+            visited.add(nodeI.polygonRef)
+            nodeI = tinyNodePool.getNodeAtIdx(nodeI.parentIndex) ?: break
+        }
     }
 
     class PortalResult(val left: Vector3f, val right: Vector3f, var fromType: Int, var toType: Int) {

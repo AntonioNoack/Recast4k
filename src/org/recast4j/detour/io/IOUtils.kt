@@ -25,16 +25,13 @@ import java.nio.ByteBuffer
 object IOUtils {
     @Throws(IOException::class)
     fun toByteBuffer(inputStream: InputStream): ByteBuffer {
-        val bos = ByteArrayOutputStream()
-        val buffer = ByteArray(4096)
-        var l: Int
-        while (inputStream.read(buffer).also { l = it } != -1) {
-            bos.write(buffer, 0, l)
-        }
-        return ByteBuffer.wrap(bos.toByteArray())
+        return ByteBuffer.wrap(inputStream.readBytes())
     }
 
     fun swapEndianness(i: Int): Int {
-        return i ushr 24 and 0xFF or (i shr 8 and 0xFF00) or (i shl 8 and 0xFF0000) or (i shl 24 and -0x1000000)
+        return i ushr 24 and 0xFF or
+                (i shr 8 and 0xFF00) or
+                (i shl 8 and 0xFF0000) or
+                (i shl 24 and -0x1000000)
     }
 }

@@ -25,7 +25,7 @@ class FindNearestPolyQuery(private val query: NavMeshQuery, private val center: 
         // climb height, favor that instead of straight line nearest point.
         var d: Float
         if (posOverPoly) {
-            d = abs(center.y - closestPtPoly.y) - tile.data!!.header!!.walkableClimb
+            d = abs(center.y - closestPtPoly.y) - tile.data!!.walkableClimb
             d = if (d > 0) d * d else 0f
         } else {
             d = center.distanceSquared(closestPtPoly)

@@ -28,7 +28,6 @@ import java.nio.ByteOrder
 
 class TileCacheWriter : DetourWriter() {
 
-    private val paramWriter = NavMeshParamWriter()
     private val builder = TileCacheBuilder()
 
     fun write(stream: OutputStream, cache: TileCache, order: ByteOrder, cCompatibility: Boolean) {
@@ -43,7 +42,7 @@ class TileCacheWriter : DetourWriter() {
             numTiles++
         }
         write(stream, numTiles, order)
-        paramWriter.write(stream, cache.navMesh.params, order)
+        NavMeshParamWriter.write(stream, cache.navMesh.params, order)
         writeCacheParams(stream, cache.params, order)
         for (i in 0 until cache.tileCount) {
             val tile = cache.getTile(i)

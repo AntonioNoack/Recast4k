@@ -191,11 +191,11 @@ class VoxelTile {
                 putShort(count, data, position, order)
                 position += 2
                 for (j in 0 until count) {
-                    putInt(buf.int, data, position, order)
+                    putInt(buf.getInt(), data, position, order)
                     position += 4
-                    putInt(buf.int, data, position, order)
+                    putInt(buf.getInt(), data, position, order)
                     position += 4
-                    putInt(buf.int, data, position, order)
+                    putInt(buf.getInt(), data, position, order)
                     position += 4
                 }
             }

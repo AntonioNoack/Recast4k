@@ -29,7 +29,7 @@ class VoxelFileReader {
     fun read(stream: InputStream): VoxelFile {
         val buf = IOUtils.toByteBuffer(stream)
         val file = VoxelFile()
-        var magic = buf.int
+        var magic = buf.getInt()
         if (magic != VoxelFile.MAGIC) {
             magic = IOUtils.swapEndianness(magic)
             if (magic != VoxelFile.MAGIC) {
@@ -37,22 +37,22 @@ class VoxelFileReader {
             }
             buf.order(if (buf.order() == ByteOrder.BIG_ENDIAN) ByteOrder.LITTLE_ENDIAN else ByteOrder.BIG_ENDIAN)
         }
-        file.version = buf.int
+        file.version = buf.getInt()
         val isExportedFromAstar = file.version and VoxelFile.VERSION_EXPORTER_MASK == 0
-        file.walkableRadius = buf.float
-        file.walkableHeight = buf.float
-        file.walkableClimb = buf.float
-        file.walkableSlopeAngle = buf.float
-        file.cellSize = buf.float
-        file.maxSimplificationError = buf.float
-        file.maxEdgeLen = buf.float
-        file.minRegionArea = buf.float.toInt().toFloat()
+        file.walkableRadius = buf.getFloat()
+        file.walkableHeight = buf.getFloat()
+        file.walkableClimb = buf.getFloat()
+        file.walkableSlopeAngle = buf.getFloat()
+        file.cellSize = buf.getFloat()
+        file.maxSimplificationError = buf.getFloat()
+        file.maxEdgeLen = buf.getFloat()
+        file.minRegionArea = buf.getFloat().toInt().toFloat()
         if (!isExportedFromAstar) {
-            file.regionMergeArea = buf.float
-            file.verticesPerPoly = buf.int
+            file.regionMergeArea = buf.getFloat()
+            file.verticesPerPoly = buf.getInt()
             file.buildMeshDetail = buf.get().toInt() != 0
-            file.detailSampleDistance = buf.float
-            file.detailSampleMaxError = buf.float
+            file.detailSampleDistance = buf.getFloat()
+            file.detailSampleMaxError = buf.getFloat()
         } else {
             file.regionMergeArea = 6 * file.minRegionArea
             file.verticesPerPoly = 6
@@ -61,15 +61,15 @@ class VoxelFileReader {
             file.detailSampleMaxError = file.maxSimplificationError * 0.8f
         }
         file.useTiles = buf.get().toInt() != 0
-        file.tileSizeX = buf.int
-        file.tileSizeZ = buf.int
-        file.rotation.set(buf.float, buf.float, buf.float)
-        file.bounds[0] = buf.float
-        file.bounds[1] = buf.float
-        file.bounds[2] = buf.float
-        file.bounds[3] = buf.float
-        file.bounds[4] = buf.float
-        file.bounds[5] = buf.float
+        file.tileSizeX = buf.getInt()
+        file.tileSizeZ = buf.getInt()
+        file.rotation.set(buf.getFloat(), buf.getFloat(), buf.getFloat())
+        file.bounds[0] = buf.getFloat()
+        file.bounds[1] = buf.getFloat()
+        file.bounds[2] = buf.getFloat()
+        file.bounds[3] = buf.getFloat()
+        file.bounds[4] = buf.getFloat()
+        file.bounds[5] = buf.getFloat()
         if (isExportedFromAstar) {
             // bounds are saved as center + size
             file.bounds[0] -= 0.5f * file.bounds[3]
@@ -79,15 +79,15 @@ class VoxelFileReader {
             file.bounds[4] += file.bounds[1]
             file.bounds[5] += file.bounds[2]
         }
-        val tileCount = buf.int
+        val tileCount = buf.getInt()
         for (tile in 0 until tileCount) {
-            val tileX = buf.int
-            val tileZ = buf.int
-            val width = buf.int
-            val depth = buf.int
-            val borderSize = buf.int
-            val boundsMin = Vector3f(buf.float, buf.float, buf.float)
-            val boundsMax = Vector3f(buf.float, buf.float, buf.float)
+            val tileX = buf.getInt()
+            val tileZ = buf.getInt()
+            val width = buf.getInt()
+            val depth = buf.getInt()
+            val borderSize = buf.getInt()
+            val boundsMin = Vector3f(buf.getFloat(), buf.getFloat(), buf.getFloat())
+            val boundsMax = Vector3f(buf.getFloat(), buf.getFloat(), buf.getFloat())
             if (isExportedFromAstar) {
                 // bounds are local
                 boundsMin.x += file.bounds[0]
@@ -97,9 +97,9 @@ class VoxelFileReader {
                 boundsMax.y += file.bounds[1]
                 boundsMax.z += file.bounds[2]
             }
-            val cellSize = buf.float
-            val cellHeight = buf.float
-            val voxelSize = buf.int
+            val cellSize = buf.getFloat()
+            val cellHeight = buf.getFloat()
+            val voxelSize = buf.getInt()
             val position = buf.position()
             val bytes = ByteArray(voxelSize)
             buf.get(bytes)

@@ -28,8 +28,8 @@ import org.joml.Vector3f
 class NavMeshDataCreateParams {
 
     companion object {
-        private val i0 = IntArray(0)
-        private val f0 = FloatArray(0)
+        val i0 = IntArray(0)
+        val f0 = FloatArray(0)
     }
 
     /// @name Polygon Mesh Attributes

@@ -35,11 +35,6 @@ class NavMeshParams {
     var tileHeight = 0f
 
     /**
-     * The maximum number of tiles the navigation mesh can contain.
-     */
-    var maxTiles = 0
-
-    /**
      * The maximum number of polygons each tile can contain.
      */
     var maxPolys = 0

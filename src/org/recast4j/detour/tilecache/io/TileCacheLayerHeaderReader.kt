@@ -22,29 +22,31 @@ import org.recast4j.detour.tilecache.TileCacheLayerHeader
 import java.io.IOException
 import java.nio.ByteBuffer
 
-class TileCacheLayerHeaderReader {
-    fun read(data: ByteBuffer, cCompatibility: Boolean): TileCacheLayerHeader {
-        val header = TileCacheLayerHeader()
-        header.magic = data.int
-        header.version = data.int
+object TileCacheLayerHeaderReader {
+    fun <V : TileCacheLayerHeader> read(data: ByteBuffer, cCompatibility: Boolean, header: V): V {
+        header.magic = data.getInt()
+        header.version = data.getInt()
         if (header.magic != TileCacheLayerHeader.DT_TILECACHE_MAGIC) throw IOException("Invalid magic")
         if (header.version != TileCacheLayerHeader.DT_TILECACHE_VERSION) throw IOException("Invalid version")
-        header.tx = data.int
-        header.ty = data.int
-        header.tlayer = data.int
-        header.bmin.set(data.float, data.float, data.float)
-        header.bmax.set(data.float, data.float, data.float)
-        header.hmin = data.short.toInt() and 0xFFFF
-        header.hmax = data.short.toInt() and 0xFFFF
-        header.width = data.get().toInt() and 0xFF
-        header.height = data.get().toInt() and 0xFF
-        header.minx = data.get().toInt() and 0xFF
-        header.maxx = data.get().toInt() and 0xFF
-        header.miny = data.get().toInt() and 0xFF
-        header.maxy = data.get().toInt() and 0xFF
+        header.tx = data.getInt()
+        header.ty = data.getInt()
+        header.tlayer = data.getInt()
+        header.bmin.set(data.getFloat(), data.getFloat(), data.getFloat())
+        header.bmax.set(data.getFloat(), data.getFloat(), data.getFloat())
+        header.hmin = data.uint16()
+        header.hmax = data.uint16()
+        header.width = data.uint8()
+        header.height = data.uint8()
+        header.minx = data.uint8()
+        header.maxx = data.uint8()
+        header.miny = data.uint8()
+        header.maxy = data.uint8()
         if (cCompatibility) {
-            data.short // C struct padding
+            data.getShort() // C struct padding
         }
         return header
     }
+
+    fun ByteBuffer.uint8() = get().toInt() and 0xFF
+    fun ByteBuffer.uint16() = getShort().toInt() and 0xFF
 }

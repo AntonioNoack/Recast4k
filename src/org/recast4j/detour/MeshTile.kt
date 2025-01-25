@@ -21,12 +21,13 @@ package org.recast4j.detour
 /**
  * Defines a navigation mesh tile.
  */
-class MeshTile(val index: Int) {
+class MeshTile(val id: Int) {
     /** Counter describing modifications to the tile.  */
     var salt = 0
 
     /** The tile data.  */
     var data: MeshData? = null
+
     lateinit var polyLinks: IntArray
 
     /** The tile links.  */
@@ -37,4 +38,6 @@ class MeshTile(val index: Int) {
 
     /** Tile flags. (See: #dtTileFlags)  */
     var flags = 0
+
+    var next: MeshTile? = null
 }

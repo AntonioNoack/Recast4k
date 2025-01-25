@@ -21,7 +21,7 @@ package org.recast4j.detour
 import org.joml.Vector3f
 
 /** Provides high level information related to a dtMeshTile object.  */
-class MeshHeader {
+open class MeshHeader {
 
     /** Tile magic number. (Used to identify the data format.)  */
     var magic = 0

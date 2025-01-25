@@ -19,15 +19,14 @@ package org.recast4j.detour.io
 
 import org.recast4j.detour.MeshData
 import org.recast4j.detour.MeshHeader
-import java.io.IOException
 import java.io.OutputStream
 import java.nio.ByteOrder
 
-class MeshDataWriter : DetourWriter() {
+object MeshDataWriter : DetourWriter() {
 
     fun write(stream: OutputStream, data: MeshData, order: ByteOrder) {
-        val header = data.header
-        write(stream, header!!.magic, order)
+        val header = data
+        write(stream, header.magic, order)
         write(stream, MeshHeader.DT_NAVMESH_VERSION_RECAST4J_LAST, order)
         write(stream, header.x, order)
         write(stream, header.y, order)
@@ -64,7 +63,7 @@ class MeshDataWriter : DetourWriter() {
     }
 
     private fun writePolys(stream: OutputStream, data: MeshData, order: ByteOrder) {
-        for (i in 0 until data.header!!.polyCount) {
+        for (i in 0 until data.polyCount) {
             for (j in data.polygons[i].vertices.indices) {
                 write(stream, data.polygons[i].vertices[j].toShort(), order)
             }
@@ -78,7 +77,7 @@ class MeshDataWriter : DetourWriter() {
     }
 
     private fun writePolyDetails(stream: OutputStream, data: MeshData, order: ByteOrder) {
-        for (i in 0 until data.header!!.detailMeshCount) {
+        for (i in 0 until data.detailMeshCount) {
             write(stream, data.detailMeshes!![i].vertBase, order)
             write(stream, data.detailMeshes!![i].triBase, order)
             stream.write(data.detailMeshes!![i].vertCount)
@@ -87,13 +86,13 @@ class MeshDataWriter : DetourWriter() {
     }
 
     private fun writeDTris(stream: OutputStream, data: MeshData) {
-        for (i in 0 until data.header!!.detailTriCount * 4) {
+        for (i in 0 until data.detailTriCount * 4) {
             stream.write(data.detailTriangles[i])
         }
     }
 
     private fun writeBVTree(stream: OutputStream, data: MeshData, order: ByteOrder) {
-        for (i in 0 until data.header!!.bvNodeCount) {
+        for (i in 0 until data.bvNodeCount) {
             write(stream, data.bvTree!![i].minX, order)
             write(stream, data.bvTree!![i].minY, order)
             write(stream, data.bvTree!![i].minZ, order)
@@ -105,7 +104,7 @@ class MeshDataWriter : DetourWriter() {
     }
 
     private fun writeOffMeshCons(stream: OutputStream, data: MeshData, order: ByteOrder) {
-        for (i in 0 until data.header!!.offMeshConCount) {
+        for (i in 0 until data.offMeshConCount) {
             write(stream, data.offMeshCons[i].posA, order)
             write(stream, data.offMeshCons[i].posB, order)
             write(stream, data.offMeshCons[i].rad, order)

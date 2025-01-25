@@ -44,35 +44,23 @@ class NavMesh(
     /**
      * Dimensions of each tile.
      */
-    var m_tileWidth = params.tileWidth
-    var m_tileHeight = params.tileHeight
-    /**
-     * The maximum number of tiles supported by the navigation mesh.
-     *
-     * @return The maximum number of tiles supported by the navigation mesh.
-     */
-    /**
-     * Max number of tiles.
-     */
-    var maxTiles = params.maxTiles
+    var tileWidth = params.tileWidth
+    var tileHeight = params.tileHeight
 
-    /**
-     * Tile hash lookup mask.
-     */
-    private val tileLutMask: Int
-    private val posLookup: MutableMap<Int, MutableList<MeshTile?>> = HashMap()
-    private val availableTiles: LinkedList<MeshTile> = LinkedList<MeshTile>()
-    private val m_tiles /// < List of tiles.
-            : Array<MeshTile?>
-
-    var tileCount = 0
+    private val tileByXY = HashMap<Long, MeshTile>()
+    private val tileById = HashMap<Int, MeshTile>()
+    private val availableTileIds = HashMap<Int, Int>() // id,salt
+    private var nextTileId = 1
 
     /**
      * Returns tile in the tile array.
      */
     fun getTile(i: Int): MeshTile? {
-        return m_tiles[i]
+        return tileById[i]
     }
+
+    val allTiles get() = tileById.values
+    val numTiles get() = tileById.size
 
     /**
      * Gets the polygon reference for the tile's base polygon.
@@ -84,7 +72,7 @@ class NavMesh(
         if (tile == null) {
             return 0
         }
-        val it = tile.index
+        val it = tile.id
         return encodePolyId(tile.salt, it, 0)
     }
 
@@ -112,24 +100,24 @@ class NavMesh(
      * @return 2-element int array with (tx,ty) tile location
      */
     fun calcTileLoc(pos: Vector3f): IntArray {
-        val tx = floor(((pos.x - origin.x) / m_tileWidth)).toInt()
-        val ty = floor(((pos.z - origin.z) / m_tileHeight)).toInt()
+        val tx = floor(((pos.x - origin.x) / tileWidth)).toInt()
+        val ty = floor(((pos.z - origin.z) / tileHeight)).toInt()
         return intArrayOf(tx, ty)
     }
 
     fun calcTileLocX(pos: Vector3f): Int {
-        return floor(((pos.x - origin.x) / m_tileWidth)).toInt()
+        return floor(((pos.x - origin.x) / tileWidth)).toInt()
     }
 
     fun calcTileLocY(pos: Vector3f): Int {
-        return floor(((pos.z - origin.z) / m_tileHeight)).toInt()
+        return floor(((pos.z - origin.z) / tileHeight)).toInt()
     }
 
     fun getPolyByRef(ref: Long, tile: MeshTile?): Poly? {
         if (tile == null) return null
         val ip = decodePolyIdPoly(ref)
         val data = tile.data!!
-        return if (ip < data.header!!.polyCount) data.polygons[ip]
+        return if (ip < data.polyCount) data.polygons[ip]
         else null
     }
 
@@ -138,7 +126,7 @@ class NavMesh(
      * This function is faster than getTileAndPolyByRef, but it does not validate the reference.
      */
     fun getTileByRefUnsafe(ref: Long): MeshTile {
-        return m_tiles[decodePolyIdTile(ref)]!!
+        return tileById[decodePolyIdTile(ref)]!!
     }
 
     /**
@@ -152,12 +140,11 @@ class NavMesh(
     fun isValidPolyRef(ref: Long): Boolean {
         if (ref == 0L) return false
         val it = decodePolyIdTile(ref)
-        if (it >= maxTiles) return false
-        val tile = m_tiles[it]!!
+        val tile = tileById[it] ?: return false
         val salt = decodePolyIdSalt(ref)
         val ip = decodePolyIdPoly(ref)
         return if (tile.salt != salt || tile.data == null) false
-        else ip < tile.data!!.header!!.polyCount
+        else ip < tile.data!!.polyCount
     }
 
     constructor(data: MeshData, maxVerticesPerPoly: Int, flags: Int) : this(
@@ -167,22 +154,11 @@ class NavMesh(
         addTile(data, flags, 0)
     }
 
-    init {
-        // Init tiles
-        tileLutMask = max(1, Vectors.nextPow2(params.maxTiles)) - 1
-        m_tiles = arrayOfNulls(maxTiles)
-        for (i in 0 until maxTiles) {
-            m_tiles[i] = MeshTile(i)
-            m_tiles[i]!!.salt = 1
-            availableTiles.add(m_tiles[i]!!)
-        }
-    }
-
     fun queryPolygonsInTile(tile: MeshTile, qmin: Vector3f, qmax: Vector3f): LongArrayList {
         val polys = LongArrayList()
         if (tile.data!!.bvTree != null) {
             var nodeIndex = 0
-            val header = tile.data!!.header!!
+            val header = tile.data!!
             val tbmin = header.bmin
             val tbmax = header.bmax
             val qfac = header.bvQuantizationFactor
@@ -225,7 +201,7 @@ class NavMesh(
             val bmin = Vector3f()
             val bmax = Vector3f()
             val base = getPolyRefBase(tile)
-            val header = tile.data!!.header!!
+            val header = tile.data!!
             for (i in 0 until header.polyCount) {
                 val p = tile.data!!.polygons[i]
                 // Do not return off-mesh connection polygons.
@@ -250,7 +226,7 @@ class NavMesh(
     }
 
     fun updateTile(data: MeshData, flags: Int): Long {
-        val header = data.header!!
+        val header = data
         var ref = getTileRefAt(header.x, header.y, header.layer)
         ref = removeTile(ref)
         return addTile(data, flags, ref)
@@ -277,7 +253,7 @@ class NavMesh(
      */
     fun addTile(data: MeshData, flags: Int, lastRef: Long): Long {
         // Make sure the data is in right format.
-        val header = data.header!!
+        val header = data
 
         // Make sure the location is free.
         if (getTileAt(header.x, header.y, header.layer) != null) {
@@ -288,36 +264,37 @@ class NavMesh(
         val tile: MeshTile?
         if (lastRef == 0L) {
             // Make sure we could allocate a tile.
-            if (availableTiles.isEmpty()) {
-                throw RuntimeException("Could not allocate a tile")
+            val tileId = availableTileIds.keys.firstOrNull()
+            if (tileId != null) {
+                tile = MeshTile(tileId)
+                tile.salt = availableTileIds.remove(tileId)!! + 1 // new salt, because its different
+            } else {
+                tile = MeshTile(nextTileId++)
             }
-            tile = availableTiles.poll()
-            tileCount++
         } else {
             // Try to relocate the tile to specific index with same salt.
-            val tileIndex = decodePolyIdTile(lastRef)
-            if (tileIndex >= maxTiles) {
-                throw RuntimeException("Tile index too high")
-            }
-            // Try to find the specific tile id from the free list.
-            val target = m_tiles[tileIndex]
-            // Remove from freelist
-            if (!availableTiles.remove(target)) {
+            val tileId = decodePolyIdTile(lastRef)
+            // Try to find the specific tile id from the free list & remove from freelist
+            if (availableTileIds.remove(tileId) == null) {
                 // Could not find the correct location.
                 throw RuntimeException("Could not find tile")
             }
-            tile = target
+            tile = MeshTile(tileId)
             // Restore salt.
-            tile!!.salt = decodePolyIdSalt(lastRef)
+            tile.salt = decodePolyIdSalt(lastRef)
         }
-        tile!!.data = data
+
+        tileById[tile.id] = tile // unique
+
+        tile.data = data
         tile.flags = flags
         tile.links.clear()
         tile.polyLinks = IntArray(data.polygons.size)
         Arrays.fill(tile.polyLinks, DT_NULL_LINK)
 
         // Insert tile into the position lut.
-        getTileListByPos(header.x, header.y).add(tile)
+        val hash = computeTileHash(header.x, header.y)
+        tile.next = tileByXY.put(hash, tile)
 
         // Patch header pointers.
 
@@ -334,25 +311,47 @@ class NavMesh(
 
         // Connect with layers in current tile.
         var neis = getTilesAt(header.x, header.y)
-        for (meshTile in neis) {
-            if (meshTile === tile) continue
-            connectExtLinks(tile, meshTile, -1)
-            connectExtLinks(meshTile, tile, -1)
-            connectExtOffMeshLinks(tile, meshTile, -1)
-            connectExtOffMeshLinks(meshTile, tile, -1)
+        while (neis != null) {
+            if (neis !== tile) {
+                connectExtLinks(tile, neis, -1)
+                connectExtLinks(neis, tile, -1)
+                connectExtOffMeshLinks(tile, neis, -1)
+                connectExtOffMeshLinks(neis, tile, -1)
+            }
+            neis = neis.next
         }
 
         // Connect with neighbour tiles.
         for (i in 0..7) {
             neis = getNeighbourTilesAt(header.x, header.y, i)
-            for (nei in neis) {
-                connectExtLinks(tile, nei, i)
-                connectExtLinks(nei, tile, Vectors.oppositeTile(i))
-                connectExtOffMeshLinks(tile, nei, i)
-                connectExtOffMeshLinks(nei, tile, Vectors.oppositeTile(i))
+            while (neis != null) {
+                connectExtLinks(tile, neis, i)
+                connectExtLinks(neis, tile, Vectors.oppositeTile(i))
+                connectExtOffMeshLinks(tile, neis, i)
+                connectExtOffMeshLinks(neis, tile, Vectors.oppositeTile(i))
+                neis = neis.next
             }
         }
         return getTileRef(tile)
+    }
+
+    private fun removeTileFromChain(h: Long, tile: MeshTile) {
+        var list = tileByXY[h]
+        if (list === tile) {
+            val next = list.next
+            if (next != null) tileByXY[h] = next
+            else tileByXY.remove(h)
+            return
+        }
+        while (list != null) {
+            val next = list.next
+            if (next === tile) {
+                // found it, remove it
+                list.next = tile.next
+                return
+            }
+            list = next
+        }
     }
 
     /**
@@ -366,35 +365,34 @@ class NavMesh(
         }
         val tileIndex = decodePolyIdTile(ref)
         val tileSalt = decodePolyIdSalt(ref)
-        if (tileIndex >= maxTiles) {
-            throw RuntimeException("Invalid tile index")
-        }
-        val tile = m_tiles[tileIndex]
-        if (tile!!.salt != tileSalt) {
+        val tile = tileById[tileIndex]
+            ?: throw RuntimeException("Invalid tile index")
+        if (tile.salt != tileSalt) {
             throw RuntimeException("Invalid tile salt")
         }
 
         // Remove tile from hash lookup.
-        val header = tile.data!!.header!!
-        getTileListByPos(header.x, header.y).remove(tile)
+        val header = tile.data!!
+        removeTileFromChain(computeTileHash(header.x, header.y), tile)
 
         // Remove connections to neighbour tiles.
         // Create connections with neighbour tiles.
 
         // Disconnect from other layers in current tile.
         var nneis = getTilesAt(header.x, header.y)
-        for (j in nneis) {
-            if (j === tile) {
-                continue
+        while (nneis != null) {
+            if (nneis !== tile) {
+                unconnectLinks(nneis, tile)
             }
-            unconnectLinks(j, tile)
+            nneis = nneis.next
         }
 
         // Disconnect from neighbour tiles.
         for (i in 0..7) {
             nneis = getNeighbourTilesAt(header.x, header.y, i)
-            for (j in nneis) {
-                unconnectLinks(j, tile)
+            while (nneis !== null) {
+                unconnectLinks(nneis, tile)
+                nneis = nneis.next
             }
         }
         // Reset tile.
@@ -409,9 +407,9 @@ class NavMesh(
             tile.salt++
         }
 
-        // Add to free list.
-        availableTiles.addFirst(tile)
-        tileCount--
+        availableTileIds[tile.id] = tile.salt
+        tileById.remove(tile.id)
+
         return getTileRef(tile)
     }
 
@@ -422,7 +420,7 @@ class NavMesh(
         if (tile == null) return
         val base = getPolyRefBase(tile)
         val data = tile.data!!
-        for (i in 0 until data.header!!.polyCount) {
+        for (i in 0 until data.polyCount) {
             val poly = data.polygons[i]
             tile.polyLinks[poly.index] = DT_NULL_LINK
             if (poly.type == Poly.DT_POLYTYPE_OFFMESH_CONNECTION) {
@@ -456,7 +454,7 @@ class NavMesh(
         }
         val targetNum = decodePolyIdTile(getTileRef(target))
         val data = tile.data!!
-        for (i in 0 until data.header!!.polyCount) {
+        for (i in 0 until data.polyCount) {
             val poly = data.polygons[i]
             var j = tile.polyLinks[poly.index]
             var pj = DT_NULL_LINK
@@ -487,7 +485,7 @@ class NavMesh(
 
         // Connect border links.
         val data = tile.data!!
-        for (i in 0 until data.header!!.polyCount) {
+        for (i in 0 until data.polyCount) {
             val poly = data.polygons[i]
 
             // Create new links.
@@ -559,7 +557,7 @@ class NavMesh(
         // We are interested on links which land from target tile to this tile.
         val oppositeSide = if (side == -1) 0xff else Vectors.oppositeTile(side)
         val data2 = target!!.data!!
-        for (i in 0 until data2.header!!.offMeshConCount) {
+        for (i in 0 until data2.offMeshConCount) {
             val targetCon = data2.offMeshCons[i]
             if (targetCon.side != oppositeSide) {
                 continue
@@ -570,7 +568,7 @@ class NavMesh(
             if (target.polyLinks[targetPoly.index] == DT_NULL_LINK) {
                 continue
             }
-            val ext = Vector3f(targetCon.rad, data2.header!!.walkableClimb, targetCon.rad)
+            val ext = Vector3f(targetCon.rad, data2.walkableClimb, targetCon.rad)
 
             // Find polygon to connect to.
             val p = Vector3f(targetCon.posB)
@@ -643,7 +641,7 @@ class NavMesh(
         var n = 0
         val base = getPolyRefBase(tile)
         val data = tile.data!!
-        for (i in 0 until data.header!!.polyCount) {
+        for (i in 0 until data.polyCount) {
             val poly = data.polygons[i]
             val nv = poly.vertCount
             for (j in 0 until nv) {
@@ -661,7 +659,7 @@ class NavMesh(
 
                 // Check if the segments touch.
                 calcSlabEndPoints(tile.data!!.vertices, vc, vd, bmin, bmax, side)
-                if (!overlapSlabs(amin, amax, bmin, bmax, 0.01f, tile.data!!.header!!.walkableClimb)) {
+                if (!overlapSlabs(amin, amax, bmin, bmax, 0.01f, tile.data!!.walkableClimb)) {
                     continue
                 }
 
@@ -726,7 +724,7 @@ class NavMesh(
 
         // Base off-mesh connection start points.
         val data = tile.data!!
-        val header = data.header!!
+        val header = data
         for (i in 0 until header.offMeshConCount) {
             val con = data.offMeshCons[i]
             val poly = data.polygons[con.poly]
@@ -1001,7 +999,7 @@ class NavMesh(
             // climb height, favor that instead of straight line nearest point.
             val diff = Vectors.sub(center, closestPtPoly)
             if (posOverPoly) {
-                d = abs(diff.y) - tile.data!!.header!!.walkableClimb
+                d = abs(diff.y) - tile.data!!.walkableClimb
                 d = if (d > 0) d * d else 0f
             } else {
                 d = diff.lengthSquared()
@@ -1018,16 +1016,15 @@ class NavMesh(
     }
 
     fun getTileAt(x: Int, y: Int, layer: Int): MeshTile? {
-        for (tile in getTileListByPos(x, y)) {
-            val header = tile?.data?.header ?: continue
-            if (header.x == x && header.y == y && header.layer == layer) {
-                return tile
-            }
+        var tile = getTileListByPos(x, y)
+        while (tile != null) {
+            if (tile.data?.layer == layer) return tile
+            tile = tile.next
         }
         return null
     }
 
-    fun getNeighbourTilesAt(x: Int, y: Int, side: Int): List<MeshTile> {
+    fun getNeighbourTilesAt(x: Int, y: Int, side: Int): MeshTile? {
         var nx = x
         var ny = y
         when (side) {
@@ -1055,16 +1052,8 @@ class NavMesh(
         return getTilesAt(nx, ny)
     }
 
-    fun getTilesAt(x: Int, y: Int): List<MeshTile> {
-        val tiles: MutableList<MeshTile> = ArrayList()
-        for (tile in getTileListByPos(x, y)) {
-            val tileData = tile?.data ?: continue
-            val header = tileData.header ?: continue
-            if (header.x == x && header.y == y) {
-                tiles.add(tile)
-            }
-        }
-        return tiles
+    fun getTilesAt(x: Int, y: Int): MeshTile? {
+        return getTileListByPos(x, y)
     }
 
     fun getTileRefAt(x: Int, y: Int, layer: Int): Long {
@@ -1074,14 +1063,14 @@ class NavMesh(
     fun getTileByRef(ref: Long): MeshTile? {
         if (ref == 0L) return null
         val tileIndex = decodePolyIdTile(ref)
-        if (tileIndex >= maxTiles) return null
         val tileSalt = decodePolyIdSalt(ref)
-        val tile = m_tiles[tileIndex]!!
+        val tile = tileById[tileIndex] ?: return null
         return if (tile.salt == tileSalt) tile else null
     }
 
     fun getTileRef(tile: MeshTile?): Long {
-        return if (tile == null) 0 else encodePolyId(tile.salt, tile.index, 0)
+        return if (tile == null) 0
+        else encodePolyId(tile.salt, tile.id, 0)
     }
 
     /**
@@ -1130,18 +1119,15 @@ class NavMesh(
         if (ref == 0L) {
             return Status.FAILURE
         }
-        val it = decodePolyIdTile(ref)
-        if (it >= maxTiles) {
-            return Status.FAILURE_INVALID_PARAM
-        }
-        val tile = m_tiles[it]!!
-        val data = tile.data
+        val tileId = decodePolyIdTile(ref)
+        val tile = tileById[tileId]
+        val data = tile?.data
         val salt = decodePolyIdSalt(ref)
-        if (tile.salt != salt || data == null || data.header == null) {
+        if (data == null || tile.salt != salt) {
             return Status.FAILURE_INVALID_PARAM
         }
         val ip = decodePolyIdPoly(ref)
-        if (ip >= data.header!!.polyCount) {
+        if (ip >= data.polyCount) {
             return Status.FAILURE_INVALID_PARAM
         }
         val poly = data.polygons[ip]
@@ -1155,21 +1141,18 @@ class NavMesh(
         if (ref == 0L) {
             return Result.failure()
         }
-        val it = decodePolyIdTile(ref)
-        if (it >= maxTiles) {
-            return Result.invalidParam()
-        }
+        val tileId = decodePolyIdTile(ref)
         val salt = decodePolyIdSalt(ref)
-        if (m_tiles[it]!!.salt != salt || m_tiles[it]!!.data?.header == null) {
+        val tile = tileById[tileId]
+        if (tile == null || tile.salt != salt || tile.data == null) {
             return Result.invalidParam()
         }
-        val tile = m_tiles[it]
-        val data = tile!!.data!!
-        val ip = decodePolyIdPoly(ref)
-        if (ip >= data.header!!.polyCount) {
+        val data = tile.data!!
+        val polyId = decodePolyIdPoly(ref)
+        if (polyId >= data.polyCount) {
             return Result.invalidParam()
         }
-        val poly = data.polygons[ip]
+        val poly = data.polygons[polyId]
         return Result.success(poly.flags)
     }
 
@@ -1177,20 +1160,18 @@ class NavMesh(
         if (ref == 0L) {
             return Status.FAILURE
         }
-        val it = decodePolyIdTile(ref)
-        if (it >= maxTiles) {
-            return Status.FAILURE
-        }
+        val tileId = decodePolyIdTile(ref)
         val salt = decodePolyIdSalt(ref)
-        if (m_tiles[it]!!.salt != salt || m_tiles[it]!!.data?.header == null) {
+        val tile = tileById[tileId]
+        val tileData = tile?.data
+        if (tileData == null || tile.salt != salt) {
             return Status.FAILURE_INVALID_PARAM
         }
-        val tile = m_tiles[it]
         val ip = decodePolyIdPoly(ref)
-        if (ip >= tile!!.data!!.header!!.polyCount) {
+        if (ip >= tileData.polyCount) {
             return Status.FAILURE_INVALID_PARAM
         }
-        val poly = tile.data!!.polygons[ip]
+        val poly = tileData.polygons[ip]
         poly.area = area.code
         return Status.SUCCESS
     }
@@ -1199,25 +1180,23 @@ class NavMesh(
         if (ref == 0L) {
             return Result.failure()
         }
-        val it = decodePolyIdTile(ref)
-        if (it >= maxTiles) {
-            return Result.invalidParam()
-        }
+        val tileId = decodePolyIdTile(ref)
         val salt = decodePolyIdSalt(ref)
-        if (m_tiles[it]!!.salt != salt || m_tiles[it]!!.data == null || m_tiles[it]!!.data!!.header == null) {
+        val tile = tileById[tileId]
+        val tileData = tile?.data
+        if (tileData == null || tile.salt != salt) {
             return Result.invalidParam()
         }
-        val tile = m_tiles[it]
         val ip = decodePolyIdPoly(ref)
-        if (ip >= tile!!.data!!.header!!.polyCount) {
+        if (ip >= tileData.polyCount) {
             return Result.invalidParam()
         }
-        val poly = tile.data!!.polygons[ip]
+        val poly = tileData.polygons[ip]
         return Result.success(poly.area)
     }
 
-    private fun getTileListByPos(x: Int, z: Int): MutableList<MeshTile?> {
-        return posLookup.computeIfAbsent(computeTileHash(x, z, tileLutMask)) { ArrayList() }
+    private fun getTileListByPos(x: Int, z: Int): MeshTile? {
+        return tileByXY[computeTileHash(x, z)]
     }
 
     companion object {
@@ -1271,13 +1250,15 @@ class NavMesh(
          * Derives a standard polygon reference.
          *
          * @param salt The tile's salt value.
-         * @param it   The index of the tile.
-         * @param ip   The index of the polygon within the tile.
+         * @param tileId   The index of the tile.
+         * @param polygonId   The index of the polygon within the tile.
          * @return encoded polygon reference
          * @note This function is generally meant for internal use only.
          */
-        fun encodePolyId(salt: Int, it: Int, ip: Int): Long {
-            return salt.toLong() shl DT_POLY_BITS + DT_TILE_BITS or (it.toLong() shl DT_POLY_BITS) or ip.toLong()
+        fun encodePolyId(salt: Int, tileId: Int, polygonId: Int): Long {
+            return salt.toLong().shl(DT_POLY_BITS + DT_TILE_BITS) or
+                    (tileId.toLong().shl(DT_POLY_BITS)) or
+                    polygonId.toLong()
         }
 
         /**
@@ -1286,7 +1267,7 @@ class NavMesh(
          * @see #encodePolyId
          * */
         fun decodePolyIdSalt(ref: Long): Int {
-            return (ref shr DT_POLY_BITS + DT_TILE_BITS and saltMask).toInt()
+            return ref.shr(DT_POLY_BITS + DT_TILE_BITS).and(saltMask).toInt()
         }
 
         /**
@@ -1295,7 +1276,7 @@ class NavMesh(
          * @see #encodePolyId
          * */
         fun decodePolyIdTile(ref: Long): Int {
-            return (ref shr DT_POLY_BITS and tileMask).toInt()
+            return ref.shr(DT_POLY_BITS).and(tileMask).toInt()
         }
 
         /**
@@ -1304,16 +1285,15 @@ class NavMesh(
          * @see #encodePolyId
          * */
         fun decodePolyIdPoly(ref: Long): Int {
-            return (ref and polyMask).toInt()
+            return ref.and(polyMask).toInt()
         }
 
         private fun getNavMeshParams(data: MeshData): NavMeshParams {
             val params = NavMeshParams()
-            val header = data.header!!
+            val header = data
             params.origin.set(header.bmin)
             params.tileWidth = header.bmax.x - header.bmin.x
             params.tileHeight = header.bmax.z - header.bmin.z
-            params.maxTiles = 1
             params.maxPolys = header.polyCount
             return params
         }
@@ -1348,11 +1328,8 @@ class NavMesh(
             bmax[1] = vertices[v1 + 1]
         }
 
-        fun computeTileHash(x: Int, y: Int, mask: Int): Int {
-            val h1 = -0x72594cbd // Large multiplicative constants;
-            val h2 = -0x27e9c7bf // here arbitrarily chosen primes
-            val n = h1 * x + h2 * y
-            return n and mask
+        fun computeTileHash(x: Int, y: Int): Long {
+            return x.toLong().shl(32) xor y.toLong()
         }
 
         /**
