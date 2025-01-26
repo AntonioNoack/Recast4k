@@ -21,6 +21,7 @@ package org.recast4j.detour
 import org.joml.Vector3f
 import org.joml.Vector3i
 import org.recast4j.LongArrayList
+import org.recast4j.ReStack
 import org.recast4j.Vectors
 import java.util.*
 import kotlin.math.*
@@ -116,7 +117,7 @@ class NavMesh(
     fun getPolyByRef(ref: Long, tile: MeshTile?): Poly? {
         if (tile == null) return null
         val ip = decodePolyIdPoly(ref)
-        val data = tile.data!!
+        val data = tile.data
         return if (ip < data.polyCount) data.polygons[ip]
         else null
     }
@@ -134,7 +135,7 @@ class NavMesh(
      * This function is faster than getTileAndPolyByRef, but it does not validate the reference.
      */
     fun getPolyByRefUnsafe(ref: Long, tile: MeshTile): Poly {
-        return tile.data!!.polygons[decodePolyIdPoly(ref)]
+        return tile.data.polygons[decodePolyIdPoly(ref)]
     }
 
     fun isValidPolyRef(ref: Long): Boolean {
@@ -143,8 +144,8 @@ class NavMesh(
         val tile = tileById[it] ?: return false
         val salt = decodePolyIdSalt(ref)
         val ip = decodePolyIdPoly(ref)
-        return if (tile.salt != salt || tile.data == null) false
-        else ip < tile.data!!.polyCount
+        return if (tile.salt != salt) false
+        else ip < tile.data.polyCount
     }
 
     constructor(data: MeshData, maxVerticesPerPoly: Int, flags: Int) : this(
@@ -156,9 +157,9 @@ class NavMesh(
 
     fun queryPolygonsInTile(tile: MeshTile, qmin: Vector3f, qmax: Vector3f): LongArrayList {
         val polys = LongArrayList()
-        if (tile.data!!.bvTree != null) {
+        if (tile.data.bvTree != null) {
             var nodeIndex = 0
-            val header = tile.data!!
+            val header = tile.data
             val tbmin = header.bmin
             val tbmax = header.bmax
             val qfac = header.bvQuantizationFactor
@@ -184,7 +185,7 @@ class NavMesh(
             val base = getPolyRefBase(tile)
             val end = header.bvNodeCount
             while (nodeIndex < end) {
-                val node = tile.data!!.bvTree!![nodeIndex]
+                val node = tile.data.bvTree!![nodeIndex]
                 val overlap: Boolean = Vectors.overlapQuantBounds(bmin, bmax, node)
                 val isLeafNode = node.index >= 0
                 if (isLeafNode && overlap) {
@@ -198,29 +199,31 @@ class NavMesh(
                 }
             }
         } else {
-            val bmin = Vector3f()
-            val bmax = Vector3f()
+            val bmin = ReStack.vec3fs.create()
+            val bmax = ReStack.vec3fs.create()
             val base = getPolyRefBase(tile)
-            val header = tile.data!!
-            for (i in 0 until header.polyCount) {
-                val p = tile.data!!.polygons[i]
+            val data = tile.data
+            val vertices = data.vertices
+            for (i in 0 until data.polyCount) {
+                val p = data.polygons[i]
                 // Do not return off-mesh connection polygons.
                 if (p.type == Poly.DT_POLYTYPE_OFFMESH_CONNECTION) {
                     continue
                 }
                 // Calc polygon bounds.
                 var v = p.vertices[0] * 3
-                bmin.set(tile.data!!.vertices, v)
-                bmax.set(tile.data!!.vertices, v)
+                bmin.set(vertices, v)
+                bmax.set(bmin)
                 for (j in 1 until p.vertCount) {
                     v = p.vertices[j] * 3
-                    Vectors.min(bmin, tile.data!!.vertices, v)
-                    Vectors.max(bmax, tile.data!!.vertices, v)
+                    Vectors.min(bmin, vertices, v)
+                    Vectors.max(bmax, vertices, v)
                 }
                 if (Vectors.overlapBounds(qmin, qmax, bmin, bmax)) {
                     polys.add(base or i.toLong())
                 }
             }
+            ReStack.vec3fs.sub(2)
         }
         return polys
     }
@@ -299,8 +302,8 @@ class NavMesh(
         // Patch header pointers.
 
         // If there are no items in the bvtree, reset the tree pointer.
-        if (tile.data!!.bvTree != null && tile.data!!.bvTree!!.isEmpty()) {
-            tile.data!!.bvTree = null
+        if (data.bvTree != null && data.bvTree!!.isEmpty()) {
+            data.bvTree = null
         }
 
         // Init tile.
@@ -372,7 +375,7 @@ class NavMesh(
         }
 
         // Remove tile from hash lookup.
-        val header = tile.data!!
+        val header = tile.data
         removeTileFromChain(computeTileHash(header.x, header.y), tile)
 
         // Remove connections to neighbour tiles.
@@ -395,8 +398,9 @@ class NavMesh(
                 nneis = nneis.next
             }
         }
+
         // Reset tile.
-        tile.data = null
+        tile.data = MeshData.empty
         tile.flags = 0
         tile.links.clear()
         tile.linksFreeList = DT_NULL_LINK
@@ -418,8 +422,8 @@ class NavMesh(
      * */
     fun connectIntLinks(tile: MeshTile?) {
         if (tile == null) return
+        val data = tile.data
         val base = getPolyRefBase(tile)
-        val data = tile.data!!
         for (i in 0 until data.polyCount) {
             val poly = data.polygons[i]
             tile.polyLinks[poly.index] = DT_NULL_LINK
@@ -452,8 +456,8 @@ class NavMesh(
         if (tile == null || target == null) {
             return
         }
+        val data = tile.data
         val targetNum = decodePolyIdTile(getTileRef(target))
-        val data = tile.data!!
         for (i in 0 until data.polyCount) {
             val poly = data.polygons[i]
             var j = tile.polyLinks[poly.index]
@@ -484,7 +488,7 @@ class NavMesh(
         }
 
         // Connect border links.
-        val data = tile.data!!
+        val data = tile.data
         for (i in 0 until data.polyCount) {
             val poly = data.polygons[i]
 
@@ -549,14 +553,14 @@ class NavMesh(
     }
 
     fun connectExtOffMeshLinks(tile: MeshTile?, target: MeshTile?, side: Int) {
-        if (tile == null) {
+        if (tile == null || target == null) {
             return
         }
 
         // Connect off-mesh links.
         // We are interested on links which land from target tile to this tile.
         val oppositeSide = if (side == -1) 0xff else Vectors.oppositeTile(side)
-        val data2 = target!!.data!!
+        val data2 = target.data
         for (i in 0 until data2.offMeshConCount) {
             val targetCon = data2.offMeshCons[i]
             if (targetCon.side != oppositeSide) {
@@ -602,7 +606,7 @@ class NavMesh(
             if (targetCon.flags and DT_OFFMESH_CON_BIDIR != 0) {
                 val tidx = allocLink(tile)
                 val landPolyIdx = decodePolyIdPoly(ref)
-                val landPoly = tile.data!!.polygons[landPolyIdx]
+                val landPoly = tile.data.polygons[landPolyIdx]
                 link = tile.links[tidx]
                 link.neighborRef = getPolyRefBase(target) or targetCon.poly.toLong()
                 link.indexOfPolyEdge = 0xff
@@ -640,7 +644,7 @@ class NavMesh(
         val m = DT_EXT_LINK or side
         var n = 0
         val base = getPolyRefBase(tile)
-        val data = tile.data!!
+        val data = tile.data
         for (i in 0 until data.polyCount) {
             val poly = data.polygons[i]
             val nv = poly.vertCount
@@ -651,15 +655,15 @@ class NavMesh(
                 }
                 val vc = poly.vertices[j] * 3
                 val vd = poly.vertices[(j + 1) % nv] * 3
-                val bpos = getSlabCoord(tile.data!!.vertices, vc, side)
+                val bpos = getSlabCoord(data.vertices, vc, side)
                 // Segments are not close enough.
                 if (abs(apos - bpos) > 0.01f) {
                     continue
                 }
 
                 // Check if the segments touch.
-                calcSlabEndPoints(tile.data!!.vertices, vc, vd, bmin, bmax, side)
-                if (!overlapSlabs(amin, amax, bmin, bmax, 0.01f, tile.data!!.walkableClimb)) {
+                calcSlabEndPoints(data.vertices, vc, vd, bmin, bmax, side)
+                if (!overlapSlabs(amin, amax, bmin, bmax, 0.01f, data.walkableClimb)) {
                     continue
                 }
 
@@ -723,7 +727,7 @@ class NavMesh(
         val base = getPolyRefBase(tile)
 
         // Base off-mesh connection start points.
-        val data = tile.data!!
+        val data = tile.data
         val header = data
         for (i in 0 until header.offMeshConCount) {
             val con = data.offMeshCons[i]
@@ -785,11 +789,11 @@ class NavMesh(
         lateinit var pmin: Vector3f
         lateinit var pmax: Vector3f
         val tileData = tile.data
-        if (tileData?.detailMeshes != null) {
+        if (tileData.detailMeshes != null) {
             val pd = tileData.detailMeshes!![ip]
             for (i in 0 until pd.triCount) {
                 val ti = (pd.triBase + i) * 4
-                val tris = tile.data!!.detailTriangles
+                val tris = tile.data.detailTriangles
                 if (onlyBoundary && tris[ti + 3].toInt() and flagAnyBoundaryEdge == 0) {
                     continue
                 }
@@ -819,7 +823,7 @@ class NavMesh(
                 }
             }
         } else {
-            if (tileData == null || poly.vertCount <= 0) return Vector3f() // invalid/empty
+            if (poly.vertCount <= 0) return Vector3f() // invalid/empty
             val (v0, v1) = tripletVec3f.get()
             val vertices = tileData.vertices
             for (j in 0 until poly.vertCount) {
@@ -848,11 +852,11 @@ class NavMesh(
         var dmin = Float.MAX_VALUE
         var y = 0f
         val tileData = tile.data
-        if (tileData?.detailMeshes != null) {
+        if (tileData.detailMeshes != null) {
             val pd = tileData.detailMeshes!![ip]
             for (i in 0 until pd.triCount) {
                 val ti = (pd.triBase + i) * 4
-                val tris = tile.data!!.detailTriangles
+                val tris = tileData.detailTriangles
                 if (onlyBoundary && tris[ti + 3].toInt() and flagAnyBoundaryEdge == 0) {
                     continue
                 }
@@ -881,7 +885,7 @@ class NavMesh(
             }
         } else {
             val (v0, v1) = tripletVec3f.get()
-            val vs = tile.data!!.vertices
+            val vs = tile.data.vertices
             val ix = poly.vertices
             for (j in 0 until poly.vertCount) {
                 val k = (j + 1) % poly.vertCount
@@ -916,11 +920,12 @@ class NavMesh(
         if (poly.type == Poly.DT_POLYTYPE_OFFMESH_CONNECTION) return Float.NaN
         if (tile == null || poly.vertCount <= 0) return Float.NaN
         val ip = poly.index
-        val tileData = tile.data!!
+        val tileData = tile.data
         val vertices = tmpVertices.get()
         val nv = poly.vertCount
         for (i in 0 until nv) {
-            System.arraycopy(tileData.vertices, poly.vertices[i] * 3, vertices, i * 3, 3)
+            val srcI = poly.vertices[i] * 3
+            tileData.vertices.copyInto(vertices, i * 3, srcI, srcI + 3)
         }
         if (!Vectors.pointInPolygon(pos, vertices, nv)) {
             return Float.NaN
@@ -960,16 +965,16 @@ class NavMesh(
     fun closestPointOnPoly(ref: Long, pos: Vector3f): ClosestPointOnPolyResult {
         val tile = getTileByRefUnsafe(ref)
         val poly = getPolyByRefUnsafe(ref, tile)
-        val closest = Vector3f(pos)
         val h = getPolyHeight(tile, poly, pos)
         if (h.isFinite()) {
-            closest.y = h
+            val closest = Vector3f(pos.x, h, pos.z)
             return ClosestPointOnPolyResult(true, closest)
         }
 
         // Off-mesh connections don't have detail polygons.
+        val tileData = tile.data
         if (poly.type == Poly.DT_POLYTYPE_OFFMESH_CONNECTION) {
-            val v = tile.data!!.vertices
+            val v = tileData.vertices
             val v0 = Vector3f().set(v, poly.vertices[0] * 3)
             val v1 = Vector3f().set(v, poly.vertices[1] * 3)
             val (_, second) = Vectors.distancePtSegSqr2D(pos, v0, v1)
@@ -980,22 +985,22 @@ class NavMesh(
     }
 
     fun findNearestPolyInTile(tile: MeshTile, center: Vector3f, extents: Vector3f): FindNearestPolyResult {
-        var nearestPt: Vector3f? = null
-        var overPoly = false
-        val bmin = Vector3f(center).sub(extents)
-        val bmax = Vector3f(center).add(extents)
+
+        val bmin = center.sub(extents, ReStack.vec3fs.create())
+        val bmax = center.add(extents, ReStack.vec3fs.create())
 
         // Get nearby polygons from proximity grid.
-        val polys: LongArrayList = queryPolygonsInTile(tile, bmin, bmax)
+        val polys = queryPolygonsInTile(tile, bmin, bmax)
+        ReStack.vec3fs.sub(2)
 
         // Find the nearest polygon amongst the nearby polygons.
         var nearest = 0L
         var nearestDistanceSqr = Float.MAX_VALUE
-        var i = 0
-        val l: Int = polys.size
-        while (i < l) {
-            val ref: Long = polys[i]
-            var d: Float
+        var nearestPt: Vector3f? = null
+        var overPoly = false
+
+        for (i in 0 until polys.size) {
+            val ref = polys[i]
             val cpp = closestPointOnPoly(ref, center)
             val posOverPoly = cpp.isPosOverPoly
             val closestPtPoly = cpp.pos
@@ -1003,19 +1008,18 @@ class NavMesh(
             // If a point is directly over a polygon and closer than
             // climb height, favor that instead of straight line nearest point.
             val diff = Vectors.sub(center, closestPtPoly)
-            if (posOverPoly) {
-                d = abs(diff.y) - tile.data!!.walkableClimb
-                d = if (d > 0) d * d else 0f
+            val distSq = if (posOverPoly) {
+                val d = abs(diff.y) - tile.data.walkableClimb
+                if (d > 0) d * d else 0f
             } else {
-                d = diff.lengthSquared()
+                diff.lengthSquared()
             }
-            if (d < nearestDistanceSqr) {
+            if (distSq < nearestDistanceSqr) {
                 nearestPt = closestPtPoly
-                nearestDistanceSqr = d
+                nearestDistanceSqr = distSq
                 nearest = ref
                 overPoly = posOverPoly
             }
-            i++
         }
         return FindNearestPolyResult(nearest, nearestPt, overPoly)
     }
@@ -1023,7 +1027,7 @@ class NavMesh(
     fun getTileAt(x: Int, y: Int, layer: Int): MeshTile? {
         var tile = getTileListByPos(x, y)
         while (tile != null) {
-            if (tile.data?.layer == layer) return tile
+            if (tile.data.layer == layer) return tile
             tile = tile.next
         }
         return null
@@ -1090,8 +1094,6 @@ class NavMesh(
         val tile = getTileByRef(polyRef) ?: return null
         val poly = getPolyByRef(polyRef, tile) ?: return null
 
-        val data = tile.data!!
-
         // Make sure that the current poly is indeed off-mesh link.
         if (poly.type != Poly.DT_POLYTYPE_OFFMESH_CONNECTION) {
             return null
@@ -1115,6 +1117,7 @@ class NavMesh(
         }
         val startPos = Vector3f()
         val endPos = Vector3f()
+        val data = tile.data
         startPos.set(data.vertices, poly.vertices[idx0] * 3)
         endPos.set(data.vertices, poly.vertices[idx1] * 3)
         return Pair(startPos, endPos)
@@ -1149,10 +1152,10 @@ class NavMesh(
         val tileId = decodePolyIdTile(ref)
         val salt = decodePolyIdSalt(ref)
         val tile = tileById[tileId]
-        if (tile == null || tile.salt != salt || tile.data == null) {
+        if (tile == null || tile.salt != salt) {
             return Result.invalidParam()
         }
-        val data = tile.data!!
+        val data = tile.data
         val polyId = decodePolyIdPoly(ref)
         if (polyId >= data.polyCount) {
             return Result.invalidParam()

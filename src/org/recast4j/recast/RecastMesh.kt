@@ -19,6 +19,7 @@ freely, subject to the following restrictions:
 package org.recast4j.recast
 
 import org.recast4j.Edge
+import org.recast4j.IntPair
 import org.recast4j.recast.RecastConstants.RC_BORDER_VERTEX
 import org.recast4j.recast.RecastConstants.RC_MESH_NULL_IDX
 import org.recast4j.recast.RecastConstants.RC_MULTIPLE_REGS
@@ -108,13 +109,15 @@ object RecastMesh {
         firstVert: IntArray,
         nextVert: IntArray,
         nv0: Int
-    ): IntArray {
+    ): IntPair {
         var nv = nv0
         val bucket = computeVertexHash(x, z)
         var i = firstVert[bucket]
         while (i != -1) {
             val v = i * 3
-            if (vertices[v] == x && abs(vertices[v + 1] - y) <= 2 && vertices[v + 2] == z) return intArrayOf(i, nv)
+            if (vertices[v] == x && abs(vertices[v + 1] - y) <= 2 && vertices[v + 2] == z) {
+                return IntPair(i, nv)
+            }
             i = nextVert[i] // next
         }
 
@@ -127,7 +130,7 @@ object RecastMesh {
         vertices[v + 2] = z
         nextVert[i] = firstVert[bucket]
         firstVert[bucket] = i
-        return intArrayOf(i, nv)
+        return IntPair(i, nv)
     }
 
     fun prev(i: Int, n: Int): Int {
@@ -541,6 +544,101 @@ object RecastMesh {
         val nvp = mesh.maxVerticesPerPolygon
 
         // Count number of polygons to remove.
+        val numRemovedVertices = countNumberOfPolygonsToRemove(mesh, nvp, rem)
+
+        val edges = IntArray(numRemovedVertices * nvp * 4)
+        var numHoles = 0
+        val hole = IntArray(numRemovedVertices * nvp)
+        val hreg = IntArray(numRemovedVertices * nvp)
+        val harea = IntArray(numRemovedVertices * nvp)
+        val numEdges = removePolygons(mesh, nvp, rem, edges)
+
+        removeVertex(rem, mesh)
+
+        adjustIndicesToMatchRemovedVertexLayout(mesh, nvp, rem, numEdges, edges)
+        if (numEdges == 0) return
+
+        // Start with one vertex, keep appending connected segments to the start and end of the hole.
+        numHoles = appendConnectedSegmentsToHole(edges, numEdges, hole, numHoles, hreg, harea)
+
+        val tris = IntArray(numHoles * 3)
+        val tvertices = IntArray(numHoles * 4)
+        val thole = IntArray(numHoles)
+
+        // Generate temp vertex array for triangulation.
+        generateTmpVertexArrayForTriangulation(numHoles, hole, mesh, tvertices, thole)
+
+        // Triangulate the hole.
+        var ntris = triangulate(numHoles, tvertices, thole, tris)
+        if (ntris < 0) {
+            ntris = -ntris
+            ctx!!.warn("removeVertex: triangulate() returned bad results.")
+        }
+
+        // Merge the hole triangles back to polygons.
+        val polys = IntArray((ntris + 1) * nvp)
+        val pregs = IntArray(ntris)
+        val pareas = IntArray(ntris)
+        val tmpPoly = ntris * nvp
+
+        // Build initial polygons.
+        var numPolygons = buildInitialPolygons2(polys, ntris, nvp, tris, hole, hreg, pregs, pareas, harea)
+        if (numPolygons == 0) return
+
+        // Merge polygons.
+        if (nvp > 3) {
+            numPolygons = mergePolygons2(numPolygons, nvp, mesh, polys, tmpPoly, pregs, pareas)
+        }
+
+        storePolygons2(numPolygons, mesh, maxTris, nvp, polys, pregs, pareas)
+    }
+
+    private fun removePolygons(
+        mesh: PolyMesh, nvp: Int, rem: Int,
+        edges: IntArray
+    ): Int {
+        var i = 0
+        var nedges = 0
+        while (i < mesh.numPolygons) {
+            val p = i * nvp * 2
+            val nv = countPolyVertices(mesh.polygons, p, nvp)
+            var hasRem = false
+            for (j in 0 until nv) if (mesh.polygons[p + j] == rem) {
+                hasRem = true
+                break
+            }
+            if (hasRem) {
+                // Collect edges which does not touch the removed vertex.
+                var j = 0
+                var k = nv - 1
+                while (j < nv) {
+                    if (mesh.polygons[p + j] != rem && mesh.polygons[p + k] != rem) {
+                        val e = nedges * 4
+                        edges[e] = mesh.polygons[p + k]
+                        edges[e + 1] = mesh.polygons[p + j]
+                        edges[e + 2] = mesh.regionIds[i]
+                        edges[e + 3] = mesh.areaIds[i]
+                        nedges++
+                    }
+                    k = j++
+                }
+                // Remove the polygon.
+                val p2 = (mesh.numPolygons - 1) * nvp * 2
+                if (p != p2) {
+                    System.arraycopy(mesh.polygons, p2, mesh.polygons, p, nvp)
+                }
+                Arrays.fill(mesh.polygons, p + nvp, p + nvp + nvp, RC_MESH_NULL_IDX)
+                mesh.regionIds[i] = mesh.regionIds[mesh.numPolygons - 1]
+                mesh.areaIds[i] = mesh.areaIds[mesh.numPolygons - 1]
+                mesh.numPolygons--
+                --i
+            }
+            ++i
+        }
+        return nedges
+    }
+
+    private fun countNumberOfPolygonsToRemove(mesh: PolyMesh, nvp: Int, rem: Int): Int {
         var numRemovedVertices = 0
         for (i in 0 until mesh.numPolygons) {
             val p = i * nvp * 2
@@ -549,76 +647,46 @@ object RecastMesh {
                 if (mesh.polygons[p + j] == rem) numRemovedVertices++
             }
         }
-        var nedges = 0
-        val edges = IntArray(numRemovedVertices * nvp * 4)
-        var nhole = 0
-        val hole = IntArray(numRemovedVertices * nvp)
-        var nhreg = 0
-        val hreg = IntArray(numRemovedVertices * nvp)
-        var nharea = 0
-        val harea = IntArray(numRemovedVertices * nvp)
-        run {
-            var i = 0
-            while (i < mesh.numPolygons) {
-                val p = i * nvp * 2
-                val nv = countPolyVertices(mesh.polygons, p, nvp)
-                var hasRem = false
-                for (j in 0 until nv) if (mesh.polygons[p + j] == rem) {
-                    hasRem = true
-                    break
-                }
-                if (hasRem) {
-                    // Collect edges which does not touch the removed vertex.
-                    var j = 0
-                    var k = nv - 1
-                    while (j < nv) {
-                        if (mesh.polygons[p + j] != rem && mesh.polygons[p + k] != rem) {
-                            val e = nedges * 4
-                            edges[e] = mesh.polygons[p + k]
-                            edges[e + 1] = mesh.polygons[p + j]
-                            edges[e + 2] = mesh.regionIds[i]
-                            edges[e + 3] = mesh.areaIds[i]
-                            nedges++
-                        }
-                        k = j++
-                    }
-                    // Remove the polygon.
-                    val p2 = (mesh.numPolygons - 1) * nvp * 2
-                    if (p != p2) {
-                        System.arraycopy(mesh.polygons, p2, mesh.polygons, p, nvp)
-                    }
-                    Arrays.fill(mesh.polygons, p + nvp, p + nvp + nvp, RC_MESH_NULL_IDX)
-                    mesh.regionIds[i] = mesh.regionIds[mesh.numPolygons - 1]
-                    mesh.areaIds[i] = mesh.areaIds[mesh.numPolygons - 1]
-                    mesh.numPolygons--
-                    --i
-                }
-                ++i
-            }
-        }
+        return numRemovedVertices
+    }
 
-        // Remove vertex.
+    private fun removeVertex(rem: Int, mesh: PolyMesh) {
         for (i in rem until mesh.numVertices - 1) {
             mesh.vertices[i * 3] = mesh.vertices[(i + 1) * 3]
             mesh.vertices[i * 3 + 1] = mesh.vertices[(i + 1) * 3 + 1]
             mesh.vertices[i * 3 + 2] = mesh.vertices[(i + 1) * 3 + 2]
         }
         mesh.numVertices--
+    }
 
-        // Adjust indices to match the removed vertex layout.
+    private fun adjustIndicesToMatchRemovedVertexLayout(
+        mesh: PolyMesh, nvp: Int, rem: Int,
+        nedges: Int, edges: IntArray
+    ) {
         for (i in 0 until mesh.numPolygons) {
             val p = i * nvp * 2
             val nv = countPolyVertices(mesh.polygons, p, nvp)
-            for (j in 0 until nv) if (mesh.polygons[p + j] > rem) mesh.polygons[p + j]--
+            for (j in 0 until nv) {
+                if (mesh.polygons[p + j] > rem) {
+                    mesh.polygons[p + j]--
+                }
+            }
         }
         for (i in 0 until nedges) {
             if (edges[i * 4] > rem) edges[i * 4]--
             if (edges[i * 4 + 1] > rem) edges[i * 4 + 1]--
         }
-        if (nedges == 0) return
+    }
 
-        // Start with one vertex, keep appending connected
-        // segments to the start and end of the hole.
+    private fun appendConnectedSegmentsToHole(
+        edges: IntArray, nedges: Int,
+        hole: IntArray, nhole: Int,
+        hreg: IntArray, harea: IntArray,
+    ): Int {
+        var nhole = nhole
+        var nedges = nedges
+        var nhreg = 0
+        var nharea = 0
         hole[nhole++] = edges[0]
         hreg[nhreg++] = edges[2]
         harea[nharea++] = edges[3]
@@ -658,11 +726,14 @@ object RecastMesh {
             }
             if (!match) break
         }
-        val tris = IntArray(nhole * 3)
-        val tvertices = IntArray(nhole * 4)
-        val thole = IntArray(nhole)
+        return nhole
+    }
 
-        // Generate temp vertex array for triangulation.
+    private fun generateTmpVertexArrayForTriangulation(
+        nhole: Int, hole: IntArray,
+        mesh: PolyMesh, tvertices: IntArray,
+        thole: IntArray
+    ) {
         for (i in 0 until nhole) {
             val pi = hole[i]
             tvertices[i * 4] = mesh.vertices[pi * 3]
@@ -671,88 +742,87 @@ object RecastMesh {
             tvertices[i * 4 + 3] = 0
             thole[i] = i
         }
+    }
 
-        // Triangulate the hole.
-        var ntris = triangulate(nhole, tvertices, thole, tris)
-        if (ntris < 0) {
-            ntris = -ntris
-            ctx!!.warn("removeVertex: triangulate() returned bad results.")
-        }
-
-        // Merge the hole triangles back to polygons.
-        val polys = IntArray((ntris + 1) * nvp)
-        val pregs = IntArray(ntris)
-        val pareas = IntArray(ntris)
-        val tmpPoly = ntris * nvp
-
-        // Build initial polygons.
-        var npolys = 0
+    private fun buildInitialPolygons2(
+        polys: IntArray, ntris: Int, nvp: Int, tris: IntArray,
+        hole: IntArray, hreg: IntArray, pregs: IntArray, pareas: IntArray, harea: IntArray
+    ): Int {
+        var numPolygons = 0
         Arrays.fill(polys, 0, ntris * nvp, RC_MESH_NULL_IDX)
         for (j in 0 until ntris) {
             val t = j * 3
             if (tris[t] != tris[t + 1] && tris[t] != tris[t + 2] && tris[t + 1] != tris[t + 2]) {
-                polys[npolys * nvp] = hole[tris[t]]
-                polys[npolys * nvp + 1] = hole[tris[t + 1]]
-                polys[npolys * nvp + 2] = hole[tris[t + 2]]
+                polys[numPolygons * nvp] = hole[tris[t]]
+                polys[numPolygons * nvp + 1] = hole[tris[t + 1]]
+                polys[numPolygons * nvp + 2] = hole[tris[t + 2]]
 
                 // If this polygon covers multiple region types then
                 // mark it as such
-                if (hreg[tris[t]] != hreg[tris[t + 1]] || hreg[tris[t + 1]] != hreg[tris[t + 2]]) pregs[npolys] =
-                    RC_MULTIPLE_REGS else pregs[npolys] = hreg[tris[t]]
-                pareas[npolys] = harea[tris[t]]
-                npolys++
+                if (hreg[tris[t]] != hreg[tris[t + 1]] || hreg[tris[t + 1]] != hreg[tris[t + 2]]) pregs[numPolygons] =
+                    RC_MULTIPLE_REGS else pregs[numPolygons] = hreg[tris[t]]
+                pareas[numPolygons] = harea[tris[t]]
+                numPolygons++
             }
         }
-        if (npolys == 0) return
+        return numPolygons
+    }
 
-        // Merge polygons.
-        if (nvp > 3) {
-            while (true) {
+    private fun mergePolygons2(
+        npolys: Int, nvp: Int, mesh: PolyMesh, polys: IntArray, tmpPoly: Int,
+        pregs: IntArray, pareas: IntArray
+    ): Int {
+        var numPolygons = npolys
+        while (true) {
 
-                // Find best polygons to merge.
-                var bestMergeVal = 0
-                var bestPa = 0
-                var bestPb = 0
-                var bestEa = 0
-                var bestEb = 0
-                for (j in 0 until npolys - 1) {
-                    val pj = j * nvp
-                    for (k in j + 1 until npolys) {
-                        val pk = k * nvp
-                        val veaeb = getPolyMergeValue(polys, pj, pk, mesh.vertices, nvp)
-                        val v = veaeb[0]
-                        val ea = veaeb[1]
-                        val eb = veaeb[2]
-                        if (v > bestMergeVal) {
-                            bestMergeVal = v
-                            bestPa = j
-                            bestPb = k
-                            bestEa = ea
-                            bestEb = eb
-                        }
+            // Find the best polygons to merge.
+            var bestMergeVal = 0
+            var bestPa = 0
+            var bestPb = 0
+            var bestEa = 0
+            var bestEb = 0
+            for (j in 0 until numPolygons - 1) {
+                val pj = j * nvp
+                for (k in j + 1 until numPolygons) {
+                    val pk = k * nvp
+                    val veaeb = getPolyMergeValue(polys, pj, pk, mesh.vertices, nvp)
+                    val v = veaeb[0]
+                    val ea = veaeb[1]
+                    val eb = veaeb[2]
+                    if (v > bestMergeVal) {
+                        bestMergeVal = v
+                        bestPa = j
+                        bestPb = k
+                        bestEa = ea
+                        bestEb = eb
                     }
-                }
-                if (bestMergeVal > 0) {
-                    // Found best, merge.
-                    val pa = bestPa * nvp
-                    val pb = bestPb * nvp
-                    mergePolyVertices(polys, pa, pb, bestEa, bestEb, tmpPoly, nvp)
-                    if (pregs[bestPa] != pregs[bestPb]) pregs[bestPa] = RC_MULTIPLE_REGS
-                    val last = (npolys - 1) * nvp
-                    if (pb != last) {
-                        System.arraycopy(polys, last, polys, pb, nvp)
-                    }
-                    pregs[bestPb] = pregs[npolys - 1]
-                    pareas[bestPb] = pareas[npolys - 1]
-                    npolys--
-                } else {
-                    // Could not merge any polygons, stop.
-                    break
                 }
             }
+            if (bestMergeVal > 0) {
+                // Found best, merge.
+                val pa = bestPa * nvp
+                val pb = bestPb * nvp
+                mergePolyVertices(polys, pa, pb, bestEa, bestEb, tmpPoly, nvp)
+                if (pregs[bestPa] != pregs[bestPb]) pregs[bestPa] = RC_MULTIPLE_REGS
+                val last = (numPolygons - 1) * nvp
+                if (pb != last) {
+                    System.arraycopy(polys, last, polys, pb, nvp)
+                }
+                pregs[bestPb] = pregs[numPolygons - 1]
+                pareas[bestPb] = pareas[numPolygons - 1]
+                numPolygons--
+            } else {
+                // Could not merge any polygons, stop.
+                break
+            }
         }
+        return numPolygons
+    }
 
-        // Store polygons.
+    private fun storePolygons2(
+        npolys: Int, mesh: PolyMesh, maxTris: Int, nvp: Int, polys: IntArray,
+        pregs: IntArray, pareas: IntArray
+    ) {
         for (i in 0 until npolys) {
             if (mesh.numPolygons >= maxTris) break
             val p = mesh.numPolygons * nvp * 2
@@ -762,7 +832,7 @@ object RecastMesh {
             mesh.areaIds[mesh.numPolygons] = pareas[i]
             mesh.numPolygons++
             if (mesh.numPolygons > maxTris) {
-                throw RuntimeException("removeVertex: Too many polygons " + mesh.numPolygons + " (max:" + maxTris + ".")
+                throw RuntimeException("removeVertex: Too many polygons ${mesh.numPolygons} (max:$maxTris).")
             }
         }
     }
@@ -795,7 +865,7 @@ object RecastMesh {
         if (maxVertices >= 0xfffe) {
             throw RuntimeException("rcBuildPolyMesh: Too many vertices $maxVertices")
         }
-        val vflags = IntArray(maxVertices)
+        val toBeRemovedVertices = BitSet(maxVertices)
         mesh.vertices = IntArray(maxVertices * 3)
         mesh.polygons = IntArray(maxTris * nvp * 2)
         Arrays.fill(mesh.polygons, RC_MESH_NULL_IDX)
@@ -819,149 +889,38 @@ object RecastMesh {
             if (cont.numVertices < 3) continue
 
             // Triangulate contour
-            for (j in 0 until cont.numVertices) indices[j] = j
-            var ntris = triangulate(cont.numVertices, cont.vertices!!, indices, tris)
-            if (ntris <= 0) {
+            for (j in 0 until cont.numVertices) {
+                indices[j] = j
+            }
+            var numTriangles = triangulate(cont.numVertices, cont.vertices!!, indices, tris)
+            if (numTriangles <= 0) {
                 // Bad triangulation, should not happen.
                 ctx?.warn("buildPolyMesh: Bad triangulation Contour $i.")
-                ntris = -ntris
+                numTriangles = -numTriangles
             }
 
-            // Add and merge vertices.
-            for (j in 0 until cont.numVertices) {
-                val v = j * 4
-                val inv = addVertex(
-                    cont.vertices!![v], cont.vertices!![v + 1], cont.vertices!![v + 2], mesh.vertices, firstVert,
-                    nextVert, mesh.numVertices
-                )
-                indices[j] = inv[0]
-                mesh.numVertices = inv[1]
-                if (cont.vertices!![v + 3] and RC_BORDER_VERTEX != 0) {
-                    // This vertex should be removed.
-                    vflags[indices[j]] = 1
-                }
-            }
+            addAndMergeVertices(cont, mesh, firstVert, nextVert, indices, toBeRemovedVertices)
 
-            // Build initial polygons.
-            var npolys = 0
-            Arrays.fill(polys, RC_MESH_NULL_IDX)
-            for (j in 0 until ntris) {
-                val t = j * 3
-                if (tris[t] != tris[t + 1] && tris[t] != tris[t + 2] && tris[t + 1] != tris[t + 2]) {
-                    polys[npolys * nvp] = indices[tris[t]]
-                    polys[npolys * nvp + 1] = indices[tris[t + 1]]
-                    polys[npolys * nvp + 2] = indices[tris[t + 2]]
-                    npolys++
-                }
-            }
-            if (npolys == 0) continue
-
-            // Merge polygons.
-            if (nvp > 3) {
-                while (true) {
-
-                    // Find the best polygons to merge.
-                    var bestMergeVal = 0
-                    var bestPa = 0
-                    var bestPb = 0
-                    var bestEa = 0
-                    var bestEb = 0
-                    for (j in 0 until npolys - 1) {
-                        val pj = j * nvp
-                        for (k in j + 1 until npolys) {
-                            val pk = k * nvp
-                            val veaeb = getPolyMergeValue(polys, pj, pk, mesh.vertices, nvp)
-                            val v = veaeb[0]
-                            val ea = veaeb[1]
-                            val eb = veaeb[2]
-                            if (v > bestMergeVal) {
-                                bestMergeVal = v
-                                bestPa = j
-                                bestPb = k
-                                bestEa = ea
-                                bestEb = eb
-                            }
-                        }
-                    }
-                    if (bestMergeVal > 0) {
-                        // Found best, merge.
-                        val pa = bestPa * nvp
-                        val pb = bestPb * nvp
-                        mergePolyVertices(polys, pa, pb, bestEa, bestEb, tmpPoly, nvp)
-                        val lastPoly = (npolys - 1) * nvp
-                        if (pb != lastPoly) {
-                            System.arraycopy(polys, lastPoly, polys, pb, nvp)
-                        }
-                        npolys--
-                    } else {
-                        // Could not merge any polygons, stop.
-                        break
-                    }
-                }
-            }
-
-            // Store polygons.
-            for (j in 0 until npolys) {
-                val p = mesh.numPolygons * nvp * 2
-                val q = j * nvp
-                if (nvp >= 0) System.arraycopy(polys, q, mesh.polygons, p, nvp)
-                mesh.regionIds[mesh.numPolygons] = cont.reg
-                mesh.areaIds[mesh.numPolygons] = cont.area
-                mesh.numPolygons++
-                if (mesh.numPolygons > maxTris) {
-                    throw RuntimeException(
-                        "rcBuildPolyMesh: Too many polygons " + mesh.numPolygons + " (max:" + maxTris + ")."
-                    )
-                }
-            }
+            var numPolygons = buildInitialPolygons(polys, numTriangles, tris, indices, nvp)
+            if (numPolygons == 0) continue
+            if (nvp > 3) numPolygons = mergePolygons(nvp, numPolygons, polys, mesh, tmpPoly)
+            storePolygons(mesh, nvp, numPolygons, polys, cont, maxTris)
         }
 
         // Remove edge vertices.
-        var i = 0
-        while (i < mesh.numVertices) {
-            if (vflags[i] != 0) {
-                if (!canRemoveVertex(mesh, i)) {
-                    ++i
-                    continue
-                }
-                removeVertex(ctx, mesh, i, maxTris)
-                // Remove vertex
-                // Note: mesh.nvertices is already decremented inside removeVertex()!
-                // Fixup vertex flags
-                if (mesh.numVertices - i >= 0) System.arraycopy(vflags, i + 1, vflags, i, mesh.numVertices - i)
-                --i
-            }
-            ++i
-        }
+        removeEdgeVertices(mesh, toBeRemovedVertices, ctx, maxTris)
 
         // Calculate adjacency.
         buildMeshAdjacency(mesh.polygons, mesh.numPolygons, mesh.numVertices, nvp)
 
         // Find portal edges
         if (mesh.borderSize > 0) {
-            val w = cset.width
-            val h = cset.height
-            for (k in 0 until mesh.numPolygons) {
-                val p = k * 2 * nvp
-                for (j in 0 until nvp) {
-                    if (mesh.polygons[p + j] == RC_MESH_NULL_IDX) break
-                    // Skip connected edges.
-                    if (mesh.polygons[p + nvp + j] != RC_MESH_NULL_IDX) continue
-                    var nj = j + 1
-                    if (nj >= nvp || mesh.polygons[p + nj] == RC_MESH_NULL_IDX) nj = 0
-                    val va = mesh.polygons[p + j] * 3
-                    val vb = mesh.polygons[p + nj] * 3
-                    if (mesh.vertices[va] == 0 && mesh.vertices[vb] == 0) mesh.polygons[p + nvp + j] =
-                        0x8000 else if (mesh.vertices[va + 2] == h && mesh.vertices[vb + 2] == h) mesh.polygons[p + nvp + j] =
-                        0x8001 else if (mesh.vertices[va] == w && mesh.vertices[vb] == w) mesh.polygons[p + nvp + j] =
-                        0x8002 else if (mesh.vertices[va + 2] == 0 && mesh.vertices[vb + 2] == 0) mesh.polygons[p + nvp + j] =
-                        0x8003
-                }
-            }
+            findPortalEdges(cset, mesh, nvp)
         }
 
         // Just allocate the mesh flags array. The user is responsible to fill it.
         mesh.flags = IntArray(mesh.numPolygons)
+        ctx?.stopTimer(TelemetryType.POLYMESH)
         if (mesh.numVertices > MAX_MESH_VERTICES_POLY) {
             throw RuntimeException(
                 "rcBuildPolyMesh: The resulting mesh has too many vertices " + mesh.numVertices
@@ -974,13 +933,158 @@ object RecastMesh {
                         + " (max " + MAX_MESH_VERTICES_POLY + "). Data can be corrupted."
             )
         }
-        ctx?.stopTimer(TelemetryType.POLYMESH)
         return mesh
     }
 
+    private fun addAndMergeVertices(
+        cont: Contour, mesh: PolyMesh,
+        firstVert: IntArray, nextVert: IntArray, indices: IntArray,
+        toBeRemovedVertices: BitSet
+    ) {
+        val contVertices = cont.vertices ?: return
+        for (j in 0 until cont.numVertices) {
+            val v = j * 4
+            val inv = addVertex(
+                contVertices[v], contVertices[v + 1], contVertices[v + 2], mesh.vertices, firstVert,
+                nextVert, mesh.numVertices
+            )
+            indices[j] = inv.first
+            mesh.numVertices = inv.second
+            if (contVertices[v + 3] and RC_BORDER_VERTEX != 0) {
+                // This vertex should be removed.
+                toBeRemovedVertices.set(indices[j])
+            }
+        }
+    }
+
+    private fun buildInitialPolygons(polys: IntArray, ntris: Int, tris: IntArray, indices: IntArray, nvp: Int): Int {
+        var npolys = 0
+        Arrays.fill(polys, RC_MESH_NULL_IDX)
+        for (j in 0 until ntris) {
+            val t = j * 3
+            if (tris[t] != tris[t + 1] && tris[t] != tris[t + 2] && tris[t + 1] != tris[t + 2]) {
+                polys[npolys * nvp] = indices[tris[t]]
+                polys[npolys * nvp + 1] = indices[tris[t + 1]]
+                polys[npolys * nvp + 2] = indices[tris[t + 2]]
+                npolys++
+            }
+        }
+        return npolys
+    }
+
+    private fun mergePolygons(nvp: Int, numPolygons0: Int, polys: IntArray, mesh: PolyMesh, tmpPoly: Int): Int {
+        var numPolygons = numPolygons0
+        while (true) {
+
+            // Find the best polygons to merge.
+            var bestMergeVal = 0
+            var bestPa = 0
+            var bestPb = 0
+            var bestEa = 0
+            var bestEb = 0
+            for (j in 0 until numPolygons - 1) {
+                val pj = j * nvp
+                for (k in j + 1 until numPolygons) {
+                    val pk = k * nvp
+                    val veaeb = getPolyMergeValue(polys, pj, pk, mesh.vertices, nvp)
+                    val v = veaeb[0]
+                    val ea = veaeb[1]
+                    val eb = veaeb[2]
+                    if (v > bestMergeVal) {
+                        bestMergeVal = v
+                        bestPa = j
+                        bestPb = k
+                        bestEa = ea
+                        bestEb = eb
+                    }
+                }
+            }
+            if (bestMergeVal > 0) {
+                // Found best, merge.
+                val pa = bestPa * nvp
+                val pb = bestPb * nvp
+                mergePolyVertices(polys, pa, pb, bestEa, bestEb, tmpPoly, nvp)
+                val lastPoly = (numPolygons - 1) * nvp
+                if (pb != lastPoly) {
+                    System.arraycopy(polys, lastPoly, polys, pb, nvp)
+                }
+                numPolygons--
+            } else {
+                // Could not merge any polygons, stop.
+                break
+            }
+        }
+        return numPolygons
+    }
+
+    private fun storePolygons(
+        mesh: PolyMesh,
+        nvp: Int,
+        numPolygons: Int,
+        polys: IntArray,
+        cont: Contour,
+        maxTris: Int
+    ) {
+        for (j in 0 until numPolygons) {
+            val p = mesh.numPolygons * nvp * 2
+            val q = j * nvp
+            if (nvp >= 0) System.arraycopy(polys, q, mesh.polygons, p, nvp)
+            mesh.regionIds[mesh.numPolygons] = cont.reg
+            mesh.areaIds[mesh.numPolygons] = cont.area
+            mesh.numPolygons++
+            if (mesh.numPolygons > maxTris) {
+                throw RuntimeException("rcBuildPolyMesh: Too many polygons ${mesh.numPolygons} (max:$maxTris).")
+            }
+        }
+    }
+
+    private fun removeEdgeVertices(mesh: PolyMesh, toBeRemovedVertices: BitSet, ctx: Telemetry?, maxTris: Int) {
+        var i = 0
+        while (i < mesh.numVertices) {
+            if (toBeRemovedVertices[i]) {
+                if (!canRemoveVertex(mesh, i)) {
+                    ++i
+                    continue
+                }
+                removeVertex(ctx, mesh, i, maxTris)
+                // Remove vertex
+                // Note: mesh.numVertices is already decremented inside removeVertex()!
+                // Fixup vertex flags
+                if (mesh.numVertices - i >= 0) {
+                    System.arraycopy(toBeRemovedVertices, i + 1, toBeRemovedVertices, i, mesh.numVertices - i)
+                }
+                --i
+            }
+            ++i
+        }
+    }
+
+    private fun findPortalEdges(cset: ContourSet, mesh: PolyMesh, nvp: Int) {
+        val w = cset.width
+        val h = cset.height
+        val polygons = mesh.polygons
+        val vertices = mesh.vertices
+        for (k in 0 until mesh.numPolygons) {
+            val p = k * 2 * nvp
+            for (j in 0 until nvp) {
+                if (polygons[p + j] == RC_MESH_NULL_IDX) break
+                // Skip connected edges.
+                if (polygons[p + nvp + j] != RC_MESH_NULL_IDX) continue
+                var nj = j + 1
+                if (nj >= nvp || polygons[p + nj] == RC_MESH_NULL_IDX) nj = 0
+                val va = polygons[p + j] * 3
+                val vb = polygons[p + nj] * 3
+                if (vertices[va] == 0 && vertices[vb] == 0) polygons[p + nvp + j] = 0x8000
+                else if (vertices[va + 2] == h && vertices[vb + 2] == h) polygons[p + nvp + j] = 0x8001
+                else if (vertices[va] == w && vertices[vb] == w) polygons[p + nvp + j] = 0x8002
+                else if (vertices[va + 2] == 0 && vertices[vb + 2] == 0) polygons[p + nvp + j] = 0x8003
+            }
+        }
+    }
+
     /** @see rcAllocPolyMesh, rcPolyMesh */
-    fun mergePolyMeshes(ctx: Telemetry?, meshes: Array<PolyMesh>?, nmeshes: Int): PolyMesh? {
-        if (nmeshes == 0 || meshes == null) return null
+    fun mergePolyMeshes(ctx: Telemetry?, meshes: Array<PolyMesh>?, numMeshes: Int): PolyMesh? {
+        if (numMeshes == 0 || meshes == null) return null
         ctx?.startTimer(TelemetryType.MERGE_POLYMESH)
         val mesh = PolyMesh()
         mesh.maxVerticesPerPolygon = meshes[0].maxVerticesPerPolygon
@@ -991,7 +1095,7 @@ object RecastMesh {
         var maxVertices = 0
         var maxPolys = 0
         var maxVerticesPerMesh = 0
-        for (i in 0 until nmeshes) {
+        for (i in 0 until numMeshes) {
             mesh.bmin.min(meshes[i].bmin, mesh.bmin)
             mesh.bmax.max(meshes[i].bmax, mesh.bmax)
             maxVerticesPerMesh = max(maxVerticesPerMesh, meshes[i].numVertices)
@@ -1010,7 +1114,7 @@ object RecastMesh {
         val firstVert = IntArray(VERTEX_BUCKET_COUNT)
         for (i in 0 until VERTEX_BUCKET_COUNT) firstVert[i] = -1
         val vremap = IntArray(maxVerticesPerMesh)
-        for (i in 0 until nmeshes) {
+        for (i in 0 until numMeshes) {
             val pmesh = meshes[i]
             val ox = floor(((pmesh.bmin.x - mesh.bmin.x) / mesh.cellSize + 0.5f)).toInt()
             val oz = floor(((pmesh.bmin.z - mesh.bmin.z) / mesh.cellSize + 0.5f)).toInt()
@@ -1019,14 +1123,15 @@ object RecastMesh {
             val isMaxX = floor(((mesh.bmax.x - pmesh.bmax.x) / mesh.cellSize + 0.5f)) == 0f
             val isMaxZ = floor(((mesh.bmax.z - pmesh.bmax.z) / mesh.cellSize + 0.5f)) == 0f
             val isOnBorder = isMinX || isMinZ || isMaxX || isMaxZ
+            val pVertices = pmesh.vertices
             for (j in 0 until pmesh.numVertices) {
                 val v = j * 3
                 val inv = addVertex(
-                    pmesh.vertices[v] + ox, pmesh.vertices[v + 1], pmesh.vertices[v + 2] + oz, mesh.vertices,
+                    pVertices[v] + ox, pVertices[v + 1], pVertices[v + 2] + oz, mesh.vertices,
                     firstVert, nextVert, mesh.numVertices
                 )
-                vremap[j] = inv[0]
-                mesh.numVertices = inv[1]
+                vremap[j] = inv.first
+                mesh.numVertices = inv.second
             }
             for (j in 0 until pmesh.numPolygons) {
                 val tgt = mesh.numPolygons * 2 * mesh.maxVerticesPerPolygon
@@ -1035,18 +1140,20 @@ object RecastMesh {
                 mesh.areaIds[mesh.numPolygons] = pmesh.areaIds[j]
                 mesh.flags[mesh.numPolygons] = pmesh.flags[j]
                 mesh.numPolygons++
+                val pPolygons = pmesh.polygons
+                val meshPolygons = mesh.polygons
                 for (k in 0 until mesh.maxVerticesPerPolygon) {
-                    if (pmesh.polygons[src + k] == RC_MESH_NULL_IDX) break
-                    mesh.polygons[tgt + k] = vremap[pmesh.polygons[src + k]]
+                    if (pPolygons[src + k] == RC_MESH_NULL_IDX) break
+                    meshPolygons[tgt + k] = vremap[pPolygons[src + k]]
                 }
                 if (isOnBorder) {
                     for (k in mesh.maxVerticesPerPolygon until mesh.maxVerticesPerPolygon * 2) {
-                        if (pmesh.polygons[src + k] and 0x8000 != 0 && pmesh.polygons[src + k] != 0xffff) {
-                            when (pmesh.polygons[src + k] and 0xf) {
-                                0 -> if (isMinX) mesh.polygons[tgt + k] = pmesh.polygons[src + k]
-                                1 -> if (isMaxZ) mesh.polygons[tgt + k] = pmesh.polygons[src + k]
-                                2 -> if (isMaxX) mesh.polygons[tgt + k] = pmesh.polygons[src + k]
-                                3 -> if (isMinZ) mesh.polygons[tgt + k] = pmesh.polygons[src + k]
+                        if (pPolygons[src + k] and 0x8000 != 0 && pPolygons[src + k] != 0xffff) {
+                            when (pPolygons[src + k] and 0xf) {
+                                0 -> if (isMinX) meshPolygons[tgt + k] = pPolygons[src + k]
+                                1 -> if (isMaxZ) meshPolygons[tgt + k] = pPolygons[src + k]
+                                2 -> if (isMaxX) meshPolygons[tgt + k] = pPolygons[src + k]
+                                3 -> if (isMinZ) meshPolygons[tgt + k] = pPolygons[src + k]
                             }
                         }
                     }
@@ -1056,19 +1163,19 @@ object RecastMesh {
 
         // Calculate adjacency.
         buildMeshAdjacency(mesh.polygons, mesh.numPolygons, mesh.numVertices, mesh.maxVerticesPerPolygon)
+        ctx?.stopTimer(TelemetryType.MERGE_POLYMESH)
         if (mesh.numVertices > MAX_MESH_VERTICES_POLY) {
             throw RuntimeException(
-                "rcBuildPolyMesh: The resulting mesh has too many vertices " + mesh.numVertices
-                        + " (max " + MAX_MESH_VERTICES_POLY + "). Data can be corrupted."
+                "rcBuildPolyMesh: The resulting mesh has too many vertices " +
+                        "${mesh.numVertices} (max $MAX_MESH_VERTICES_POLY). Data can be corrupted."
             )
         }
         if (mesh.numPolygons > MAX_MESH_VERTICES_POLY) {
             throw RuntimeException(
-                "rcBuildPolyMesh: The resulting mesh has too many polygons " + mesh.numPolygons
-                        + " (max " + MAX_MESH_VERTICES_POLY + "). Data can be corrupted."
+                "rcBuildPolyMesh: The resulting mesh has too many polygons " +
+                        "${mesh.numPolygons} (max $MAX_MESH_VERTICES_POLY). Data can be corrupted."
             )
         }
-        ctx?.stopTimer(TelemetryType.MERGE_POLYMESH)
         return mesh
     }
 

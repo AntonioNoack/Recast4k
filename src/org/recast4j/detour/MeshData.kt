@@ -64,6 +64,9 @@ class MeshData : MeshHeader() {
     lateinit var offMeshCons: Array<OffMeshConnection>
 
     companion object {
+
+        val empty = MeshData()
+
         fun build(params: NavMeshDataCreateParams, tileX: Int, tileY: Int): MeshData? {
             val data = createNavMeshData(params)
             if (data != null) {

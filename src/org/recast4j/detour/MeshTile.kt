@@ -26,8 +26,7 @@ class MeshTile(val id: Int) {
     var salt = 0
 
     /** The tile data.  */
-    var data: MeshData? = null
-
+    var data: MeshData = MeshData.empty
     lateinit var polyLinks: IntArray
 
     /** The tile links.  */

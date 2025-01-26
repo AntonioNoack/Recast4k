@@ -19,6 +19,7 @@ package org.recast4j.detour
 
 import org.joml.Vector3f
 import org.recast4j.FloatSubArray
+import org.recast4j.ReStack
 import org.recast4j.Vectors
 import kotlin.math.abs
 
@@ -37,20 +38,20 @@ object ConvexConvexIntersection {
         val m = q.size / 3
         var ii = 0
         /* Initialize variables. */
-        val a = Vector3f()
-        val b = Vector3f()
-        val a1 = Vector3f()
-        val b1 = Vector3f()
+        val a = ReStack.vec3fs.create()
+        val b = ReStack.vec3fs.create()
+        val a1 = ReStack.vec3fs.create()
+        val b1 = ReStack.vec3fs.create()
         var aa = 0
         var ba = 0
         var ai = 0
         var bi = 0
         var f = InFlag.Unknown
         var isFirstPoint = true
-        val ip = Vector3f()
-        val iq = Vector3f()
-        val A = Vector3f()
-        val B = Vector3f()
+        val ip = ReStack.vec3fs.create()
+        val iq = ReStack.vec3fs.create()
+        val A = ReStack.vec3fs.create()
+        val B = ReStack.vec3fs.create()
         do {
             a.set(p.data, 3 * (ai % n))
             b.set(q.data, 3 * (bi % m))
@@ -63,7 +64,9 @@ object ConvexConvexIntersection {
             val bHA = Vectors.triArea2D(a1, a, b)
             if (abs(cross) < EPSILON) cross = 0f
             val parallel = cross == 0f
-            val code = if (parallel) parallelInt(a1, a, b1, b, ip, iq) else segSegInt(a1, a, b1, b, ip)
+            val code =
+                if (parallel) parallelInt(a1, a, b1, b, ip, iq)
+                else segSegInt(a1, a, b1, b, ip)
             if (code == Intersection.Single) {
                 if (isFirstPoint) {
                     isFirstPoint = false
@@ -87,6 +90,7 @@ object ConvexConvexIntersection {
 
             /* Special case: A & B parallel and separated. */
             if (parallel && aHB < 0f && bHA < 0f) {
+                ReStack.vec3fs.sub(8)
                 return null
             } else if (parallel && abs(aHB) < EPSILON && abs(bHA) < EPSILON) {
                 /* Advance but do not output point. */
@@ -129,6 +133,7 @@ object ConvexConvexIntersection {
             /* Quit when both adv. indices have cycled, or one has cycled twice. */
         } while ((aa < n || ba < m) && aa < 2 * n && ba < 2 * m)
 
+        ReStack.vec3fs.sub(8)
         /* Deal with special cases: not implemented. */
         return if (f == InFlag.Unknown) null
         else {

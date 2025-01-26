@@ -1443,13 +1443,6 @@ class TileCacheBuilder {
         layer: TileCacheLayer, orig: Vector3f, cs: Float, ch: Float, pos: Vector3f, radius: Float,
         height: Float, areaId: Int
     ) {
-        val bmin = Vector3f(pos)
-        val bmax = Vector3f(pos)
-        bmin.x -= radius
-        bmin.z -= radius
-        bmax.x += radius
-        bmax.y += height
-        bmax.z += radius
         val r2 = sq(radius / cs + 0.5f)
         val w = layer.width
         val h = layer.height
@@ -1457,12 +1450,12 @@ class TileCacheBuilder {
         val ich = 1f / ch
         val px = (pos.x - orig.x) * ics
         val pz = (pos.z - orig.z) * ics
-        var minx = floor(((bmin.x - orig.x) * ics)).toInt()
-        val miny = floor(((bmin.y - orig.y) * ich)).toInt()
-        var minz = floor(((bmin.z - orig.z) * ics)).toInt()
-        var maxx = floor(((bmax.x - orig.x) * ics)).toInt()
-        val maxy = floor(((bmax.y - orig.y) * ich)).toInt()
-        var maxz = floor(((bmax.z - orig.z) * ics)).toInt()
+        var minx = floor(((pos.x - radius - orig.x) * ics)).toInt()
+        val miny = floor(((pos.y - orig.y) * ich)).toInt()
+        var minz = floor(((pos.z - radius - orig.z) * ics)).toInt()
+        var maxx = floor(((pos.x + radius - orig.x) * ics)).toInt()
+        val maxy = floor(((pos.y + height - orig.y) * ich)).toInt()
+        var maxz = floor(((pos.z + radius - orig.z) * ics)).toInt()
         minx = max(minx, 0)
         maxx = min(maxx, w - 1)
         minz = max(minz, 0)
