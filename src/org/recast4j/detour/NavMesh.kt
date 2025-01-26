@@ -293,7 +293,7 @@ class NavMesh(
         tile.flags = flags
         tile.links.clear()
         tile.polyLinks = IntArray(data.polygons.size)
-        Arrays.fill(tile.polyLinks, DT_NULL_LINK)
+        tile.polyLinks.fill(DT_NULL_LINK)
 
         // Insert tile into the position lut.
         val hash = computeTileHash(header.x, header.y)

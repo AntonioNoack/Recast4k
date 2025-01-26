@@ -1080,7 +1080,7 @@ object RecastRegion {
         src = boxBlur(chf, src)
 
         // Store distance.
-        System.arraycopy(src, 0, chf.dist, 0, src.size)
+        src.copyInto(chf.dist)
         ctx?.stopTimer(TelemetryType.DISTANCEFIELD_BLUR)
         ctx?.stopTimer(TelemetryType.DISTANCEFIELD)
     }
@@ -1153,7 +1153,7 @@ object RecastRegion {
             if (prev.size < id * 2) {
                 prev = IntArray(id * 2)
             } else {
-                Arrays.fill(prev, 0, id, 0)
+                prev.fill(0, 0, id)
             }
             var rid = 1
             for (x in borderSize until w - borderSize) {
@@ -1381,15 +1381,15 @@ object RecastRegion {
             paintRectRegion(0, w, h - bh, h, id or RecastConstants.RC_BORDER_REG, chf, srcReg)
             id++
         }
-        var prev = IntArray(1024)
 
+        var prev = IntArray(1024)
         // Sweep one line at a time.
         for (y in borderSize until h - borderSize) {
             // Collect spans from this row.
             if (prev.size <= id * 2) {
                 prev = IntArray(id * 2)
             } else {
-                Arrays.fill(prev, 0, id, 0)
+                prev.fill(0, 0, id)
             }
             var rid = 1
             for (x in borderSize until w - borderSize) {

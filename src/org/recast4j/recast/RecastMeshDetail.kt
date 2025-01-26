@@ -13,7 +13,6 @@ import org.recast4j.recast.RecastConstants.RC_NOT_CONNECTED
 import org.recast4j.recast.RecastConstants.SPAN_MAX_HEIGHT
 import org.recast4j.recast.RecastMesh.next
 import org.recast4j.recast.RecastMesh.prev
-import java.util.*
 import kotlin.math.*
 
 object RecastMeshDetail {
@@ -672,7 +671,7 @@ object RecastMeshDetail {
                 vcap += max(dMeshNverts + nverts - vcap + 255 shr 8, 0) shl 8
                 val newv = FloatArray(vcap * 3)
                 if (dMeshNverts != 0) {
-                    System.arraycopy(dmesh.vertices, 0, newv, 0, 3 * dMeshNverts)
+                    dmesh.vertices.copyInto(newv, 0, 0, 3 * dMeshNverts)
                 }
                 dmesh.vertices = newv
             }
@@ -716,7 +715,7 @@ object RecastMeshDetail {
         // Note: Reads to the compact heightfield are offset by border size (bs)
         // since border size offset is already removed from the polymesh vertices.
         var queue = IntArrayList(512)
-        Arrays.fill(hp.data, 0, hp.width * hp.height, RC_UNSET_HEIGHT)
+        hp.data.fill(RC_UNSET_HEIGHT, 0, hp.width * hp.height)
         var empty = true
 
         // We cannot sample from this poly if it was created from polys
@@ -1006,7 +1005,7 @@ object RecastMeshDetail {
         array.add(startCellY)
         array.add(startSpanIndex)
         val dirs = intArrayOf(0, 1, 2, 3)
-        Arrays.fill(hp.data, 0, hp.width * hp.height, 0)
+        hp.data.fill(0, 0, hp.width * hp.height)
 
         // DFS to move to the center. Note that we need a DFS here and can not just move
         // directly towards the center without recording intermediate nodes, even though the polygons
@@ -1073,7 +1072,7 @@ object RecastMeshDetail {
         array.add(cx + bs)
         array.add(cy + bs)
         array.add(ci)
-        Arrays.fill(hp.data, 0, hp.width * hp.height, RC_UNSET_HEIGHT)
+        hp.data.fill(RC_UNSET_HEIGHT, 0, hp.width * hp.height)
         val cs = chf.spans[ci]
         hp.data[cx - hp.xmin + (cy - hp.ymin) * hp.width] = cs.y
     }
@@ -1090,7 +1089,7 @@ object RecastMeshDetail {
         var nhull = 0
         var nverts = nin
 
-        System.arraycopy(input, 0, vertices, 0, nin * 3)
+        input.copyInto(vertices, 0, 0, nin * 3)
 
         tris.clear()
         val cs = chf.cellSize

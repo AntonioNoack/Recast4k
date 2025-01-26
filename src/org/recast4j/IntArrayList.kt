@@ -7,8 +7,7 @@ class IntArrayList(var values: IntArray) {
     var size = 0
 
     constructor(cap: Int = 16) : this(IntArray(cap))
-    constructor(src: IntArrayList) : this(src.size) {
-        System.arraycopy(src.values, 0, values, 0, src.size)
+    constructor(src: IntArrayList) : this(src.values.copyOf()) {
         size = src.size
     }
 

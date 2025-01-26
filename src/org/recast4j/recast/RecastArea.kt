@@ -177,7 +177,7 @@ class RecastArea {
             val h = chf.height
             ctx?.startTimer(TelemetryType.ERODE_AREA)
             val dist = IntArray(chf.spanCount)
-            Arrays.fill(dist, 255)
+            dist.fill(255)
             // Mark boundary cells.
             for (y in 0 until h) {
                 for (x in 0 until w) {

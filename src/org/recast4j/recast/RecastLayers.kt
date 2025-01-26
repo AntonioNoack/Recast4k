@@ -27,7 +27,6 @@ import org.recast4j.recast.RecastCommon.getDirOffsetY
 import org.recast4j.recast.RecastConstants.RC_NOT_CONNECTED
 import org.recast4j.recast.RecastConstants.RC_NULL_AREA
 import org.recast4j.recast.RecastRegion.SweepSpan
-import java.util.*
 import kotlin.math.max
 import kotlin.math.min
 
@@ -49,7 +48,7 @@ object RecastLayers {
         val h = chf.height
         val borderSize = chf.borderSize
         val srcReg = IntArray(chf.spanCount)
-        Arrays.fill(srcReg, 0xFF)
+        srcReg.fill(0xff)
         val numSweeps = chf.width // max(chf.width, chf.height);
         val sweeps = Array(numSweeps) { SweepSpan() }
         // Partition walkable area into monotone regions.
@@ -58,7 +57,7 @@ object RecastLayers {
         // Sweep one line at a time.
         for (y in borderSize until h - borderSize) {
             // Collect spans from this row.
-            Arrays.fill(prevCount, 0, regId, 0)
+            prevCount.fill(0, 0, regId)
             var sweepId = 0
             for (x in borderSize until w - borderSize) {
                 val c = x + y * w
@@ -330,7 +329,7 @@ object RecastLayers {
             val layer = lset[curId]
             val gridSize = lw * lh
             layer.heights = IntArray(gridSize)
-            Arrays.fill(layer.heights, 0xFF)
+            layer.heights.fill(0xFF)
             layer.areas = IntArray(gridSize)
             layer.cons = IntArray(gridSize)
 

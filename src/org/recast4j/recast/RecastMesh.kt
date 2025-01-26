@@ -29,11 +29,14 @@ import kotlin.math.floor
 import kotlin.math.max
 
 object RecastMesh {
+
     private const val MAX_MESH_VERTICES_POLY = 0xffff
-    var VERTEX_BUCKET_COUNT = 1 shl 12
+    private const val VERTEX_BUCKET_COUNT = 1 shl 12
+    private const val VERTEX_BUCKET_MASK = VERTEX_BUCKET_COUNT - 1
+
     private fun buildMeshAdjacency(polys: IntArray, npolys: Int, nvertices: Int, verticesPerPoly: Int) {
         // Based on code by Eric Lengyel from:
-        // http://www.terathon.com/code/edges.php
+        // https://web.archive.org/web/20080704083314/https://www.terathon.com/code/edges.php
         val maxEdgeCount = npolys * verticesPerPoly
         val firstEdge = IntArray(nvertices + maxEdgeCount)
         var edgeCount = 0
@@ -67,8 +70,8 @@ object RecastMesh {
             for (j in 0 until verticesPerPoly) {
                 if (polys[t + j] == RC_MESH_NULL_IDX) break
                 val v0 = polys[t + j]
-                val v1 =
-                    if (j + 1 >= verticesPerPoly || polys[t + j + 1] == RC_MESH_NULL_IDX) polys[t] else polys[t + j + 1]
+                val v1 = if (j + 1 >= verticesPerPoly || polys[t + j + 1] == RC_MESH_NULL_IDX)
+                    polys[t] else polys[t + j + 1]
                 if (v0 > v1) {
                     var e = firstEdge[v1]
                     while (e != RC_MESH_NULL_IDX) {
@@ -84,10 +87,16 @@ object RecastMesh {
             }
         }
 
-        // Store adjacency
-        for (i in 0 until edgeCount) {
-            val e = edges[i]
-            if (e!!.poly0 != e.poly1) {
+        storeAdjacency(edges, verticesPerPoly, polys)
+    }
+
+    private fun storeAdjacency(
+        edges: Array<Edge?>, verticesPerPoly: Int,
+        polys: IntArray
+    ) {
+        for (i in edges.indices) {
+            val e = edges[i] ?: return // when null is encountered, we're done
+            if (e.poly0 != e.poly1) {
                 val p0 = e.poly0 * verticesPerPoly * 2
                 val p1 = e.poly1 * verticesPerPoly * 2
                 polys[p0 + verticesPerPoly + e.polyEdge0] = e.poly1
@@ -100,7 +109,7 @@ object RecastMesh {
         val h1 = -0x72594cbd // Large multiplicative constants;
         val h3 = -0x34e54ce1 // here arbitrarily chosen primes
         val n = h1 * x + h3 * z
-        return n and (VERTEX_BUCKET_COUNT - 1)
+        return n and VERTEX_BUCKET_MASK
     }
 
     private fun addVertex(
@@ -146,8 +155,9 @@ object RecastMesh {
                 - (vertices[c] - vertices[a]) * (vertices[b + 2] - vertices[a + 2]))
     }
 
-    // Returns true iff c is strictly to the left of the directed
-    // line through a to b.
+    /**
+     * Returns true iff c is strictly to the left of the directed line through a to b.
+     * */
     fun left(vertices: IntArray, a: Int, b: Int, c: Int): Boolean {
         return area2(vertices, a, b, c) < 0
     }
@@ -160,9 +170,11 @@ object RecastMesh {
         return area2(vertices, a, b, c) == 0
     }
 
-    // Returns true iff ab properly intersects cd: they share
-    // a point interior to both segments. The properness of the
-    // intersection is ensured by using strict leftness.
+    /**
+     * Returns true iff ab properly intersects cd: they share
+     * a point interior to both segments. The properness of the
+     * intersection is ensured by using strict leftness.
+     * */
     private fun intersectProp(vertices: IntArray, a: Int, b: Int, c: Int, d: Int): Boolean {
         // Eliminate improper cases.
         return if (collinear(vertices, a, b, c) || collinear(vertices, a, b, d) ||
@@ -171,8 +183,7 @@ object RecastMesh {
                 (left(vertices, c, d, a) xor left(vertices, c, d, b)))
     }
 
-    // Returns T iff (a,b,c) are collinear and point c lies
-    // on the closed segment ab.
+    /** Returns T iff (a,b,c) are collinear and point c lies on the closed segment ab. */
     private fun between(vertices: IntArray, a: Int, b: Int, c: Int): Boolean {
         if (!collinear(vertices, a, b, c)) return false
         // If ab not vertical, check betweenness on x; else on y.
@@ -182,7 +193,7 @@ object RecastMesh {
             (vertices[a + 2] <= vertices[c + 2] && vertices[c + 2] <= vertices[b + 2] || vertices[a + 2] >= vertices[c + 2] && vertices[c + 2] >= vertices[b + 2])
     }
 
-    // Returns true iff segments ab and cd intersect, properly or improperly.
+    /** Returns true iff segments ab and cd intersect, properly or improperly. */
     fun intersect(vertices: IntArray, a: Int, b: Int, c: Int, d: Int): Boolean {
         return if (intersectProp(vertices, a, b, c, d)) true else between(
             vertices, a, b, c
@@ -194,8 +205,7 @@ object RecastMesh {
         return vertices!![a] == vertices[b] && vertices[a + 2] == vertices[b + 2]
     }
 
-    // Returns T iff (v_i, v_j) is a proper internal *or* external
-    // diagonal of P, *ignoring edges incident to v_i and v_j*.
+    /** Returns T iff (v_i, v_j) is a proper internal *or* external diagonal of P, *ignoring edges incident to v_i and v_j*. */
     private fun diagonalie(i: Int, j: Int, n: Int, vertices: IntArray, indices: IntArray): Boolean {
         val d0 = (indices[i] and 0x0fffffff) * 4
         val d1 = (indices[j] and 0x0fffffff) * 4
@@ -219,8 +229,10 @@ object RecastMesh {
         return true
     }
 
-    // Returns true iff the diagonal (i,j) is strictly internal to the
-    // polygon P in the neighborhood of the i endpoint.
+    /**
+     * Returns true iff the diagonal (i,j) is strictly internal to the
+     * polygon P in the neighborhood of the i endpoint.
+     * */
     private fun inCone(i: Int, j: Int, n: Int, vertices: IntArray, indices: IntArray): Boolean {
         val pi = (indices[i] and 0x0fffffff) * 4
         val pj = (indices[j] and 0x0fffffff) * 4
@@ -234,8 +246,7 @@ object RecastMesh {
         // else P[i] is reflex.
     }
 
-    // Returns T iff (v_i, v_j) is a proper internal
-    // diagonal of P.
+    /** Returns T iff (v_i, v_j) is a proper internal diagonal of P. */
     private fun diagonal(i: Int, j: Int, n: Int, vertices: IntArray, indices: IntArray): Boolean {
         return inCone(i, j, n, vertices, indices) && diagonalie(i, j, n, vertices, indices)
     }
@@ -434,7 +445,7 @@ object RecastMesh {
         val nb = countPolyVertices(polys, pb, nvp)
 
         // Merge polygons.
-        Arrays.fill(polys, tmp, tmp + nvp, RC_MESH_NULL_IDX)
+        polys.fill(RC_MESH_NULL_IDX, tmp, tmp + nvp)
         var n = 0
         // Add pa
         for (i in 0 until na - 1) {
@@ -446,11 +457,13 @@ object RecastMesh {
             polys[tmp + n] = polys[pb + (eb + 1 + i) % nb]
             n++
         }
-        System.arraycopy(polys, tmp, polys, pa, nvp)
+        polys.copyInto(polys, pa, tmp, tmp + nvp)
     }
 
     private fun pushFront(v: Int, arr: IntArray, an: Int) {
-        if (an - 1 >= 0) System.arraycopy(arr, 0, arr, 1, an - 1)
+        if (an >= 1) {
+            System.arraycopy(arr, 0, arr, 1, an - 1)
+        }
         arr[0] = v
     }
 
@@ -627,7 +640,7 @@ object RecastMesh {
                 if (p != p2) {
                     System.arraycopy(mesh.polygons, p2, mesh.polygons, p, nvp)
                 }
-                Arrays.fill(mesh.polygons, p + nvp, p + nvp + nvp, RC_MESH_NULL_IDX)
+                mesh.polygons.fill(RC_MESH_NULL_IDX, p + nvp, p + nvp + nvp)
                 mesh.regionIds[i] = mesh.regionIds[mesh.numPolygons - 1]
                 mesh.areaIds[i] = mesh.areaIds[mesh.numPolygons - 1]
                 mesh.numPolygons--
@@ -734,12 +747,14 @@ object RecastMesh {
         mesh: PolyMesh, tvertices: IntArray,
         thole: IntArray
     ) {
+        val meshVertices = mesh.vertices
         for (i in 0 until nhole) {
-            val pi = hole[i]
-            tvertices[i * 4] = mesh.vertices[pi * 3]
-            tvertices[i * 4 + 1] = mesh.vertices[pi * 3 + 1]
-            tvertices[i * 4 + 2] = mesh.vertices[pi * 3 + 2]
-            tvertices[i * 4 + 3] = 0
+            val pi = hole[i] * 3
+            val i4 = i * 4
+            tvertices[i4] = meshVertices[pi]
+            tvertices[i4 + 1] = meshVertices[pi + 1]
+            tvertices[i4 + 2] = meshVertices[pi + 2]
+            tvertices[i4 + 3] = 0
             thole[i] = i
         }
     }
@@ -749,7 +764,7 @@ object RecastMesh {
         hole: IntArray, hreg: IntArray, pregs: IntArray, pareas: IntArray, harea: IntArray
     ): Int {
         var numPolygons = 0
-        Arrays.fill(polys, 0, ntris * nvp, RC_MESH_NULL_IDX)
+        polys.fill(RC_MESH_NULL_IDX, 0, ntris * nvp)
         for (j in 0 until ntris) {
             val t = j * 3
             if (tris[t] != tris[t + 1] && tris[t] != tris[t + 2] && tris[t + 1] != tris[t + 2]) {
@@ -826,7 +841,7 @@ object RecastMesh {
         for (i in 0 until npolys) {
             if (mesh.numPolygons >= maxTris) break
             val p = mesh.numPolygons * nvp * 2
-            Arrays.fill(mesh.polygons, p, p + nvp * 2, RC_MESH_NULL_IDX)
+            mesh.polygons.fill(RC_MESH_NULL_IDX, p, p + nvp * 2)
             if (nvp >= 0) System.arraycopy(polys, i * nvp, mesh.polygons, p, nvp)
             mesh.regionIds[mesh.numPolygons] = pregs[i]
             mesh.areaIds[mesh.numPolygons] = pareas[i]
@@ -868,7 +883,7 @@ object RecastMesh {
         val toBeRemovedVertices = BitSet(maxVertices)
         mesh.vertices = IntArray(maxVertices * 3)
         mesh.polygons = IntArray(maxTris * nvp * 2)
-        Arrays.fill(mesh.polygons, RC_MESH_NULL_IDX)
+        mesh.polygons.fill(RC_MESH_NULL_IDX)
         mesh.regionIds = IntArray(maxTris)
         mesh.areaIds = IntArray(maxTris)
         mesh.numVertices = 0
@@ -877,35 +892,13 @@ object RecastMesh {
         mesh.numAllocatedPolygons = maxTris
         val nextVert = IntArray(maxVertices)
         val firstVert = IntArray(VERTEX_BUCKET_COUNT)
-        for (i in 0 until VERTEX_BUCKET_COUNT) firstVert[i] = -1
+        firstVert.fill(-1)
+
         val indices = IntArray(maxVerticesPerCont)
         val tris = IntArray(maxVerticesPerCont * 3)
         val polys = IntArray((maxVerticesPerCont + 1) * nvp)
         val tmpPoly = maxVerticesPerCont * nvp
-        for (i in cset.contours.indices) {
-            val cont = cset.contours[i]
-
-            // Skip null contours.
-            if (cont.numVertices < 3) continue
-
-            // Triangulate contour
-            for (j in 0 until cont.numVertices) {
-                indices[j] = j
-            }
-            var numTriangles = triangulate(cont.numVertices, cont.vertices!!, indices, tris)
-            if (numTriangles <= 0) {
-                // Bad triangulation, should not happen.
-                ctx?.warn("buildPolyMesh: Bad triangulation Contour $i.")
-                numTriangles = -numTriangles
-            }
-
-            addAndMergeVertices(cont, mesh, firstVert, nextVert, indices, toBeRemovedVertices)
-
-            var numPolygons = buildInitialPolygons(polys, numTriangles, tris, indices, nvp)
-            if (numPolygons == 0) continue
-            if (nvp > 3) numPolygons = mergePolygons(nvp, numPolygons, polys, mesh, tmpPoly)
-            storePolygons(mesh, nvp, numPolygons, polys, cont, maxTris)
-        }
+        triangulateContours(ctx, cset, indices, tris, mesh, firstVert, nextVert, toBeRemovedVertices, nvp, polys, tmpPoly, maxTris)
 
         // Remove edge vertices.
         removeEdgeVertices(mesh, toBeRemovedVertices, ctx, maxTris)
@@ -936,6 +929,37 @@ object RecastMesh {
         return mesh
     }
 
+    private fun triangulateContours(
+        ctx: Telemetry?, cset: ContourSet, indices: IntArray, tris: IntArray,
+        mesh: PolyMesh, firstVert: IntArray, nextVert: IntArray,
+        toBeRemovedVertices: BitSet, nvp: Int, polys: IntArray, tmpPoly: Int, maxTris: Int
+    ) {
+        for (i in cset.contours.indices) {
+            val cont = cset.contours[i]
+
+            // Skip null contours.
+            if (cont.numVertices < 3) continue
+
+            // Triangulate contour
+            for (j in 0 until cont.numVertices) {
+                indices[j] = j
+            }
+            var numTriangles = triangulate(cont.numVertices, cont.vertices!!, indices, tris)
+            if (numTriangles <= 0) {
+                // Bad triangulation, should not happen.
+                ctx?.warn("buildPolyMesh: Bad triangulation Contour $i.")
+                numTriangles = -numTriangles
+            }
+
+            addAndMergeVertices(cont, mesh, firstVert, nextVert, indices, toBeRemovedVertices)
+
+            var numPolygons = buildInitialPolygons(polys, numTriangles, tris, indices, nvp)
+            if (numPolygons == 0) continue
+            if (nvp > 3) numPolygons = mergePolygons(nvp, numPolygons, polys, mesh, tmpPoly)
+            storePolygons(mesh, nvp, numPolygons, polys, cont, maxTris)
+        }
+    }
+
     private fun addAndMergeVertices(
         cont: Contour, mesh: PolyMesh,
         firstVert: IntArray, nextVert: IntArray, indices: IntArray,
@@ -959,7 +983,7 @@ object RecastMesh {
 
     private fun buildInitialPolygons(polys: IntArray, ntris: Int, tris: IntArray, indices: IntArray, nvp: Int): Int {
         var npolys = 0
-        Arrays.fill(polys, RC_MESH_NULL_IDX)
+        polys.fill(RC_MESH_NULL_IDX)
         for (j in 0 until ntris) {
             val t = j * 3
             if (tris[t] != tris[t + 1] && tris[t] != tris[t + 2] && tris[t + 1] != tris[t + 2]) {
@@ -1106,13 +1130,14 @@ object RecastMesh {
         mesh.vertices = IntArray(maxVertices * 3)
         mesh.numPolygons = 0
         mesh.polygons = IntArray(maxPolys * 2 * mesh.maxVerticesPerPolygon)
-        Arrays.fill(mesh.polygons, 0, mesh.polygons.size, RC_MESH_NULL_IDX)
+        mesh.polygons.fill(RC_MESH_NULL_IDX, 0, mesh.polygons.size)
         mesh.regionIds = IntArray(maxPolys)
         mesh.areaIds = IntArray(maxPolys)
         mesh.flags = IntArray(maxPolys)
         val nextVert = IntArray(maxVertices)
         val firstVert = IntArray(VERTEX_BUCKET_COUNT)
-        for (i in 0 until VERTEX_BUCKET_COUNT) firstVert[i] = -1
+        firstVert.fill(-1)
+
         val vremap = IntArray(maxVerticesPerMesh)
         for (i in 0 until numMeshes) {
             val pmesh = meshes[i]

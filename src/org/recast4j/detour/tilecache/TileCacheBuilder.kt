@@ -78,7 +78,7 @@ class TileCacheBuilder {
         var regId = 0
         for (y in 0 until h) {
             if (regId > 0) {
-                Arrays.fill(prevCount, 0, regId, 0)
+                prevCount.fill(0, 0, regId)
             }
             // memset(prevCount,0,sizeof(char)*regId);
             var sweepId = 0
@@ -1001,7 +1001,7 @@ class TileCacheBuilder {
         val nb = countPolyVertices(polys, pb, maxVerticesPerPoly)
 
         // Merge polygons.
-        Arrays.fill(tmp, TILECACHE_NULL_IDX)
+        tmp.fill(TILECACHE_NULL_IDX)
         var n = 0
         // Add pa
         for (i in 0 until na - 1) tmp[n++] = polys[pa + (ea + 1 + i) % na]
@@ -1133,7 +1133,7 @@ class TileCacheBuilder {
                     // Remove the polygon.
                     val p2 = (mesh.numPolygons - 1) * maxVerticesPerPoly * 2
                     System.arraycopy(mesh.polys, p2, mesh.polys, p, maxVerticesPerPoly)
-                    Arrays.fill(mesh.polys, p + maxVerticesPerPoly, p + 2 * maxVerticesPerPoly, TILECACHE_NULL_IDX)
+                    mesh.polys.fill(TILECACHE_NULL_IDX, p + maxVerticesPerPoly, p + 2 * maxVerticesPerPoly)
                     mesh.areas[i] = mesh.areas[mesh.numPolygons - 1]
                     mesh.numPolygons--
                     --i
@@ -1223,7 +1223,7 @@ class TileCacheBuilder {
 
         // Build initial polygons.
         var npolys = 0
-        Arrays.fill(polys, 0, ntris * maxVerticesPerPoly, TILECACHE_NULL_IDX)
+        polys.fill(TILECACHE_NULL_IDX, 0, ntris * maxVerticesPerPoly)
         for (j in 0 until ntris) {
             val t = j * 3
             if (tris[t] != tris[t + 1] && tris[t] != tris[t + 2] && tris[t + 1] != tris[t + 2]) {
@@ -1282,8 +1282,10 @@ class TileCacheBuilder {
         for (i in 0 until npolys) {
             if (mesh.numPolygons >= maxTris) break
             val p = mesh.numPolygons * maxVerticesPerPoly * 2
-            Arrays.fill(mesh.polys, p, p + maxVerticesPerPoly * 2, TILECACHE_NULL_IDX)
-            for (j in 0 until maxVerticesPerPoly) mesh.polys[p + j] = polys[i * maxVerticesPerPoly + j]
+            mesh.polys.fill(TILECACHE_NULL_IDX, p, p + maxVerticesPerPoly * 2)
+            for (j in 0 until maxVerticesPerPoly) {
+                mesh.polys[p + j] = polys[i * maxVerticesPerPoly + j]
+            }
             mesh.areas[mesh.numPolygons] = pareas[i]
             mesh.numPolygons++
             if (mesh.numPolygons > maxTris) {
@@ -1315,7 +1317,7 @@ class TileCacheBuilder {
         mesh.flags = IntArray(maxTris)
         mesh.numVertices = 0
         mesh.numPolygons = 0
-        Arrays.fill(mesh.polys, TILECACHE_NULL_IDX)
+        mesh.polys.fill(TILECACHE_NULL_IDX)
         val firstVert = IntArray(VERTEX_BUCKET_COUNT2)
         for (i in 0 until VERTEX_BUCKET_COUNT2) firstVert[i] = TILECACHE_NULL_IDX
         val nextVert = IntArray(maxVertices)
@@ -1352,7 +1354,7 @@ class TileCacheBuilder {
 
             // Build initial polygons.
             var npolys = 0
-            Arrays.fill(polys, TILECACHE_NULL_IDX)
+            polys.fill(TILECACHE_NULL_IDX)
             for (j in 0 until ntris) {
                 val t = j * 3
                 if (tris[t] != tris[t + 1] && tris[t] != tris[t + 2] && tris[t + 1] != tris[t + 2]) {
