@@ -290,8 +290,7 @@ object RecastRegion {
                     }
                 }
             }
-        } else  // use cells in the input stack
-        {
+        } else {  // use cells in the input stack
             // mark all cells which already have a region
             var j = 0
             while (j < stack.size) {
@@ -419,16 +418,14 @@ object RecastRegion {
         }
     }
 
-    private fun removeAdjacentNeighbours(reg: Region?) {
-        // Remove adjacent duplicates.
+    private fun removeAdjacentDuplicates(reg: Region) {
         var i = 0
-        while (i < reg!!.connections.size && reg.connections.size > 1) {
-            val ni = (i + 1) % reg.connections.size
-            if (reg.connections[i] == reg.connections[ni]) {
-                reg.connections.remove(i)
-            } else {
-                ++i
-            }
+        val con = reg.connections
+        while (i < con.size && con.size > 1) {
+            val ni = (i + 1) % con.size
+            if (con[i] == con[ni]) {
+                con.remove(i)
+            } else i++
         }
     }
 
@@ -448,7 +445,7 @@ object RecastRegion {
             }
         }
         if (neiChanged) {
-            removeAdjacentNeighbours(reg)
+            removeAdjacentDuplicates(reg)
         }
     }
 
@@ -501,7 +498,7 @@ object RecastRegion {
         addConnections(rega, acon, insa)
         addConnections(rega, bcon, insb)
 
-        removeAdjacentNeighbours(rega)
+        removeAdjacentDuplicates(rega)
         val flo = regb.floors
         for (j in 0 until flo.size) {
             addUniqueFloorRegion(rega, flo[j])

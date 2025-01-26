@@ -621,7 +621,10 @@ object RecastFilledVolumeRasterization {
         var tr = 0
         var tri = 0
         while (tri < triangles.size) {
-            if (triBounds[tr][0] > rectangle[2] || triBounds[tr][2] < rectangle[0] || triBounds[tr][1] > rectangle[3] || triBounds[tr][3] < rectangle[1]) {
+            if (triBounds[tr][0] > rectangle[2] ||
+                triBounds[tr][2] < rectangle[0] ||
+                triBounds[tr][1] > rectangle[3] ||
+                triBounds[tr][3] < rectangle[1]) {
                 tr++
                 tri += 3
                 continue
