@@ -564,7 +564,12 @@ open class NavMeshQuery(val nav1: NavMesh) {
             val tiles = ArrayList<MeshTile>()
             for (y in miny..maxy) {
                 for (x in minx..maxx) {
-                    tiles.add(nav1.getTilesAt(x, y) ?: continue)
+                    // add all siblings (layers) at x,y
+                    var tile = nav1.getTilesAt(x, y)
+                    while (tile != null) {
+                        tiles.add(tile)
+                        tile = tile.next
+                    }
                 }
             }
             return tiles

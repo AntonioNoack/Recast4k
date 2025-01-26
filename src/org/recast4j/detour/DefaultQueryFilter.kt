@@ -75,8 +75,8 @@ class DefaultQueryFilter : QueryFilter {
 
     override fun getCost(
         pa: Vector3f, pb: Vector3f, prevRef: Long, prevTile: MeshTile?, prevPoly: Poly?, curRef: Long,
-        curTile: MeshTile?, curPoly: Poly?, nextRef: Long, nextTile: MeshTile?, nextPoly: Poly?
+        curTile: MeshTile?, curPoly: Poly, nextRef: Long, nextTile: MeshTile?, nextPoly: Poly?
     ): Float {
-        return pa.distance(pb) * areaCosts[curPoly!!.area]
+        return pa.distance(pb) * areaCosts[curPoly.area]
     }
 }

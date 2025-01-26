@@ -172,12 +172,8 @@ object ConvexConvexIntersection {
     }
 
     private fun parallelInt(
-        a: Vector3f,
-        b: Vector3f,
-        c: Vector3f,
-        d: Vector3f,
-        p: Vector3f,
-        q: Vector3f
+        a: Vector3f, b: Vector3f, c: Vector3f, d: Vector3f,
+        p: Vector3f, q: Vector3f
     ): Intersection {
         if (between(a, b, c) && between(a, b, d)) {
             p.set(c)
