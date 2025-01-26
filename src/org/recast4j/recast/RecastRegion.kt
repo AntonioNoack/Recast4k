@@ -26,16 +26,40 @@ import kotlin.math.min
 object RecastRegion {
     const val RC_NULL_NEI = 0xffff
     fun calculateDistanceField(chf: CompactHeightfield, src: IntArray): Int {
-        var maxDist: Int
         val w = chf.width
         val h = chf.height
 
         // Init distance and points.
-        for (i in 0 until chf.spanCount) {
-            src[i] = 0xffff
+        src.fill(0xffff, 0, chf.spanCount)
+
+        markBoundaryCells(w, h, chf, src)
+
+        // Pass 1
+        for (y in 0 until h) {
+            for (x in 0 until w) {
+                distCellStep(x, y, w, chf, src, 0, 3, 2)
+            }
         }
 
-        // Mark boundary cells.
+        // Pass 2
+        for (y in h - 1 downTo 0) {
+            for (x in w - 1 downTo 0) {
+                distCellStep(x, y, w, chf, src, 2, 1, 0)
+            }
+        }
+
+        return findMaxDist(src, chf.spanCount)
+    }
+
+    private fun findMaxDist(src: IntArray, size: Int): Int {
+        var maxDist = 0
+        for (i in 0 until size) {
+            maxDist = max(src[i], maxDist)
+        }
+        return maxDist
+    }
+
+    private fun markBoundaryCells(w: Int, h: Int, chf: CompactHeightfield, src: IntArray) {
         for (y in 0 until h) {
             for (x in 0 until w) {
                 val c = x + y * w
@@ -59,154 +83,93 @@ object RecastRegion {
                 }
             }
         }
+    }
 
-        // Pass 1
-        for (y in 0 until h) {
-            for (x in 0 until w) {
-                val c = x + y * w
-                for (i in chf.index[c] until chf.endIndex[c]) {
-                    val s = chf.spans[i]
-                    if (RecastCommon.getCon(s, 0) != RecastConstants.RC_NOT_CONNECTED) {
-                        // (-1,0)
-                        val ax = x + RecastCommon.getDirOffsetX(0)
-                        val ay = y + RecastCommon.getDirOffsetY(0)
-                        val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 0)
-                        val asp = chf.spans[ai]
-                        if (src[ai] + 2 < src[i]) {
-                            src[i] = src[ai] + 2
-                        }
+    private fun distCellStep(
+        x: Int, y: Int, w: Int, chf: CompactHeightfield,
+        src: IntArray, d0: Int, d1: Int, d2: Int
+    ) {
+        val c = x + y * w
+        for (i in chf.index[c] until chf.endIndex[c]) {
+            val s = chf.spans[i]
+            distCellStep1(x, y, w, chf, s, src, i, d0, d1)
+            distCellStep1(x, y, w, chf, s, src, i, d1, d2)
+        }
+    }
 
-                        // (-1,-1)
-                        if (RecastCommon.getCon(asp, 3) != RecastConstants.RC_NOT_CONNECTED) {
-                            val aax = ax + RecastCommon.getDirOffsetX(3)
-                            val aay = ay + RecastCommon.getDirOffsetY(3)
-                            val aai = chf.index[aax + aay * w] + RecastCommon.getCon(asp, 3)
-                            if (src[aai] + 3 < src[i]) {
-                                src[i] = src[aai] + 3
-                            }
-                        }
-                    }
-                    if (RecastCommon.getCon(s, 3) != RecastConstants.RC_NOT_CONNECTED) {
-                        // (0,-1)
-                        val ax = x + RecastCommon.getDirOffsetX(3)
-                        val ay = y + RecastCommon.getDirOffsetY(3)
-                        val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 3)
-                        val asp = chf.spans[ai]
-                        if (src[ai] + 2 < src[i]) {
-                            src[i] = src[ai] + 2
-                        }
+    private fun distCellStep1(
+        x: Int, y: Int, w: Int, chf: CompactHeightfield, s: CompactSpan,
+        src: IntArray, i: Int, d0: Int, d1: Int
+    ) {
+        if (RecastCommon.getCon(s, d0) != RecastConstants.RC_NOT_CONNECTED) {
+            // (0,1) if 1
+            val ax = x + RecastCommon.getDirOffsetX(d0)
+            val ay = y + RecastCommon.getDirOffsetY(d0)
+            val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, d0)
+            val asp = chf.spans[ai]
+            if (src[ai] + 2 < src[i]) {
+                src[i] = src[ai] + 2
+            }
 
-                        // (1,-1)
-                        if (RecastCommon.getCon(asp, 2) != RecastConstants.RC_NOT_CONNECTED) {
-                            val aax = ax + RecastCommon.getDirOffsetX(2)
-                            val aay = ay + RecastCommon.getDirOffsetY(2)
-                            val aai = chf.index[aax + aay * w] + RecastCommon.getCon(asp, 2)
-                            if (src[aai] + 3 < src[i]) {
-                                src[i] = src[aai] + 3
-                            }
-                        }
-                    }
+            // (-1,1) if 0
+            if (RecastCommon.getCon(asp, d1) != RecastConstants.RC_NOT_CONNECTED) {
+                val aax = ax + RecastCommon.getDirOffsetX(d1)
+                val aay = ay + RecastCommon.getDirOffsetY(d1)
+                val aai = chf.index[aax + aay * w] + RecastCommon.getCon(asp, d1)
+                if (src[aai] + 3 < src[i]) {
+                    src[i] = src[aai] + 3
                 }
             }
         }
-
-        // Pass 2
-        for (y in h - 1 downTo 0) {
-            for (x in w - 1 downTo 0) {
-                val c = x + y * w
-                for (i in chf.index[c] until chf.endIndex[c]) {
-                    val s = chf.spans[i]
-                    if (RecastCommon.getCon(s, 2) != RecastConstants.RC_NOT_CONNECTED) {
-                        // (1,0)
-                        val ax = x + RecastCommon.getDirOffsetX(2)
-                        val ay = y + RecastCommon.getDirOffsetY(2)
-                        val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 2)
-                        val asp = chf.spans[ai]
-                        if (src[ai] + 2 < src[i]) {
-                            src[i] = src[ai] + 2
-                        }
-
-                        // (1,1)
-                        if (RecastCommon.getCon(asp, 1) != RecastConstants.RC_NOT_CONNECTED) {
-                            val aax = ax + RecastCommon.getDirOffsetX(1)
-                            val aay = ay + RecastCommon.getDirOffsetY(1)
-                            val aai = chf.index[aax + aay * w] + RecastCommon.getCon(asp, 1)
-                            if (src[aai] + 3 < src[i]) {
-                                src[i] = src[aai] + 3
-                            }
-                        }
-                    }
-                    if (RecastCommon.getCon(s, 1) != RecastConstants.RC_NOT_CONNECTED) {
-                        // (0,1)
-                        val ax = x + RecastCommon.getDirOffsetX(1)
-                        val ay = y + RecastCommon.getDirOffsetY(1)
-                        val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 1)
-                        val asp = chf.spans[ai]
-                        if (src[ai] + 2 < src[i]) {
-                            src[i] = src[ai] + 2
-                        }
-
-                        // (-1,1)
-                        if (RecastCommon.getCon(asp, 0) != RecastConstants.RC_NOT_CONNECTED) {
-                            val aax = ax + RecastCommon.getDirOffsetX(0)
-                            val aay = ay + RecastCommon.getDirOffsetY(0)
-                            val aai = chf.index[aax + aay * w] + RecastCommon.getCon(asp, 0)
-                            if (src[aai] + 3 < src[i]) {
-                                src[i] = src[aai] + 3
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        maxDist = 0
-        for (i in 0 until chf.spanCount) {
-            maxDist = max(src[i], maxDist)
-        }
-        return maxDist
     }
 
     private fun boxBlur(chf: CompactHeightfield, src: IntArray): IntArray {
         val w = chf.width
-        val h = chf.height
         val dst = IntArray(chf.spanCount)
         val thr = 2
-        for (y in 0 until h) {
+        for (y in 0 until chf.height) {
             for (x in 0 until w) {
                 val c = x + y * w
                 for (i in chf.index[c] until chf.endIndex[c]) {
-                    val s = chf.spans[i]
-                    val cd = src[i]
-                    if (cd <= thr) {
-                        dst[i] = cd
-                        continue
-                    }
-                    var d = cd
-                    for (dir in 0..3) {
-                        if (RecastCommon.getCon(s, dir) != RecastConstants.RC_NOT_CONNECTED) {
-                            val ax = x + RecastCommon.getDirOffsetX(dir)
-                            val ay = y + RecastCommon.getDirOffsetY(dir)
-                            val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, dir)
-                            d += src[ai]
-                            val asp = chf.spans[ai]
-                            val dir2 = dir + 1 and 0x3
-                            d += if (RecastCommon.getCon(asp, dir2) != RecastConstants.RC_NOT_CONNECTED) {
-                                val ax2 = ax + RecastCommon.getDirOffsetX(dir2)
-                                val ay2 = ay + RecastCommon.getDirOffsetY(dir2)
-                                val ai2 = chf.index[ax2 + ay2 * w] + RecastCommon.getCon(asp, dir2)
-                                src[ai2]
-                            } else {
-                                cd
-                            }
-                        } else {
-                            d += cd * 2
-                        }
-                    }
-                    dst[i] = (d + 5) / 9
+                    boxBlurCell(x, y, w, chf, i, src, thr, dst)
                 }
             }
         }
         return dst
+    }
+
+    private fun boxBlurCell(
+        x: Int, y: Int, w: Int, chf: CompactHeightfield, i: Int,
+        src: IntArray, thr: Int, dst: IntArray
+    ) {
+        val s = chf.spans[i]
+        val cd = src[i]
+        if (cd <= thr) {
+            dst[i] = cd
+            return
+        }
+        var d = cd
+        for (dir in 0..3) {
+            if (RecastCommon.getCon(s, dir) != RecastConstants.RC_NOT_CONNECTED) {
+                val ax = x + RecastCommon.getDirOffsetX(dir)
+                val ay = y + RecastCommon.getDirOffsetY(dir)
+                val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, dir)
+                d += src[ai]
+                val asp = chf.spans[ai]
+                val dir2 = dir + 1 and 0x3
+                d += if (RecastCommon.getCon(asp, dir2) != RecastConstants.RC_NOT_CONNECTED) {
+                    val ax2 = ax + RecastCommon.getDirOffsetX(dir2)
+                    val ay2 = ay + RecastCommon.getDirOffsetY(dir2)
+                    val ai2 = chf.index[ax2 + ay2 * w] + RecastCommon.getCon(asp, dir2)
+                    src[ai2]
+                } else {
+                    cd
+                }
+            } else {
+                d += cd * 2
+            }
+        }
+        dst[i] = (d + 5) / 9
     }
 
     private fun floodRegion(
@@ -224,7 +187,7 @@ object RecastRegion {
         srcReg[i] = r
         srcDist[i] = 0
         val lev = if (level >= 2) level - 2 else 0
-        var count = 0
+        var changed = false
         while (stack.size > 0) {
             val ci = stack.remove(stack.size - 1)
             val cy = stack.remove(stack.size - 1)
@@ -232,67 +195,78 @@ object RecastRegion {
             val cs = chf.spans[ci]
 
             // Check if any of the neighbours already have a valid region set.
-            var ar = 0
-            for (dir in 0..3) {
-                // 8 connected
-                if (RecastCommon.getCon(cs, dir) != RecastConstants.RC_NOT_CONNECTED) {
-                    val ax = cx + RecastCommon.getDirOffsetX(dir)
-                    val ay = cy + RecastCommon.getDirOffsetY(dir)
-                    val ai = chf.index[ax + ay * w] + RecastCommon.getCon(cs, dir)
-                    if (chf.areas[ai] != area) {
-                        continue
-                    }
-                    val nr = srcReg[ai]
-                    if (nr and RecastConstants.RC_BORDER_REG != 0) {
-                        continue
-                    }
-                    if (nr != 0 && nr != r) {
-                        ar = nr
-                        break
-                    }
-                    val asp = chf.spans[ai]
-                    val dir2 = dir + 1 and 0x3
-                    if (RecastCommon.getCon(asp, dir2) != RecastConstants.RC_NOT_CONNECTED) {
-                        val ax2 = ax + RecastCommon.getDirOffsetX(dir2)
-                        val ay2 = ay + RecastCommon.getDirOffsetY(dir2)
-                        val ai2 = chf.index[ax2 + ay2 * w] + RecastCommon.getCon(asp, dir2)
-                        if (chf.areas[ai2] != area) {
-                            continue
-                        }
-                        val nr2 = srcReg[ai2]
-                        if (nr2 != 0 && nr2 != r) {
-                            ar = nr2
-                            break
-                        }
-                    }
-                }
-            }
-            if (ar != 0) {
+            val neighborIsValid = anyNeighborHasValidRegion(cs, cx, cy, w, chf, area, srcReg, r)
+            if (neighborIsValid) {
                 srcReg[ci] = 0
-                continue
+            } else {
+                changed = true
+                expandNeighbors(cs, cx, cy, chf, w, area, lev, srcReg, r, srcDist, stack)
             }
-            count++
+        }
+        return changed
+    }
 
-            // Expand neighbours.
-            for (dir in 0..3) {
-                if (RecastCommon.getCon(cs, dir) != RecastConstants.RC_NOT_CONNECTED) {
-                    val ax = cx + RecastCommon.getDirOffsetX(dir)
-                    val ay = cy + RecastCommon.getDirOffsetY(dir)
-                    val ai = chf.index[ax + ay * w] + RecastCommon.getCon(cs, dir)
-                    if (chf.areas[ai] != area) {
+    private fun anyNeighborHasValidRegion(
+        cs: CompactSpan, cx: Int, cy: Int, w: Int, chf: CompactHeightfield,
+        area: Int, srcReg: IntArray, r: Int
+    ): Boolean {
+        for (dir in 0..3) {
+            // 8 connected
+            if (RecastCommon.getCon(cs, dir) != RecastConstants.RC_NOT_CONNECTED) {
+                val ax = cx + RecastCommon.getDirOffsetX(dir)
+                val ay = cy + RecastCommon.getDirOffsetY(dir)
+                val ai = chf.index[ax + ay * w] + RecastCommon.getCon(cs, dir)
+                if (chf.areas[ai] != area) {
+                    continue
+                }
+                val nr = srcReg[ai]
+                if (nr and RecastConstants.RC_BORDER_REG != 0) {
+                    continue
+                }
+                if (nr != 0 && nr != r) {
+                    return true
+                }
+                val asp = chf.spans[ai]
+                val dir2 = dir + 1 and 0x3
+                if (RecastCommon.getCon(asp, dir2) != RecastConstants.RC_NOT_CONNECTED) {
+                    val ax2 = ax + RecastCommon.getDirOffsetX(dir2)
+                    val ay2 = ay + RecastCommon.getDirOffsetY(dir2)
+                    val ai2 = chf.index[ax2 + ay2 * w] + RecastCommon.getCon(asp, dir2)
+                    if (chf.areas[ai2] != area) {
                         continue
                     }
-                    if (chf.dist[ai] >= lev && srcReg[ai] == 0) {
-                        srcReg[ai] = r
-                        srcDist[ai] = 0
-                        stack.add(ax)
-                        stack.add(ay)
-                        stack.add(ai)
+                    val nr2 = srcReg[ai2]
+                    if (nr2 != 0 && nr2 != r) {
+                        return true
                     }
                 }
             }
         }
-        return count > 0
+        return false
+    }
+
+    private fun expandNeighbors(
+        cs: CompactSpan, cx: Int, cy: Int, chf: CompactHeightfield, w: Int,
+        area: Int, lev: Int, srcReg: IntArray, r: Int,
+        srcDist: IntArray, stack: IntArrayList
+    ) {
+        for (dir in 0..3) {
+            if (RecastCommon.getCon(cs, dir) != RecastConstants.RC_NOT_CONNECTED) {
+                val ax = cx + RecastCommon.getDirOffsetX(dir)
+                val ay = cy + RecastCommon.getDirOffsetY(dir)
+                val ai = chf.index[ax + ay * w] + RecastCommon.getCon(cs, dir)
+                if (chf.areas[ai] != area) {
+                    continue
+                }
+                if (chf.dist[ai] >= lev && srcReg[ai] == 0) {
+                    srcReg[ai] = r
+                    srcDist[ai] = 0
+                    stack.add(ax)
+                    stack.add(ay)
+                    stack.add(ai)
+                }
+            }
+        }
     }
 
     private fun expandRegions(
@@ -573,15 +547,16 @@ object RecastRegion {
     }
 
     private fun walkContour(
-        x: Int, y: Int, i: Int, dir: Int, chf: CompactHeightfield, srcReg: IntArray,
-        cont: IntArrayList
+        x0: Int, y0: Int, i0: Int, dir0: Int, chf: CompactHeightfield,
+        srcReg: IntArray, cont: IntArrayList
     ) {
-        var x = x
-        var y = y
-        var i = i
-        var dir = dir
+        var x = x0
+        var y = y0
+        var i = i0
+        var dir = dir0
         val startDir = dir
         val starti = i
+
         val ss = chf.spans[i]
         var curReg = 0
         if (RecastCommon.getCon(ss, dir) != RecastConstants.RC_NOT_CONNECTED) {
@@ -590,6 +565,7 @@ object RecastRegion {
             val ai = chf.index[ax + ay * chf.width] + RecastCommon.getCon(ss, dir)
             curReg = srcReg[ai]
         }
+
         cont.add(curReg)
         var iter = 0
         while (++iter < 40000) {
@@ -629,77 +605,103 @@ object RecastRegion {
             }
         }
 
-        // Remove adjacent duplicates.
-        if (cont.size > 1) {
-            var j = 0
-            while (j < cont.size) {
-                val nj = (j + 1) % cont.size
-                if (cont[j] == cont[nj]) {
-                    cont.remove(j)
-                } else {
-                    ++j
+        removeAdjacentDuplicates(cont)
+    }
+
+    private fun removeAdjacentDuplicates(cont: IntArrayList) {
+        if (cont.size <= 1) return
+        var j = 0
+        while (j < cont.size) {
+            val nj = (j + 1) % cont.size
+            if (cont[j] == cont[nj]) {
+                cont.remove(j)
+            } else j++
+        }
+    }
+
+    private fun mergeAndFilterRegions(
+        minRegionArea: Int, mergeRegionSize: Int, maxRegionId0: Int,
+        chf: CompactHeightfield, srcReg: IntArray, overlaps: IntArrayList
+    ): Int {
+        val nreg = maxRegionId0 + 1
+        val regions = Array(nreg) { Region(it) }
+
+        findRegionEdgeAndConnectionsAroundContour(nreg, regions, chf, srcReg)
+
+        removeTooSmallRegions(nreg, regions, minRegionArea)
+        mergeTooSmallRegionsWithNeighbors(nreg, regions, mergeRegionSize)
+
+        val maxRegionId = compressRegionIds(nreg, regions)
+        remapRegions(chf, srcReg, regions)
+
+        // Return regions that we found to be overlapping.
+        collectOverlappingRegions(nreg, regions, overlaps)
+        return maxRegionId
+    }
+
+    /**
+     * Find edge of a region and find connections around the contour.
+     * */
+    private fun findRegionEdgeAndConnectionsAroundContour(
+        nreg: Int, regions: Array<Region>, chf: CompactHeightfield,
+        srcReg: IntArray,
+    ) {
+        val w = chf.width
+        for (y in 0 until chf.height) {
+            for (x in 0 until w) {
+                val c = x + y * w
+                for (i in chf.index[c] until chf.endIndex[c]) {
+                    findRegionEdgeAndConnectionsAroundContourCell(nreg, regions, srcReg, i, c, chf, x, y)
                 }
             }
         }
     }
 
-    private fun mergeAndFilterRegions(
-        minRegionArea: Int, mergeRegionSize: Int, maxRegionId: Int,
-        chf: CompactHeightfield, srcReg: IntArray, overlaps: IntArrayList
-    ): Int {
-        var maxRegionId = maxRegionId
-        val w = chf.width
-        val h = chf.height
-        val nreg = maxRegionId + 1
-        val regions = Array(nreg) { Region(it) }
+    private fun findRegionEdgeAndConnectionsAroundContourCell(
+        nreg: Int, regions: Array<Region>,
+        srcReg: IntArray, i: Int, c: Int,
+        chf: CompactHeightfield, x: Int, y: Int
+    ) {
+        val r = srcReg[i]
+        if (r == 0 || r >= nreg) {
+            return
+        }
+        val reg = regions[r]
+        reg.spanCount++
 
-        // Find edge of a region and find connections around the contour.
-        for (y in 0 until h) {
-            for (x in 0 until w) {
-                val c = x + y * w
-                for (i in chf.index[c] until chf.endIndex[c]) {
-                    val r = srcReg[i]
-                    if (r == 0 || r >= nreg) {
-                        continue
-                    }
-                    val reg = regions[r]
-                    reg.spanCount++
-
-                    // Update floors.
-                    for (j in chf.index[c] until chf.endIndex[c]) {
-                        if (i == j) continue
-                        val floorId = srcReg[j]
-                        if (floorId == 0 || floorId >= nreg) continue
-                        if (floorId == r) {
-                            reg.overlap = true
-                        }
-                        addUniqueFloorRegion(reg, floorId)
-                    }
-
-                    // Have found contour
-                    if (reg.connections.size > 0) {
-                        continue
-                    }
-                    reg.areaType = chf.areas[i]
-
-                    // Check if this cell is next to a border.
-                    var ndir = -1
-                    for (dir in 0..3) {
-                        if (isSolidEdge(chf, srcReg, x, y, i, dir)) {
-                            ndir = dir
-                            break
-                        }
-                    }
-                    if (ndir != -1) {
-                        // The cell is at border.
-                        // Walk around the contour to find all the neighbours.
-                        walkContour(x, y, i, ndir, chf, srcReg, reg.connections)
-                    }
-                }
+        // Update floors.
+        for (j in chf.index[c] until chf.endIndex[c]) {
+            if (i == j) continue
+            val floorId = srcReg[j]
+            if (floorId == 0 || floorId >= nreg) continue
+            if (floorId == r) {
+                reg.overlap = true
             }
+            addUniqueFloorRegion(reg, floorId)
         }
 
-        // Remove too small regions.
+        // Have found contour
+        if (reg.connections.size > 0) {
+            return
+        }
+        reg.areaType = chf.areas[i]
+
+        // Check if this cell is next to a border.
+        var ndir = -1
+        for (dir in 0..3) {
+            if (isSolidEdge(chf, srcReg, x, y, i, dir)) {
+                ndir = dir
+                break
+            }
+        }
+        if (ndir != -1) {
+            // The cell is at border.
+            // Walk around the contour to find all the neighbours.
+            walkContour(x, y, i, ndir, chf, srcReg, reg.connections)
+        }
+    }
+
+    private fun removeTooSmallRegions(nreg: Int, regions: Array<Region>, minRegionArea: Int) {
         val stack = IntArrayList(32)
         val trace = IntArrayList(32)
         for (i in 0 until nreg) {
@@ -760,20 +762,17 @@ object RecastRegion {
                 }
             }
         }
+    }
 
+    private fun mergeTooSmallRegionsWithNeighbors(nreg: Int, regions: Array<Region>, mergeRegionSize: Int) {
         // Merge too small regions to neighbour regions.
-        var mergeCount: Int
         do {
-            mergeCount = 0
+            var mergeCount = 0
             for (i in 0 until nreg) {
                 val reg = regions[i]
-                if (reg.id == 0 || reg.id and RecastConstants.RC_BORDER_REG != 0) {
-                    continue
-                }
-                if (reg.overlap) {
-                    continue
-                }
-                if (reg.spanCount == 0) {
+                if (reg.id == 0 || reg.id and RecastConstants.RC_BORDER_REG != 0 ||
+                    reg.overlap || reg.spanCount == 0
+                ) {
                     continue
                 }
 
@@ -828,50 +827,15 @@ object RecastRegion {
                 }
             }
         } while (mergeCount > 0)
+    }
 
-        // Compress region Ids.
-        for (i in 0 until nreg) {
-            regions[i].remap = false
-            if (regions[i].id == 0) {
-                continue  // Skip nil regions.
-            }
-            if (regions[i].id and RecastConstants.RC_BORDER_REG != 0) {
-                continue  // Skip external regions.
-            }
-            regions[i].remap = true
-        }
-        var regIdGen = 0
-        for (i in 0 until nreg) {
-            if (!regions[i].remap) {
-                continue
-            }
-            val oldId = regions[i].id
-            val newId = ++regIdGen
-            for (j in i until nreg) {
-                val regionJ = regions[j]
-                if (regionJ.id == oldId) {
-                    regionJ.id = newId
-                    regionJ.remap = false
-                }
-            }
-        }
-        maxRegionId = regIdGen
-
-        // Remap regions.
-        for (i in 0 until chf.spanCount) {
-            if (srcReg[i] and RecastConstants.RC_BORDER_REG == 0) {
-                srcReg[i] = regions[srcReg[i]].id
-            }
-        }
-
-        // Return regions that we found to be overlapping.
+    private fun collectOverlappingRegions(nreg: Int, regions: Array<Region>, overlaps: IntArrayList) {
         for (i in 0 until nreg) {
             val regionI = regions[i]
             if (regionI.overlap) {
                 overlaps.add(regionI.id)
             }
         }
-        return maxRegionId
     }
 
     private fun addUniqueConnection(reg: Region, n: Int) {
@@ -881,75 +845,106 @@ object RecastRegion {
     }
 
     private fun mergeAndFilterLayerRegions(
-        minRegionArea: Int, maxRegionId: Int,
+        minRegionArea: Int, maxRegionId0: Int,
         chf: CompactHeightfield, srcReg: IntArray
     ): Int {
-        var maxRegionId = maxRegionId
         val w = chf.width
         val h = chf.height
-        val nreg = maxRegionId + 1
+        val nreg = maxRegionId0 + 1
+
         // Construct regions
         val regions = Array(nreg) { Region(it) }
+        findRegionNeighborsAndOverlappingRegions(w, h, chf, srcReg, nreg, regions)
 
-        // Find region neighbours and overlapping regions.
+        // Create 2D layers from regions.
+        for (i in 0 until nreg) {
+            regions[i].id = 0
+        }
+
+        mergeMonotoneRegions(nreg, regions)
+
+        removeSmallRegions(nreg, regions, minRegionArea)
+        val maxRegionId = compressRegionIds(nreg, regions)
+        remapRegions(chf, srcReg, regions)
+        return maxRegionId
+    }
+
+    private fun findRegionNeighborsAndOverlappingRegions(
+        w: Int, h: Int, chf: CompactHeightfield,
+        srcReg: IntArray, nreg: Int, regions: Array<Region>
+    ) {
         val lregs = IntArrayList(32)
         for (y in 0 until h) {
             for (x in 0 until w) {
                 val c = x + y * w
                 lregs.clear()
-
                 for (i in chf.index[c] until chf.endIndex[c]) {
-                    val s = chf.spans[i]
-                    val ri = srcReg[i]
-                    if (ri == 0 || ri >= nreg) {
-                        continue
-                    }
-                    val reg = regions[ri]
-                    reg.spanCount++
-                    reg.areaType = chf.areas[i]
-                    reg.ymin = min(reg.ymin, s.y)
-                    reg.ymax = max(reg.ymax, s.y)
-                    // Collect all region layers.
-                    lregs.add(ri)
-
-                    // Update neighbours
-                    for (dir in 0..3) {
-                        if (RecastCommon.getCon(s, dir) != RecastConstants.RC_NOT_CONNECTED) {
-                            val ax = x + RecastCommon.getDirOffsetX(dir)
-                            val ay = y + RecastCommon.getDirOffsetY(dir)
-                            val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, dir)
-                            val rai = srcReg[ai]
-                            if (rai in 1 until nreg && rai != ri) {
-                                addUniqueConnection(reg, rai)
-                            }
-                            if (rai and RecastConstants.RC_BORDER_REG != 0) {
-                                reg.connectsToBorder = true
-                            }
-                        }
-                    }
+                    findRegionNeighborsCell(w, chf, srcReg, nreg, regions, i, lregs, x, y)
                 }
+                updateOverlappingRegions(lregs, regions)
+            }
+        }
+    }
 
-                // Update overlapping regions.
-                for (i in 0 until lregs.size - 1) {
-                    for (j in i + 1 until lregs.size) {
-                        if (lregs[i] != lregs[j]) {
-                            val ri = regions[lregs[i]]
-                            val rj = regions[lregs[j]]
-                            addUniqueFloorRegion(ri, lregs[j])
-                            addUniqueFloorRegion(rj, lregs[i])
-                        }
-                    }
+    private fun findRegionNeighborsCell(
+        w: Int, chf: CompactHeightfield,
+        srcReg: IntArray, nreg: Int, regions: Array<Region>,
+        i: Int, lregs: IntArrayList, x: Int, y: Int
+    ) {
+        val s = chf.spans[i]
+        val ri = srcReg[i]
+        if (ri == 0 || ri >= nreg) {
+            return
+        }
+        val reg = regions[ri]
+        reg.spanCount++
+        reg.areaType = chf.areas[i]
+        reg.ymin = min(reg.ymin, s.y)
+        reg.ymax = max(reg.ymax, s.y)
+        // Collect all region layers.
+        lregs.add(ri)
+
+        updateNeighbors(x, y, w, chf, s, srcReg, nreg, ri, reg)
+    }
+
+    private fun updateNeighbors(
+        x: Int, y: Int, w: Int, chf: CompactHeightfield, s: CompactSpan,
+        srcReg: IntArray, nreg: Int, ri: Int, reg: Region
+    ) {
+        for (dir in 0..3) {
+            if (RecastCommon.getCon(s, dir) != RecastConstants.RC_NOT_CONNECTED) {
+                val ax = x + RecastCommon.getDirOffsetX(dir)
+                val ay = y + RecastCommon.getDirOffsetY(dir)
+                val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, dir)
+                val rai = srcReg[ai]
+                if (rai in 1 until nreg && rai != ri) {
+                    addUniqueConnection(reg, rai)
+                }
+                if (rai and RecastConstants.RC_BORDER_REG != 0) {
+                    reg.connectsToBorder = true
                 }
             }
         }
+    }
 
-        // Create 2D layers from regions.
-        var layerId = 1
-        for (i in 0 until nreg) {
-            regions[i].id = 0
+    private fun updateOverlappingRegions(lregs: IntArrayList, regions: Array<Region>) {
+        for (i in 0 until lregs.size - 1) {
+            for (j in i + 1 until lregs.size) {
+                if (lregs[i] != lregs[j]) {
+                    val ri = regions[lregs[i]]
+                    val rj = regions[lregs[j]]
+                    addUniqueFloorRegion(ri, lregs[j])
+                    addUniqueFloorRegion(rj, lregs[i])
+                }
+            }
         }
+    }
 
-        // Merge montone regions to create non-overlapping areas.
+    /**
+     * Merge montone regions to create non-overlapping areas.
+     * */
+    private fun mergeMonotoneRegions(nreg: Int, regions: Array<Region>) {
+        var layerId = 1
         val stack = IntArrayList(32)
         for (i in 1 until nreg) {
             val root = regions[i]
@@ -1009,8 +1004,9 @@ object RecastRegion {
             }
             layerId++
         }
+    }
 
-        // Remove small regions
+    private fun removeSmallRegions(nreg: Int, regions: Array<Region>, minRegionArea: Int) {
         for (i in 0 until nreg) {
             if (regions[i].spanCount in 1 until minRegionArea && !regions[i].connectsToBorder) {
                 val reg = regions[i].id
@@ -1021,8 +1017,9 @@ object RecastRegion {
                 }
             }
         }
+    }
 
-        // Compress region Ids.
+    private fun compressRegionIds(nreg: Int, regions: Array<Region>): Int {
         for (i in 0 until nreg) {
             regions[i].remap = false
             if (regions[i].id == 0) {
@@ -1047,15 +1044,15 @@ object RecastRegion {
                 }
             }
         }
-        maxRegionId = regIdGen
+        return regIdGen
+    }
 
-        // Remap regions.
+    private fun remapRegions(chf: CompactHeightfield, srcReg: IntArray, regions: Array<Region>) {
         for (i in 0 until chf.spanCount) {
             if (srcReg[i] and RecastConstants.RC_BORDER_REG == 0) {
                 srcReg[i] = regions[srcReg[i]].id
             }
         }
-        return maxRegionId
     }
 
     /**
@@ -1206,25 +1203,8 @@ object RecastRegion {
                 }
             }
 
-            // Create unique ID.
-            for (i in 1 until rid) {
-                val sweep = sweeps[i]
-                if (sweep.neighborId != RC_NULL_NEI && sweep.neighborId != 0 && prev[sweep.neighborId] == sweep.numSamples) {
-                    sweep.regionId = sweep.neighborId
-                } else {
-                    sweep.regionId = id++
-                }
-            }
-
-            // Remap IDs
-            for (x in borderSize until w - borderSize) {
-                val c = x + y * w
-                for (i in chf.index[c] until chf.endIndex[c]) {
-                    if (srcReg[i] in 1 until rid) {
-                        srcReg[i] = sweeps[srcReg[i]].regionId
-                    }
-                }
-            }
+            id = createUniqueIDs(sweeps, rid, prev, id)
+            remapIDs(y, w, borderSize, chf, srcReg, rid, sweeps)
         }
         ctx?.startTimer(TelemetryType.REGIONS_FILTER)
 
@@ -1240,6 +1220,34 @@ object RecastRegion {
             chf.spans[i].regionId = srcReg[i]
         }
         ctx?.stopTimer(TelemetryType.REGIONS)
+    }
+
+    private fun createUniqueIDs(sweeps: Array<SweepSpan>, rid: Int, prev: IntArray, id0: Int): Int {
+        var id = id0
+        for (i in 1 until rid) {
+            val sweep = sweeps[i]
+            if (sweep.neighborId != RC_NULL_NEI && sweep.neighborId != 0 && prev[sweep.neighborId] == sweep.numSamples) {
+                sweep.regionId = sweep.neighborId
+            } else {
+                sweep.regionId = id++
+            }
+        }
+        return id
+    }
+
+    private fun remapIDs(
+        y: Int, w: Int, borderSize: Int,
+        chf: CompactHeightfield, srcReg: IntArray, rid: Int,
+        sweeps: Array<SweepSpan>
+    ) {
+        for (x in borderSize until w - borderSize) {
+            val c = x + y * w
+            for (i in chf.index[c] until chf.endIndex[c]) {
+                if (srcReg[i] in 1 until rid) {
+                    srcReg[i] = sweeps[srcReg[i]].regionId
+                }
+            }
+        }
     }
 
     /**

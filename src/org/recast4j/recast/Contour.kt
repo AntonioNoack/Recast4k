@@ -21,7 +21,7 @@ package org.recast4j.recast
 /** Represents a simple, non-overlapping contour in field space.  */
 class Contour {
     /** Simplified contour vertex and connection data. [Size: 4 * #nvertices]  */
-    var vertices: IntArray? = null
+    lateinit var vertices: IntArray
 
     /** The number of vertices in the simplified contour.  */
     var numVertices = 0

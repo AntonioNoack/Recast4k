@@ -19,17 +19,14 @@ freely, subject to the following restrictions:
 package org.recast4j.recast
 
 import org.recast4j.IntArrayList
+import org.recast4j.detour.NavMeshDataCreateParams.Companion.i0
 import java.util.*
 import kotlin.math.max
 
 object RecastContour {
     private fun getCornerHeight(
-        x: Int,
-        y: Int,
-        i: Int,
-        dir: Int,
-        chf: CompactHeightfield,
-        isBorderVertex: BooleanArray
+        x: Int, y: Int, i: Int, dir: Int,
+        chf: CompactHeightfield, isBorderVertex: BooleanArray
     ): Int {
         val s = chf.spans[i]
         var ch = s.y
@@ -39,38 +36,9 @@ object RecastContour {
         // Combine region and area codes in order to prevent
         // border vertices which are in between two areas to be removed.
         regs[0] = chf.spans[i].regionId or (chf.areas[i] shl 16)
-        if (RecastCommon.getCon(s, dir) != RecastConstants.RC_NOT_CONNECTED) {
-            val ax = x + RecastCommon.getDirOffsetX(dir)
-            val ay = y + RecastCommon.getDirOffsetY(dir)
-            val ai = chf.index[ax + ay * chf.width] + RecastCommon.getCon(s, dir)
-            val asp = chf.spans[ai]
-            ch = max(ch, asp.y)
-            regs[1] = chf.spans[ai].regionId or (chf.areas[ai] shl 16)
-            if (RecastCommon.getCon(asp, dirp) != RecastConstants.RC_NOT_CONNECTED) {
-                val ax2 = ax + RecastCommon.getDirOffsetX(dirp)
-                val ay2 = ay + RecastCommon.getDirOffsetY(dirp)
-                val ai2 = chf.index[ax2 + ay2 * chf.width] + RecastCommon.getCon(asp, dirp)
-                val as2 = chf.spans[ai2]
-                ch = max(ch, as2.y)
-                regs[2] = chf.spans[ai2].regionId or (chf.areas[ai2] shl 16)
-            }
-        }
-        if (RecastCommon.getCon(s, dirp) != RecastConstants.RC_NOT_CONNECTED) {
-            val ax = x + RecastCommon.getDirOffsetX(dirp)
-            val ay = y + RecastCommon.getDirOffsetY(dirp)
-            val ai = chf.index[ax + ay * chf.width] + RecastCommon.getCon(s, dirp)
-            val asp = chf.spans[ai]
-            ch = max(ch, asp.y)
-            regs[3] = chf.spans[ai].regionId or (chf.areas[ai] shl 16)
-            if (RecastCommon.getCon(asp, dir) != RecastConstants.RC_NOT_CONNECTED) {
-                val ax2 = ax + RecastCommon.getDirOffsetX(dir)
-                val ay2 = ay + RecastCommon.getDirOffsetY(dir)
-                val ai2 = chf.index[ax2 + ay2 * chf.width] + RecastCommon.getCon(asp, dir)
-                val as2 = chf.spans[ai2]
-                ch = max(ch, as2.y)
-                regs[2] = chf.spans[ai2].regionId or (chf.areas[ai2] shl 16)
-            }
-        }
+
+        ch = getCornerHeightStep(x, y, s, dir, dirp, chf, ch, regs, 1)
+        ch = getCornerHeightStep(x, y, s, dirp, dir, chf, ch, regs, 3)
 
         // Check if the vertex is special edge vertex, these vertices will be removed later.
         for (a in 0..3) {
@@ -92,16 +60,40 @@ object RecastContour {
         return ch
     }
 
+    private fun getCornerHeightStep(
+        x: Int, y: Int, s: CompactSpan, dirp: Int, dir: Int,
+        chf: CompactHeightfield, ch0: Int, regs: IntArray, d0: Int
+    ): Int {
+        var ch = ch0
+        if (RecastCommon.getCon(s, dirp) != RecastConstants.RC_NOT_CONNECTED) {
+            val ax = x + RecastCommon.getDirOffsetX(dirp)
+            val ay = y + RecastCommon.getDirOffsetY(dirp)
+            val ai = chf.index[ax + ay * chf.width] + RecastCommon.getCon(s, dirp)
+            val asp = chf.spans[ai]
+            ch = max(ch, asp.y)
+            regs[d0] = chf.spans[ai].regionId or (chf.areas[ai] shl 16)
+            if (RecastCommon.getCon(asp, dir) != RecastConstants.RC_NOT_CONNECTED) {
+                val ax2 = ax + RecastCommon.getDirOffsetX(dir)
+                val ay2 = ay + RecastCommon.getDirOffsetY(dir)
+                val ai2 = chf.index[ax2 + ay2 * chf.width] + RecastCommon.getCon(asp, dir)
+                val as2 = chf.spans[ai2]
+                ch = max(ch, as2.y)
+                regs[2] = chf.spans[ai2].regionId or (chf.areas[ai2] shl 16)
+            }
+        }
+        return ch
+    }
+
     private fun walkContour(
-        x: Int, y: Int, i: Int,
+        x0: Int, y0: Int, i0: Int,
         chf: CompactHeightfield,
         flags: IntArray,
         points: IntArrayList
     ) {
         // Choose the first non-connected edge
-        var x = x
-        var y = y
-        var i = i
+        var x = x0
+        var y = y0
+        var i = i0
         var dir = 0
         while (flags[i] and (1 shl dir) == 0) dir++
         val startDir = dir
@@ -182,192 +174,24 @@ object RecastContour {
         points: IntArrayList, simplified: IntArrayList, maxError: Float, maxEdgeLen: Int,
         buildFlags: Int
     ) {
-        // Add initial points.
-        var hasConnections = false
-        run {
-            var i = 0
-            while (i < points.size) {
-                if (points[i + 3] and RecastConstants.RC_CONTOUR_REG_MASK != 0) {
-                    hasConnections = true
-                    break
-                }
-                i += 4
-            }
-        }
+        var hasConnections = addInitialPoints(points)
         if (hasConnections) {
             // The contour has some portals to other regions.
             // Add a new point to every location where the region changes.
-            var i = 0
-            val ni = points.size / 4
-            while (i < ni) {
-                val ii = (i + 1) % ni
-                val differentRegs = points[i * 4 + 3] and RecastConstants.RC_CONTOUR_REG_MASK != (points[ii * 4 + 3]
-                        and RecastConstants.RC_CONTOUR_REG_MASK)
-                val areaBorders = points[i * 4 + 3] and RecastConstants.RC_AREA_BORDER != (points[ii * 4 + 3]
-                        and RecastConstants.RC_AREA_BORDER)
-                if (differentRegs || areaBorders) {
-                    simplified.add(points[i * 4])
-                    simplified.add(points[i * 4 + 1])
-                    simplified.add(points[i * 4 + 2])
-                    simplified.add(i)
-                }
-                ++i
-            }
+            addPointsForPortals(simplified, points)
         }
         if (simplified.size == 0) {
-            // If there is no connections at all,
-            // create some initial points for the simplification process.
-            // Find lower-left and upper-right vertices of the contour.
-            var llx = points[0]
-            var lly = points[1]
-            var llz = points[2]
-            var lli = 0
-            var urx = points[0]
-            var ury = points[1]
-            var urz = points[2]
-            var uri = 0
-            var i = 0
-            while (i < points.size) {
-                val x = points[i]
-                val y = points[i + 1]
-                val z = points[i + 2]
-                if (x < llx || x == llx && z < llz) {
-                    llx = x
-                    lly = y
-                    llz = z
-                    lli = i / 4
-                }
-                if (x > urx || x == urx && z > urz) {
-                    urx = x
-                    ury = y
-                    urz = z
-                    uri = i / 4
-                }
-                i += 4
-            }
-            simplified.add(llx)
-            simplified.add(lly)
-            simplified.add(llz)
-            simplified.add(lli)
-            simplified.add(urx)
-            simplified.add(ury)
-            simplified.add(urz)
-            simplified.add(uri)
+            findInitialPointsForSimplification(simplified, points)
         }
-        // Add points until all raw points are within
-        // error tolerance to the simplified shape.
-        val pn = points.size / 4
-        run {
-            var i = 0
-            while (i < simplified.size / 4) {
-                val ii = (i + 1) % (simplified.size / 4)
-                var ax = simplified[i * 4]
-                var az = simplified[i * 4 + 2]
-                val ai = simplified[i * 4 + 3]
-                var bx = simplified[ii * 4]
-                var bz = simplified[ii * 4 + 2]
-                val bi = simplified[ii * 4 + 3]
 
-                // Find maximum deviation from the segment.
-                var maxd = 0f
-                var maxi = -1
-                var ci: Int
-                var cinc: Int
-                var endi: Int
+        val pn = points.size.shr(2)
+        addPointsToSimplifiedShape(simplified, pn, points, maxError)
 
-                // Traverse the segment in lexilogical order so that the
-                // max deviation is calculated similarly when traversing
-                // opposite segments.
-                if (bx > ax || bx == ax && bz > az) {
-                    cinc = 1
-                    ci = (ai + cinc) % pn
-                    endi = bi
-                } else {
-                    cinc = pn - 1
-                    ci = (bi + cinc) % pn
-                    endi = ai
-                    var temp = ax
-                    ax = bx
-                    bx = temp
-                    temp = az
-                    az = bz
-                    bz = temp
-                }
-                // Tessellate only outer edges or edges between areas.
-                if (points[ci * 4 + 3] and RecastConstants.RC_CONTOUR_REG_MASK == 0 || points[ci * 4 + 3] and RecastConstants.RC_AREA_BORDER != 0) {
-                    while (ci != endi) {
-                        val d = distancePtSeg(points[ci * 4], points[ci * 4 + 2], ax, az, bx, bz)
-                        if (d > maxd) {
-                            maxd = d
-                            maxi = ci
-                        }
-                        ci = (ci + cinc) % pn
-                    }
-                }
-                // If the max deviation is larger than accepted error,
-                // add new point, else continue to next segment.
-                if (maxi != -1 && maxd > maxError * maxError) {
-                    // Add the point.
-                    simplified.add((i + 1) * 4, points[maxi * 4])
-                    simplified.add((i + 1) * 4 + 1, points[maxi * 4 + 1])
-                    simplified.add((i + 1) * 4 + 2, points[maxi * 4 + 2])
-                    simplified.add((i + 1) * 4 + 3, maxi)
-                } else {
-                    ++i
-                }
-            }
-        }
         // Split too long edges.
         if (maxEdgeLen > 0 && buildFlags and (RecastConstants.RC_CONTOUR_TESS_WALL_EDGES or RecastConstants.RC_CONTOUR_TESS_AREA_EDGES) != 0) {
-            var i = 0
-            while (i < simplified.size / 4) {
-                val ii = (i + 1) % (simplified.size / 4)
-                val ax = simplified[i * 4]
-                val az = simplified[i * 4 + 2]
-                val ai = simplified[i * 4 + 3]
-                val bx = simplified[ii * 4]
-                val bz = simplified[ii * 4 + 2]
-                val bi = simplified[ii * 4 + 3]
-
-                // Find maximum deviation from the segment.
-                var maxi = -1
-                val ci = (ai + 1) % pn
-
-                // Tessellate only outer edges or edges between areas.
-                var tess = (buildFlags and RecastConstants.RC_CONTOUR_TESS_WALL_EDGES != 0
-                        && points[ci * 4 + 3] and RecastConstants.RC_CONTOUR_REG_MASK == 0)
-                // Wall edges.
-                // Edges between areas.
-                if (buildFlags and RecastConstants.RC_CONTOUR_TESS_AREA_EDGES != 0 && points[ci * 4 + 3] and RecastConstants.RC_AREA_BORDER != 0) tess =
-                    true
-                if (tess) {
-                    val dx = bx - ax
-                    val dz = bz - az
-                    if (dx * dx + dz * dz > maxEdgeLen * maxEdgeLen) {
-                        // Round based on the segments in lexilogical order so that the
-                        // max tesselation is consistent regardles in which direction
-                        // segments are traversed.
-                        val n = if (bi < ai) bi + pn - ai else bi - ai
-                        if (n > 1) {
-                            maxi = if ((bx > ax || bx == ax) && bz > az) (ai + n / 2) % pn else (ai + (n + 1) / 2) % pn
-                        }
-                    }
-                }
-
-                // If the max deviation is larger than accepted error,
-                // add new point, else continue to next segment.
-                if (maxi != -1) {
-                    // Add the point.
-                    simplified.add((i + 1) * 4, points[maxi * 4])
-                    simplified.add((i + 1) * 4 + 1, points[maxi * 4 + 1])
-                    simplified.add((i + 1) * 4 + 2, points[maxi * 4 + 2])
-                    simplified.add((i + 1) * 4 + 3, maxi)
-                } else {
-                    ++i
-                }
-            }
+            splitTooLongEdges(simplified, pn, buildFlags, points, maxEdgeLen)
         }
-        for (i in 0 until simplified.size / 4) {
+        for (i in 0 until simplified.size.shr(2)) {
             // The edge vertex flag is take from the current raw point,
             // and the neighbour region is take from the next raw point.
             val ai = (simplified[i * 4 + 3] + 1) % pn
@@ -376,6 +200,193 @@ object RecastContour {
                 (points[ai * 4 + 3] and (RecastConstants.RC_CONTOUR_REG_MASK or RecastConstants.RC_AREA_BORDER)
                         or (points[bi * 4 + 3] and RecastConstants.RC_BORDER_VERTEX))
         }
+    }
+
+    private fun addInitialPoints(points: IntArrayList): Boolean {
+        var i = 0
+        var hasConnections = false
+        while (i < points.size) {
+            if (points[i + 3] and RecastConstants.RC_CONTOUR_REG_MASK != 0) {
+                hasConnections = true
+                break
+            }
+            i += 4
+        }
+        return hasConnections
+    }
+
+    /**
+     * Add a new point to every location where the region changes.
+     * */
+    private fun addPointsForPortals(simplified: IntArrayList, points: IntArrayList) {
+        val ni = points.size.shr(2)
+        for (i in 0 until ni) {
+            val ii = (i + 1) % ni
+            val differentRegs = points[i * 4 + 3] and RecastConstants.RC_CONTOUR_REG_MASK !=
+                    (points[ii * 4 + 3] and RecastConstants.RC_CONTOUR_REG_MASK)
+            val areaBorders = points[i * 4 + 3] and RecastConstants.RC_AREA_BORDER !=
+                    (points[ii * 4 + 3] and RecastConstants.RC_AREA_BORDER)
+            if (differentRegs || areaBorders) {
+                simplified.add(points[i * 4])
+                simplified.add(points[i * 4 + 1])
+                simplified.add(points[i * 4 + 2])
+                simplified.add(i)
+            }
+        }
+    }
+
+    /**
+     * If there is no connections at all, create some initial points for the simplification process.
+     * Find lower-left and upper-right vertices of the contour.
+     * */
+    private fun findInitialPointsForSimplification(simplified: IntArrayList, points: IntArrayList) {
+        var llx = points[0]
+        var lly = points[1]
+        var llz = points[2]
+        var lli = 0
+        var urx = points[0]
+        var ury = points[1]
+        var urz = points[2]
+        var uri = 0
+        var i = 0
+        while (i < points.size) {
+            val x = points[i]
+            val y = points[i + 1]
+            val z = points[i + 2]
+            if (x < llx || x == llx && z < llz) {
+                llx = x
+                lly = y
+                llz = z
+                lli = i / 4
+            }
+            if (x > urx || x == urx && z > urz) {
+                urx = x
+                ury = y
+                urz = z
+                uri = i / 4
+            }
+            i += 4
+        }
+        simplified.add(llx)
+        simplified.add(lly)
+        simplified.add(llz)
+        simplified.add(lli)
+        simplified.add(urx)
+        simplified.add(ury)
+        simplified.add(urz)
+        simplified.add(uri)
+    }
+
+    /**
+     * Add points until all raw points are within error tolerance to the simplified shape.
+     * */
+    private fun addPointsToSimplifiedShape(simplified: IntArrayList, pn: Int, points: IntArrayList, maxError: Float) {
+        var i = 0
+        while (i < simplified.size.shr(2)) {
+            val ii = (i + 1) % (simplified.size.shr(2))
+            var ax = simplified[i * 4]
+            var az = simplified[i * 4 + 2]
+            val ai = simplified[i * 4 + 3]
+            var bx = simplified[ii * 4]
+            var bz = simplified[ii * 4 + 2]
+            val bi = simplified[ii * 4 + 3]
+
+            // Find maximum deviation from the segment.
+            var maxd = 0f
+            var maxi = -1
+            var ci: Int
+            var cinc: Int
+            var endi: Int
+
+            // Traverse the segment in lexilogical order so that the
+            // max deviation is calculated similarly when traversing
+            // opposite segments.
+            if (bx > ax || bx == ax && bz > az) {
+                cinc = 1
+                ci = (ai + cinc) % pn
+                endi = bi
+            } else {
+                cinc = pn - 1
+                ci = (bi + cinc) % pn
+                endi = ai
+                var temp = ax
+                ax = bx
+                bx = temp
+                temp = az
+                az = bz
+                bz = temp
+            }
+            // Tessellate only outer edges or edges between areas.
+            if (points[ci * 4 + 3] and RecastConstants.RC_CONTOUR_REG_MASK == 0 || points[ci * 4 + 3] and RecastConstants.RC_AREA_BORDER != 0) {
+                while (ci != endi) {
+                    val d = distancePtSeg(points[ci * 4], points[ci * 4 + 2], ax, az, bx, bz)
+                    if (d > maxd) {
+                        maxd = d
+                        maxi = ci
+                    }
+                    ci = (ci + cinc) % pn
+                }
+            }
+            // If the max deviation is larger than accepted error,
+            // add new point, else continue to next segment.
+            if (maxi != -1 && maxd > maxError * maxError) {
+                addNewPoint(simplified, points, i, maxi)
+            } else i++
+        }
+    }
+
+    private fun splitTooLongEdges(
+        simplified: IntArrayList, pn: Int, buildFlags: Int, points: IntArrayList,
+        maxEdgeLen: Int
+    ) {
+        var i = 0
+        while (i < simplified.size / 4) {
+            val ii = (i + 1) % (simplified.size / 4)
+            val ax = simplified[i * 4]
+            val az = simplified[i * 4 + 2]
+            val ai = simplified[i * 4 + 3]
+            val bx = simplified[ii * 4]
+            val bz = simplified[ii * 4 + 2]
+            val bi = simplified[ii * 4 + 3]
+
+            // Find maximum deviation from the segment.
+            var maxi = -1
+            val ci = (ai + 1) % pn
+
+            // Tessellate only outer edges or edges between areas.
+            var tess = (buildFlags and RecastConstants.RC_CONTOUR_TESS_WALL_EDGES != 0
+                    && points[ci * 4 + 3] and RecastConstants.RC_CONTOUR_REG_MASK == 0)
+            // Wall edges.
+            // Edges between areas.
+            if (buildFlags and RecastConstants.RC_CONTOUR_TESS_AREA_EDGES != 0 &&
+                points[ci * 4 + 3] and RecastConstants.RC_AREA_BORDER != 0
+            ) tess = true
+            if (tess) {
+                val dx = bx - ax
+                val dz = bz - az
+                if (dx * dx + dz * dz > maxEdgeLen * maxEdgeLen) {
+                    // Round based on the segments in lexilogical order so that the
+                    // max tesselation is consistent regardles in which direction
+                    // segments are traversed.
+                    val n = if (bi < ai) bi + pn - ai else bi - ai
+                    if (n > 1) {
+                        maxi = if ((bx > ax || bx == ax) && bz > az) (ai + n / 2) % pn else (ai + (n + 1) / 2) % pn
+                    }
+                }
+            }
+
+            // If the max deviation is larger than accepted error, add new point, else continue to next segment.
+            if (maxi != -1) {
+                addNewPoint(simplified, points, i, maxi)
+            } else i++
+        }
+    }
+
+    private fun addNewPoint(simplified: IntArrayList, points: IntArrayList, i: Int, maxi: Int) {
+        simplified.add((i + 1) * 4, points[maxi * 4])
+        simplified.add((i + 1) * 4 + 1, points[maxi * 4 + 1])
+        simplified.add((i + 1) * 4 + 2, points[maxi * 4 + 2])
+        simplified.add((i + 1) * 4 + 3, maxi)
     }
 
     private fun calcAreaOfPolygon2D(vertices: IntArray, nvertices: Int): Int {
@@ -392,12 +403,12 @@ object RecastContour {
     }
 
     private fun intersectSegCountour(
-        d0: Int, d1: Int, i: Int, n: Int, vertices: IntArray, d0vertices: IntArray,
+        d00: Int, d10: Int, i: Int, n: Int, vertices: IntArray, d0vertices: IntArray,
         d1vertices: IntArray
     ): Boolean {
         // For each edge (k,k+1) of P
-        var d0 = d0
-        var d1 = d1
+        var d0 = d00
+        var d1 = d10
         val pvertices = IntArray(4 * 4)
         for (g in 0..3) {
             pvertices[g] = d0vertices[d0 + g]
@@ -425,8 +436,8 @@ object RecastContour {
         return false
     }
 
-    private fun inCone(i: Int, n: Int, vertices: IntArray, pj: Int, vertpj: IntArray): Boolean {
-        var pj = pj
+    private fun inCone(i: Int, n: Int, vertices: IntArray, pj0: Int, vertpj: IntArray): Boolean {
+        var pj = pj0
         var pi = i * 4
         var pi1 = RecastMesh.next(i, n) * 4
         var pin1 = RecastMesh.prev(i, n) * 4
@@ -442,22 +453,11 @@ object RecastContour {
         pin1 = 8
         pj = 12
         // If P[i] is a convex vertex [ i+1 left or on (i-1,i) ].
-        return if (RecastMesh.leftOn(pvertices, pin1, pi, pi1)) RecastMesh.left(
-            pvertices,
-            pi,
-            pj,
-            pin1
-        ) && RecastMesh.left(
-            pvertices,
-            pj,
-            pi,
-            pi1
-        ) else !(RecastMesh.leftOn(
-            pvertices,
-            pi,
-            pj,
-            pi1
-        ) && RecastMesh.leftOn(pvertices, pj, pi, pin1))
+        return if (RecastMesh.leftOn(pvertices, pin1, pi, pi1)) {
+            RecastMesh.left(pvertices, pi, pj, pin1) && RecastMesh.left(pvertices, pj, pi, pi1)
+        } else {
+            !(RecastMesh.leftOn(pvertices, pi, pj, pi1) && RecastMesh.leftOn(pvertices, pj, pi, pin1))
+        }
         // Assume (i-1,i,i+1) not collinear.
         // else P[i] is reflex.
     }
@@ -481,46 +481,44 @@ object RecastContour {
         }
     }
 
-    private fun mergeContours(ca: Contour?, cb: Contour?, ia: Int, ib: Int) {
-        val maxVertices = ca!!.numVertices + cb!!.numVertices + 2
+    private fun mergeContours(ca: Contour, cb: Contour, ia: Int, ib: Int) {
+        val maxVertices = ca.numVertices + cb.numVertices + 2
         val vertices = IntArray(maxVertices * 4)
         var nv = 0
 
-        // Copy contour A.
+        nv = copyContour(ca, nv, ia, vertices)
+        nv = copyContour(cb, nv, ib, vertices)
+
+        ca.vertices = vertices
+        ca.numVertices = nv
+        cb.vertices = i0
+        cb.numVertices = 0
+    }
+
+    private fun copyContour(ca: Contour, nv0: Int, ia: Int, vertices: IntArray): Int {
+        var nv = nv0
+        val cav = ca.vertices
         for (i in 0..ca.numVertices) {
             val dst = nv * 4
             val src = (ia + i) % ca.numVertices * 4
-            vertices[dst] = ca.vertices!![src]
-            vertices[dst + 1] = ca.vertices!![src + 1]
-            vertices[dst + 2] = ca.vertices!![src + 2]
-            vertices[dst + 3] = ca.vertices!![src + 3]
+            vertices[dst] = cav[src]
+            vertices[dst + 1] = cav[src + 1]
+            vertices[dst + 2] = cav[src + 2]
+            vertices[dst + 3] = cav[src + 3]
             nv++
         }
-
-        // Copy contour B
-        for (i in 0..cb.numVertices) {
-            val dst = nv * 4
-            val src = (ib + i) % cb.numVertices * 4
-            vertices[dst] = cb.vertices!![src]
-            vertices[dst + 1] = cb.vertices!![src + 1]
-            vertices[dst + 2] = cb.vertices!![src + 2]
-            vertices[dst + 3] = cb.vertices!![src + 3]
-            nv++
-        }
-        ca.vertices = vertices
-        ca.numVertices = nv
-        cb.vertices = null
-        cb.numVertices = 0
+        return nv
     }
 
     // Finds the lowest leftmost vertex of a contour.
     private fun findLeftMostVertex(contour: Contour): IntArray {
-        var minx = contour.vertices!![0]
-        var minz = contour.vertices!![2]
+        val vertices = contour.vertices
+        var minx = vertices[0]
+        var minz = vertices[2]
         var leftmost = 0
         for (i in 1 until contour.numVertices) {
-            val x = contour.vertices!![i * 4]
-            val z = contour.vertices!![i * 4 + 2]
+            val x = vertices[i * 4]
+            val z = vertices[i * 4 + 2]
             if (x < minx || x == minx && z < minz) {
                 minx = x
                 minz = z
@@ -530,20 +528,25 @@ object RecastContour {
         return intArrayOf(minx, minz, leftmost)
     }
 
-    private fun mergeRegionHoles(ctx: Telemetry?, region: ContourRegion?) {
+    private fun mergeRegionHoles(ctx: Telemetry?, region: ContourRegion) {
         // Sort holes from left to right.
-        for (i in 0 until region!!.nholes) {
-            val minleft = findLeftMostVertex(region.holes[i].contour!!)
-            region.holes[i].minx = minleft[0]
-            region.holes[i].minz = minleft[1]
-            region.holes[i].leftmost = minleft[2]
+        for (i in 0 until region.nholes) {
+            val hole = region.holes[i]
+            val minleft = findLeftMostVertex(hole.contour!!)
+            hole.minx = minleft[0]
+            hole.minz = minleft[1]
+            hole.leftmost = minleft[2]
         }
+
         region.holes.sortWith { a, b ->
-            a!!.minx.compareTo(b!!.minx) * 2 +
+            a.minx.compareTo(b.minx) * 2 +
                     a.minz.compareTo(b.minz)
         }
+
         var maxVertices = region.outline!!.numVertices
-        for (i in 0 until region.nholes) maxVertices += region.holes[i].contour!!.numVertices
+        for (i in 0 until region.nholes) {
+            maxVertices += region.holes[i].contour!!.numVertices
+        }
         val diags = Array(maxVertices) { PotentialDiagonal() }
         val outline = region.outline
 
@@ -564,8 +567,8 @@ object RecastContour {
                 var ndiags = 0
                 val corner = bestVertex * 4
                 for (j in 0 until outline!!.numVertices) {
-                    val vs = outline.vertices!!
-                    val hs = hole.vertices!!
+                    val vs = outline.vertices
+                    val hs = hole.vertices
                     if (inCone(j, outline.numVertices, vs, corner, hs)) {
                         val dx = vs[j * 4] - hs[corner]
                         val dz = vs[j * 4 + 2] - hs[corner + 2]
@@ -574,21 +577,22 @@ object RecastContour {
                         ndiags++
                     }
                 }
+
                 // Sort potential diagonals by distance, we want to make the connection as short as possible.
-                Arrays.sort(diags, 0, ndiags, CompareDiagDist())
+                Arrays.sort(diags, 0, ndiags, CompareDiagDist)
 
                 // Find a diagonal that is not intersecting the outline not the remaining holes.
                 for (j in 0 until ndiags) {
                     val pt = diags[j].vert * 4
                     var intersect = intersectSegCountour(
-                        pt, corner, diags[j].vert, outline.numVertices, outline.vertices!!,
-                        outline.vertices!!, hole.vertices!!
+                        pt, corner, diags[j].vert, outline.numVertices, outline.vertices,
+                        outline.vertices, hole.vertices
                     )
                     var k = i
                     while (k < region.nholes && !intersect) {
                         intersect = intersectSegCountour(
                             pt, corner, -1, region.holes[k].contour!!.numVertices,
-                            region.holes[k].contour!!.vertices!!, outline.vertices!!, hole.vertices!!
+                            region.holes[k].contour!!.vertices, outline.vertices, hole.vertices
                         )
                         k++
                     }
@@ -606,7 +610,7 @@ object RecastContour {
                 ctx!!.warn("mergeHoles: Failed to find merge points for")
                 continue
             }
-            mergeContours(region.outline, hole, index, bestVertex)
+            mergeContours(region.outline!!, hole, index, bestVertex)
         }
     }
 
@@ -649,10 +653,101 @@ object RecastContour {
         cset.height = chf.height - chf.borderSize * 2
         cset.borderSize = chf.borderSize
         cset.maxError = maxError
+
         val flags = IntArray(chf.spanCount)
         ctx?.startTimer(TelemetryType.CONTOURS_TRACE)
+        markBoundaries(w, h, chf, flags)
+        ctx?.stopTimer(TelemetryType.CONTOURS_TRACE)
 
-        // Mark boundaries.
+        val vertices = IntArrayList(256)
+        val simplified = IntArrayList(64)
+        for (y in 0 until h) {
+            for (x in 0 until w) {
+                val c = x + y * w
+                for (i in chf.index[c] until chf.endIndex[c]) {
+                    createContoursInCell(
+                        ctx, x, y, i, flags, chf, vertices, simplified,
+                        maxError, maxEdgeLen, buildFlags, cset, borderSize
+                    )
+                }
+            }
+        }
+
+        // Merge holes if needed.
+        if (cset.contours.size > 0) {
+            mergeHoles(ctx, cset, chf)
+        }
+        ctx?.stopTimer(TelemetryType.CONTOURS)
+        return cset
+    }
+
+    private fun createContoursInCell(
+        ctx: Telemetry?, x: Int, y: Int, i: Int, flags: IntArray, chf: CompactHeightfield,
+        vertices: IntArrayList, simplified: IntArrayList,
+        maxError: Float, maxEdgeLen: Int, buildFlags: Int,
+        cset: ContourSet, borderSize: Int,
+    ) {
+        if (flags[i] == 0 || flags[i] == 0xf) {
+            flags[i] = 0
+            return
+        }
+        val reg = chf.spans[i].regionId
+        if (reg == 0 || reg and RecastConstants.RC_BORDER_REG != 0) {
+            return
+        }
+
+        val area = chf.areas[i]
+        vertices.clear()
+        simplified.clear()
+        ctx?.startTimer(TelemetryType.CONTOURS_WALK)
+        walkContour(x, y, i, chf, flags, vertices)
+        ctx?.stopTimer(TelemetryType.CONTOURS_WALK)
+        ctx?.startTimer(TelemetryType.CONTOURS_SIMPLIFY)
+        simplifyContour(vertices, simplified, maxError, maxEdgeLen, buildFlags)
+        removeDegenerateSegments(simplified)
+        ctx?.stopTimer(TelemetryType.CONTOURS_SIMPLIFY)
+
+        // Store region->contour remap info.
+        // Create contour.
+        println("simplified: ${simplified.size} from ${vertices.size} vertices")
+        if (simplified.size.shr(2) >= 3) {
+            cset.contours.add(createContour(simplified, vertices, borderSize, reg, area))
+        }
+    }
+
+    private fun createContour(
+        simplified: IntArrayList, vertices: IntArrayList,
+        borderSize: Int, reg: Int, area: Int
+    ): Contour {
+        val cont = Contour()
+        cont.numVertices = simplified.size / 4
+        cont.vertices = IntArray(simplified.size)
+        val vs = cont.vertices
+        for (l in vs.indices) {
+            vs[l] = simplified[l]
+        }
+        if (borderSize > 0) {
+            // If the heightfield was build with bordersize, remove the offset.
+            for (j in 0 until cont.numVertices) {
+                vs[j * 4] -= borderSize
+                vs[j * 4 + 2] -= borderSize
+            }
+        }
+        cont.numRawVertices = vertices.size / 4
+        cont.rawVertices = vertices.toIntArray()
+        if (borderSize > 0) {
+            // If the heightfield was build with bordersize, remove the offset.
+            for (j in 0 until cont.numRawVertices) {
+                cont.rawVertices[j * 4] -= borderSize
+                cont.rawVertices[j * 4 + 2] -= borderSize
+            }
+        }
+        cont.reg = reg
+        cont.area = area
+        return cont
+    }
+
+    private fun markBoundaries(w: Int, h: Int, chf: CompactHeightfield, flags: IntArray) {
         for (y in 0 until h) {
             for (x in 0 until w) {
                 val c = x + y * w
@@ -677,130 +772,69 @@ object RecastContour {
                 }
             }
         }
-        ctx?.stopTimer(TelemetryType.CONTOURS_TRACE)
-        val vertices = IntArrayList(256)
-        val simplified = IntArrayList(64)
-        for (y in 0 until h) {
-            for (x in 0 until w) {
-                val c = x + y * w
-                for (i in chf.index[c] until chf.endIndex[c]) {
-                    if (flags[i] == 0 || flags[i] == 0xf) {
-                        flags[i] = 0
-                        continue
-                    }
-                    val reg = chf.spans[i].regionId
-                    if (reg == 0 || reg and RecastConstants.RC_BORDER_REG != 0) {
-                        continue
-                    }
-                    val area = chf.areas[i]
-                    vertices.clear()
-                    simplified.clear()
-                    ctx?.startTimer(TelemetryType.CONTOURS_WALK)
-                    walkContour(x, y, i, chf, flags, vertices)
-                    ctx?.stopTimer(TelemetryType.CONTOURS_WALK)
-                    ctx?.startTimer(TelemetryType.CONTOURS_SIMPLIFY)
-                    simplifyContour(vertices, simplified, maxError, maxEdgeLen, buildFlags)
-                    removeDegenerateSegments(simplified)
-                    ctx?.stopTimer(TelemetryType.CONTOURS_SIMPLIFY)
+    }
 
-                    // Store region->contour remap info.
-                    // Create contour.
-                    println("simplified: ${simplified.size} from ${vertices.size} vertices")
-                    if (simplified.size / 4 >= 3) {
-                        val cont = Contour()
-                        cset.contours.add(cont)
-                        cont.numVertices = simplified.size / 4
-                        cont.vertices = IntArray(simplified.size)
-                        val vs = cont.vertices!!
-                        for (l in vs.indices) {
-                            vs[l] = simplified[l]
-                        }
-                        if (borderSize > 0) {
-                            // If the heightfield was build with bordersize, remove the offset.
-                            for (j in 0 until cont.numVertices) {
-                                vs[j * 4] -= borderSize
-                                vs[j * 4 + 2] -= borderSize
-                            }
-                        }
-                        cont.numRawVertices = vertices.size / 4
-                        cont.rawVertices = IntArray(vertices.size)
-                        for (l in cont.rawVertices.indices) {
-                            cont.rawVertices[l] = vertices[l]
-                        }
-                        if (borderSize > 0) {
-                            // If the heightfield was build with bordersize, remove the offset.
-                            for (j in 0 until cont.numRawVertices) {
-                                cont.rawVertices[j * 4] -= borderSize
-                                cont.rawVertices[j * 4 + 2] -= borderSize
-                            }
-                        }
-                        cont.reg = reg
-                        cont.area = area
-                    }
-                }
-            }
+    private fun mergeHoles(ctx: Telemetry?, cset: ContourSet, chf: CompactHeightfield) {
+        // Calculate winding of all polygons.
+        val winding = IntArray(cset.contours.size)
+        var nholes = 0
+        for (i in cset.contours.indices) {
+            val cont = cset.contours[i]
+            // If the contour is wound backwards, it is a hole.
+            winding[i] = if (calcAreaOfPolygon2D(cont.vertices, cont.numVertices) < 0) -1 else 1
+            if (winding[i] < 0) nholes++
         }
-
-        // Merge holes if needed.
-        if (cset.contours.size > 0) {
-            // Calculate winding of all polygons.
-            val winding = IntArray(cset.contours.size)
-            var nholes = 0
+        if (nholes > 0) {
+            // Collect outline contour and holes contours per region.
+            // We assume that there is one outline and multiple holes.
+            val regions = Array(chf.maxRegions + 1) { ContourRegion() }
             for (i in cset.contours.indices) {
                 val cont = cset.contours[i]
-                // If the contour is wound backwards, it is a hole.
-                winding[i] = if (calcAreaOfPolygon2D(cont.vertices!!, cont.numVertices) < 0) -1 else 1
-                if (winding[i] < 0) nholes++
+                val region = regions[cont.reg]
+                // Positively would contours are outlines, negative holes.
+                if (winding[i] > 0) {
+                    if (region.outline != null) {
+                        throw RuntimeException("rcBuildContours: Multiple outlines for region ${cont.reg}.")
+                    }
+                    region.outline = cont
+                } else {
+                    region.nholes++
+                }
             }
-            if (nholes > 0) {
-                // Collect outline contour and holes contours per region.
-                // We assume that there is one outline and multiple holes.
-                val nregions = chf.maxRegions + 1
-                val regions = Array(nregions) { ContourRegion() }
-                for (i in cset.contours.indices) {
-                    val cont = cset.contours[i]
-                    // Positively would contours are outlines, negative holes.
-                    if (winding[i] > 0) {
-                        if (regions[cont.reg].outline != null) {
-                            throw RuntimeException("rcBuildContours: Multiple outlines for region ${cont.reg}.")
-                        }
-                        regions[cont.reg].outline = cont
-                    } else {
-                        regions[cont.reg].nholes++
-                    }
+            for (i in regions.indices) {
+                val region = regions[i]
+                if (region.nholes > 0) {
+                    region.holes = Array(region.nholes) { ContourHole() }
+                    region.nholes = 0
                 }
-                for (i in 0 until nregions) {
-                    if (regions[i].nholes > 0) {
-                        regions[i].holes = Array(regions[i].nholes) { ContourHole() }
-                        regions[i].nholes = 0
-                    }
-                }
-                for (i in cset.contours.indices) {
-                    val cont = cset.contours[i]
-                    val reg = regions[cont.reg]
-                    if (winding[i] < 0) reg.holes[reg.nholes++].contour = cont
-                }
+            }
+            for (i in cset.contours.indices) {
+                val contour = cset.contours[i]
+                val region = regions[contour.reg]
+                if (winding[i] < 0) region.holes[region.nholes++].contour = contour
+            }
 
-                // Finally merge each regions holes into the outline.
-                for (i in 0 until nregions) {
-                    val reg = regions[i]
-                    if (reg.nholes == 0) continue
-                    if (reg.outline != null) {
-                        mergeRegionHoles(ctx, reg)
-                    } else {
-                        // The region does not have an outline.
-                        // This can happen if the contour becomes self-overlapping because of
-                        // too aggressive simplification settings.
-                        throw RuntimeException(
-                            "rcBuildContours: Bad outline for region " + i
-                                    + ", contour simplification is likely too aggressive."
-                        )
-                    }
-                }
+            // Finally merge each regions holes into the outline.
+            mergeHolesIntoOutline(ctx, regions)
+        }
+    }
+
+    private fun mergeHolesIntoOutline(ctx: Telemetry?, regions: Array<ContourRegion>) {
+        for (i in regions.indices) {
+            val reg = regions[i]
+            if (reg.nholes == 0) continue
+            if (reg.outline != null) {
+                mergeRegionHoles(ctx, reg)
+            } else {
+                // The region does not have an outline.
+                // This can happen if the contour becomes self-overlapping because of
+                // too aggressive simplification settings.
+                throw RuntimeException(
+                    "rcBuildContours: Bad outline for region " + i
+                            + ", contour simplification is likely too aggressive."
+                )
             }
         }
-        ctx?.stopTimer(TelemetryType.CONTOURS)
-        return cset
     }
 
     private class ContourRegion {
@@ -821,7 +855,7 @@ object RecastContour {
         var vert = 0
     }
 
-    private class CompareDiagDist : Comparator<PotentialDiagonal> {
+    private object CompareDiagDist : Comparator<PotentialDiagonal> {
         override fun compare(va: PotentialDiagonal, vb: PotentialDiagonal): Int {
             return va.dist.toFloat().compareTo(vb.dist.toFloat())
         }

@@ -714,7 +714,7 @@ object RecastMeshDetail {
     ) {
         // Note: Reads to the compact heightfield are offset by border size (bs)
         // since border size offset is already removed from the polymesh vertices.
-        var queue = IntArrayList(512)
+        val queue = IntArrayList(512)
         hp.data.fill(RC_UNSET_HEIGHT, 0, hp.width * hp.height)
         var empty = true
 
@@ -722,8 +722,7 @@ object RecastMeshDetail {
         // of different regions. If it was then it could potentially be overlapping
         // with polys of that region, and the heights sampled here could be wrong.
         if (region != RC_MULTIPLE_REGS) {
-            // Copy the height from the same region, and mark region borders
-            // as seed points to fill the rest.
+            // Copy the height from the same region, and mark region borders as seed points to fill the rest.
             for (hy in 0 until hp.height) {
                 val y = hp.ymin + hy + bs
                 for (hx in 0 until hp.width) {
@@ -780,7 +779,7 @@ object RecastMeshDetail {
             head += 3
             if (head >= RETRACT_SIZE_X3) {
                 head = 0
-                queue = queue.subList(RETRACT_SIZE_X3, queue.size)
+                queue.removeRange(0, RETRACT_SIZE_X3)
             }
             val cs = chf.spans[ci]
             for (dir in 0..3) {

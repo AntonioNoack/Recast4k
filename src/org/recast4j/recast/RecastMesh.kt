@@ -870,12 +870,14 @@ object RecastMesh {
         var maxVertices = 0
         var maxTris = 0
         var maxVerticesPerCont = 0
-        for (i in cset.contours.indices) {
+        val contours = cset.contours
+        for (i in contours.indices) {
             // Skip null contours.
-            if (cset.contours[i].numVertices < 3) continue
-            maxVertices += cset.contours[i].numVertices
-            maxTris += cset.contours[i].numVertices - 2
-            maxVerticesPerCont = max(maxVerticesPerCont, cset.contours[i].numVertices)
+            val contour = contours[i]
+            if (contour.numVertices < 3) continue
+            maxVertices += contour.numVertices
+            maxTris += contour.numVertices - 2
+            maxVerticesPerCont = max(maxVerticesPerCont, contour.numVertices)
         }
         if (maxVertices >= 0xfffe) {
             throw RuntimeException("rcBuildPolyMesh: Too many vertices $maxVertices")

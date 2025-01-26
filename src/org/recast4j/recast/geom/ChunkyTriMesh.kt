@@ -34,13 +34,13 @@ class ChunkyTriMesh(vertices: FloatArray, tris: IntArray, numTris: Int, trisPerC
         lateinit var triangles: IntArray
     }
 
-    private class CompareItemX : Comparator<Node0> {
+    private object CompareItemX : Comparator<Node0> {
         override fun compare(a: Node0, b: Node0): Int {
             return a.minX.compareTo(b.minX)
         }
     }
 
-    private class CompareItemY : Comparator<Node0> {
+    private object CompareItemY : Comparator<Node0> {
         override fun compare(a: Node0, b: Node0): Int {
             return a.minY.compareTo(b.minY)
         }
@@ -97,10 +97,10 @@ class ChunkyTriMesh(vertices: FloatArray, tris: IntArray, numTris: Int, trisPerC
             calcExtends(items, startIndex, endIndex, node)
             val axis = longestAxis(node.maxX - node.minX, node.maxY - node.minY)
             if (axis == 0) {
-                Arrays.sort(items, startIndex, endIndex, CompareItemX())
+                Arrays.sort(items, startIndex, endIndex, CompareItemX)
                 // Sort along x-axis
             } else if (axis == 1) {
-                Arrays.sort(items, startIndex, endIndex, CompareItemY())
+                Arrays.sort(items, startIndex, endIndex, CompareItemY)
                 // Sort along y-axis
             }
             val splitIndex = startIndex + length / 2

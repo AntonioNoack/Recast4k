@@ -125,21 +125,13 @@ class RecastArea {
         chf: CompactHeightfield
     ) {
         ctx?.startTimer(TelemetryType.MARK_CYLINDER_AREA)
-        val bmin = Vector3f()
-        val bmax = Vector3f()
-        bmin.x = pos.x - r
-        bmin.y = pos.y
-        bmin.z = pos.z - r
-        bmax.x = pos.x + r
-        bmax.y = pos.y + h
-        bmax.z = pos.z + r
         val r2 = r * r
-        var minx = ((bmin.x - chf.bmin.x) / chf.cellSize).toInt()
-        val miny = ((bmin.y - chf.bmin.y) / chf.cellHeight).toInt()
-        var minz = ((bmin.z - chf.bmin.z) / chf.cellSize).toInt()
-        var maxx = ((bmax.x - chf.bmin.x) / chf.cellSize).toInt()
-        var maxy = ((bmax.y - chf.bmin.y) / chf.cellHeight).toInt()
-        val maxz = ((bmax.z - chf.bmin.z) / chf.cellSize).toInt()
+        var minx = ((pos.x - r - chf.bmin.x) / chf.cellSize).toInt()
+        val miny = ((pos.y - chf.bmin.y) / chf.cellHeight).toInt()
+        var minz = ((pos.z - r - chf.bmin.z) / chf.cellSize).toInt()
+        var maxx = ((pos.x + r - chf.bmin.x) / chf.cellSize).toInt()
+        var maxy = ((pos.y + h - chf.bmin.y) / chf.cellHeight).toInt()
+        val maxz = ((pos.z + r - chf.bmin.z) / chf.cellSize).toInt()
         minx = max(minx, 0)
         minz = max(minz, 0)
         maxx = min(maxx, chf.width - 1)
@@ -178,7 +170,23 @@ class RecastArea {
             ctx?.startTimer(TelemetryType.ERODE_AREA)
             val dist = IntArray(chf.spanCount)
             dist.fill(255)
-            // Mark boundary cells.
+            erodeMarkBoundaryCells(w, h, chf, dist)
+            for (y in 0 until h) {
+                for (x in 0 until w) {
+                    erodeCell(x, y, w, chf, dist, 0, 3, 2)
+                }
+            }
+            for (y in h - 1 downTo 0) {
+                for (x in w - 1 downTo 0) {
+                    erodeCell(x, y, w, chf, dist, 2, 1, 0)
+                }
+            }
+            val thr = radius * 2
+            for (i in 0 until chf.spanCount) if (dist[i] < thr) chf.areas[i] = RecastConstants.RC_NULL_AREA
+            ctx?.stopTimer(TelemetryType.ERODE_AREA)
+        }
+
+        private fun erodeMarkBoundaryCells(w: Int, h: Int, chf: CompactHeightfield, dist: IntArray) {
             for (y in 0 until h) {
                 for (x in 0 until w) {
                     val c = x + y * w
@@ -204,119 +212,63 @@ class RecastArea {
                     }
                 }
             }
+        }
 
-            // Pass 1
-            for (y in 0 until h) {
-                for (x in 0 until w) {
-                    val c = x + y * w
-                    for (i in chf.index[c] until chf.endIndex[c]) {
-                        val s = chf.spans[i]
-                        if (RecastCommon.getCon(s, 0) != RecastConstants.RC_NOT_CONNECTED) {
-                            // (-1,0)
-                            val ax = x + RecastCommon.getDirOffsetX(0)
-                            val ay = y + RecastCommon.getDirOffsetY(0)
-                            val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 0)
-                            val asp = chf.spans[ai]
-                            var nd = min(dist[ai] + 2, 255)
-                            if (nd < dist[i]) dist[i] = nd
+        private fun erodeCell(
+            x: Int, y: Int, w: Int, chf: CompactHeightfield, dist: IntArray,
+            d0: Int, d1: Int, d2: Int,
+        ) {
+            val c = x + y * w
+            for (i in chf.index[c] until chf.endIndex[c]) {
+                val s = chf.spans[i]
+                erodeCellStep(x, y, w, chf, dist, d0, d1, i, s)
+                erodeCellStep(x, y, w, chf, dist, d1, d2, i, s)
+            }
+        }
 
-                            // (-1,-1)
-                            if (RecastCommon.getCon(asp, 3) != RecastConstants.RC_NOT_CONNECTED) {
-                                val aax = ax + RecastCommon.getDirOffsetX(3)
-                                val aay = ay + RecastCommon.getDirOffsetY(3)
-                                val aai = chf.index[aax + aay * w] + RecastCommon.getCon(asp, 3)
-                                nd = min(dist[aai] + 3, 255)
-                                if (nd < dist[i]) dist[i] = nd
-                            }
-                        }
-                        if (RecastCommon.getCon(s, 3) != RecastConstants.RC_NOT_CONNECTED) {
-                            // (0,-1)
-                            val ax = x + RecastCommon.getDirOffsetX(3)
-                            val ay = y + RecastCommon.getDirOffsetY(3)
-                            val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 3)
-                            val asp = chf.spans[ai]
-                            var nd = min(dist[ai] + 2, 255)
-                            if (nd < dist[i]) dist[i] = nd
+        private fun erodeCellStep(
+            x: Int, y: Int, w: Int, chf: CompactHeightfield, dist: IntArray,
+            d0: Int, d1: Int, i: Int, s: CompactSpan
+        ) {
+            if (RecastCommon.getCon(s, d0) != RecastConstants.RC_NOT_CONNECTED) {
+                // (-1,0) if 0, (1,0) if 2, (0,-1) if 3, (0,1) if 1
+                val ax = x + RecastCommon.getDirOffsetX(d0)
+                val ay = y + RecastCommon.getDirOffsetY(d0)
+                val ai = getNextErodeIndex(ax, ay, w, chf, s, d0)
+                val asp = chf.spans[ai]
+                erodeCellStepMin(dist, i, ai, 2)
 
-                            // (1,-1)
-                            if (RecastCommon.getCon(asp, 2) != RecastConstants.RC_NOT_CONNECTED) {
-                                val aax = ax + RecastCommon.getDirOffsetX(2)
-                                val aay = ay + RecastCommon.getDirOffsetY(2)
-                                val aai = chf.index[aax + aay * w] + RecastCommon.getCon(asp, 2)
-                                nd = min(dist[aai] + 3, 255)
-                                if (nd < dist[i]) dist[i] = nd
-                            }
-                        }
-                    }
+                // (-1,-1) if 3, (1,1) if 1, (1,-1) if 2, (-1,1) if 0
+                if (RecastCommon.getCon(asp, d1) != RecastConstants.RC_NOT_CONNECTED) {
+                    val aax = ax + RecastCommon.getDirOffsetX(d1)
+                    val aay = ay + RecastCommon.getDirOffsetY(d1)
+                    val aai = getNextErodeIndex(aax, aay, w, chf, asp, d1)
+                    erodeCellStepMin(dist, aai, i, 3)
                 }
             }
+        }
 
-            // Pass 2
-            for (y in h - 1 downTo 0) {
-                for (x in w - 1 downTo 0) {
-                    val c = x + y * w
-                    for (i in chf.index[c] until chf.endIndex[c]) {
-                        val s = chf.spans[i]
-                        if (RecastCommon.getCon(s, 2) != RecastConstants.RC_NOT_CONNECTED) {
-                            // (1,0)
-                            val ax = x + RecastCommon.getDirOffsetX(2)
-                            val ay = y + RecastCommon.getDirOffsetY(2)
-                            val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 2)
-                            val asp = chf.spans[ai]
-                            var nd = min(dist[ai] + 2, 255)
-                            if (nd < dist[i]) dist[i] = nd
+        private fun getNextErodeIndex(x: Int, y: Int, w: Int, chf: CompactHeightfield, s: CompactSpan, d0: Int): Int {
+            return chf.index[x + y * w] + RecastCommon.getCon(s, d0)
+        }
 
-                            // (1,1)
-                            if (RecastCommon.getCon(asp, 1) != RecastConstants.RC_NOT_CONNECTED) {
-                                val aax = ax + RecastCommon.getDirOffsetX(1)
-                                val aay = ay + RecastCommon.getDirOffsetY(1)
-                                val aai = chf.index[aax + aay * w] + RecastCommon.getCon(asp, 1)
-                                nd = min(dist[aai] + 3, 255)
-                                if (nd < dist[i]) dist[i] = nd
-                            }
-                        }
-                        if (RecastCommon.getCon(s, 1) != RecastConstants.RC_NOT_CONNECTED) {
-                            // (0,1)
-                            val ax = x + RecastCommon.getDirOffsetX(1)
-                            val ay = y + RecastCommon.getDirOffsetY(1)
-                            val ai = chf.index[ax + ay * w] + RecastCommon.getCon(s, 1)
-                            val asp = chf.spans[ai]
-                            var nd = min(dist[ai] + 2, 255)
-                            if (nd < dist[i]) dist[i] = nd
-
-                            // (-1,1)
-                            if (RecastCommon.getCon(asp, 0) != RecastConstants.RC_NOT_CONNECTED) {
-                                val aax = ax + RecastCommon.getDirOffsetX(0)
-                                val aay = ay + RecastCommon.getDirOffsetY(0)
-                                val aai = chf.index[aax + aay * w] + RecastCommon.getCon(asp, 0)
-                                nd = min(dist[aai] + 3, 255)
-                                if (nd < dist[i]) dist[i] = nd
-                            }
-                        }
-                    }
-                }
-            }
-            val thr = radius * 2
-            for (i in 0 until chf.spanCount) if (dist[i] < thr) chf.areas[i] = RecastConstants.RC_NULL_AREA
-            ctx?.stopTimer(TelemetryType.ERODE_AREA)
+        private fun erodeCellStepMin(dist: IntArray, i: Int, ai: Int, dd: Int) {
+            var nd = min(dist[ai] + dd, 255)
+            if (nd < dist[i]) dist[i] = nd
         }
 
         fun pointInPoly(vertices: FloatArray, p: Vector3f): Boolean {
-            var c = false
-            var i: Int
-            var j: Int
-            i = 0
-            j = vertices.size - 3
+            var isInside = false
+            var i = 0
+            var j = vertices.size - 3
             while (i < vertices.size) {
-                if (vertices[i + 2] > p.z != vertices[j + 2] > p.z &&
+                if ((vertices[i + 2] > p.z) != (vertices[j + 2] > p.z) &&
                     p.x < (vertices[j] - vertices[i]) * (p.z - vertices[i + 2]) / (vertices[j + 2] - vertices[i + 2]) + vertices[i]
-                ) {
-                    c = !c
-                }
+                ) isInside = !isInside
                 j = i
                 i += 3
             }
-            return c
+            return isInside
         }
 
         /**
@@ -336,10 +288,8 @@ class RecastArea {
             chf: CompactHeightfield
         ) {
             ctx?.startTimer(TelemetryType.MARK_CONVEXPOLY_AREA)
-            val bmin = Vector3f()
-            val bmax = Vector3f()
-            bmin.set(vertices, 0)
-            bmax.set(vertices, 0)
+            val bmin = Vector3f().set(vertices, 0)
+            val bmax = Vector3f().set(bmin)
             var i = 3
             while (i < vertices.size) {
                 Vectors.min(bmin, vertices, i)

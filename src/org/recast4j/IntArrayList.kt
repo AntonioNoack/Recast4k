@@ -62,9 +62,13 @@ class IntArrayList(var values: IntArray) {
 
     fun isEmpty() = size <= 0
 
-    fun subList(startIndex: Int, endIndex: Int): IntArrayList {
-        return IntArrayList(values.copyOfRange(startIndex, endIndex))
+    fun removeRange(startIndex: Int, endIndex: Int) {
+        val rangeSize = endIndex - startIndex
+        System.arraycopy(values, endIndex, values, startIndex, size - endIndex)
+        size -= rangeSize
     }
+
+    fun toIntArray(): IntArray = values.copyOf(size)
 
     companion object {
         val empty = IntArrayList(0)
