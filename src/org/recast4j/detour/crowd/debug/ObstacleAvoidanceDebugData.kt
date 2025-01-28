@@ -23,82 +23,63 @@ import org.recast4j.Vectors.clamp
 import kotlin.math.max
 import kotlin.math.min
 
-class ObstacleAvoidanceDebugData(var maxSamples: Int) {
+class ObstacleAvoidanceDebugData(capacity: Int) {
 
-    var sampleCount = 0
+    var size = 0
 
-    var vel: FloatArray = FloatArray(3 * maxSamples)
-    var ssize: FloatArray = FloatArray(maxSamples)
-    var pen: FloatArray = FloatArray(maxSamples)
-    var vpen: FloatArray = FloatArray(maxSamples)
-    var vcpen: FloatArray = FloatArray(maxSamples)
-    var spen: FloatArray = FloatArray(maxSamples)
-    var tpen: FloatArray = FloatArray(maxSamples)
+    val velocities = FloatArray(3 * capacity)
+    val sizes = FloatArray(capacity)
+    val penalties = FloatArray(capacity)
+    val desiredVelocityPenalties = FloatArray(capacity)
+    val currentVelocityPenalties = FloatArray(capacity)
+    val preferredSidePenalties = FloatArray(capacity)
+    val collisionTimePenalties = FloatArray(capacity)
 
     fun reset() {
-        sampleCount = 0
+        size = 0
     }
+
+    val capacity get() = sizes.size
 
     fun normalizeArray(arr: FloatArray, n: Int) {
         // Normalize penalty range.
-        var minPen = Float.MAX_VALUE
-        var maxPen = -Float.MAX_VALUE
+        var minValue = Float.MAX_VALUE
+        var maxValue = -Float.MAX_VALUE
         for (i in 0 until n) {
-            minPen = min(minPen, arr[i])
-            maxPen = max(maxPen, arr[i])
+            minValue = min(minValue, arr[i])
+            maxValue = max(maxValue, arr[i])
         }
-        val penRange = maxPen - minPen
-        val s = if (penRange > 0.001f) 1f / penRange else 1f
-        for (i in 0 until n) arr[i] = clamp((arr[i] - minPen) * s, 0f, 1f)
+        val range = maxValue - minValue
+        val scale = if (range > 0.001f) 1f / range else 1f
+        for (i in 0 until n) {
+            arr[i] = clamp((arr[i] - minValue) * scale, 0f, 1f)
+        }
     }
 
     fun normalizeSamples() {
-        normalizeArray(pen, sampleCount)
-        normalizeArray(vpen, sampleCount)
-        normalizeArray(vcpen, sampleCount)
-        normalizeArray(spen, sampleCount)
-        normalizeArray(tpen, sampleCount)
+        normalizeArray(penalties, size)
+        normalizeArray(desiredVelocityPenalties, size)
+        normalizeArray(currentVelocityPenalties, size)
+        normalizeArray(preferredSidePenalties, size)
+        normalizeArray(collisionTimePenalties, size)
     }
 
-    fun addSample(vel: Vector3f, ssize: Float, pen: Float, vpen: Float, vcpen: Float, spen: Float, tpen: Float) {
-        if (sampleCount >= maxSamples) return
-        vel.get(this.vel, sampleCount * 3)
-        this.ssize[sampleCount] = ssize
-        this.pen[sampleCount] = pen
-        this.vpen[sampleCount] = vpen
-        this.vcpen[sampleCount] = vcpen
-        this.spen[sampleCount] = spen
-        this.tpen[sampleCount] = tpen
-        sampleCount++
-    }
-
-    fun getSampleVelocity(i: Int): Vector3f {
-        val vel = Vector3f()
-        vel.set(this.vel, i * 3)
-        return vel
-    }
-
-    fun getSampleSize(i: Int): Float {
-        return ssize[i]
-    }
-
-    fun getSamplePenalty(i: Int): Float {
-        return pen[i]
-    }
-
-    fun getSampleDesiredVelocityPenalty(i: Int): Float {
-        return vpen[i]
-    }
-
-    fun getSampleCurrentVelocityPenalty(i: Int): Float {
-        return vcpen[i]
-    }
-
-    fun getSamplePreferredSidePenalty(i: Int): Float {
-        return spen[i]
-    }
-
-    fun getSampleCollisionTimePenalty(i: Int): Float {
-        return tpen[i]
+    fun addSample(
+        velocity: Vector3f,
+        sizeI: Float, penalty: Float,
+        desiredVelocityPenalty: Float,
+        currentVelocityPenalty: Float,
+        preferredSidePenalty: Float,
+        collisionTimePenalty: Float
+    ) {
+        if (size >= capacity) return
+        velocity.get(velocities, size * 3)
+        sizes[size] = sizeI
+        penalties[size] = penalty
+        desiredVelocityPenalties[size] = desiredVelocityPenalty
+        currentVelocityPenalties[size] = currentVelocityPenalty
+        preferredSidePenalties[size] = preferredSidePenalty
+        collisionTimePenalties[size] = collisionTimePenalty
+        size++
     }
 }

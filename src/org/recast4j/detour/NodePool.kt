@@ -54,21 +54,14 @@ class NodePool {
     }
 
     fun findNodes(id: Long): List<Node> {
-        var nodes: List<Node>? = nodeMap[id]
-        if (nodes == null) {
-            nodes = ArrayList()
-        }
-        return nodes
+        return nodeMap[id] ?: emptyList()
     }
 
     fun findNode(id: Long): Node? {
-        val nodes: List<Node>? = nodeMap[id]
-        return if (nodes != null && nodes.isNotEmpty()) {
-            nodes[0]
-        } else null
+        return nodeMap[id]?.firstOrNull()
     }
 
-    fun getNode(id: Long, state: Int): Node {
+    fun getOrCreateNode(id: Long, state: Int): Node {
         var nodes = nodeMap[id]
         if (nodes != null) {
             for (node in nodes) {
@@ -100,7 +93,7 @@ class NodePool {
         return if (idx != 0) nodeList[idx - 1] else null
     }
 
-    fun getNode(ref: Long): Node {
-        return getNode(ref, 0)
+    fun getOrCreateNode(ref: Long): Node {
+        return getOrCreateNode(ref, 0)
     }
 }

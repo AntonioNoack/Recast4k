@@ -53,10 +53,6 @@ open class NavMeshQuery(val nav1: NavMesh) {
         var tile: MeshTile? = null
         var tsum = 0f
         for (t in nav1.allTiles) {
-            if (t.data == null || t.data == null) {
-                continue
-            }
-
             // Choose random tile using reservoi sampling.
             val area = 1f // Could be tile area too.
             tsum += area
@@ -183,7 +179,7 @@ open class NavMeshQuery(val nav1: NavMesh) {
 
         nodePool.clear()
         openList.clear()
-        val startNode = nodePool.getNode(startRef)
+        val startNode = nodePool.getOrCreateNode(startRef)
         startNode.pos.set(centerPos)
         startNode.parentIndex = 0
         startNode.cost = 0f
@@ -284,7 +280,7 @@ open class NavMeshQuery(val nav1: NavMesh) {
                     i = bestTile.links[i].indexOfNextLink
                     continue
                 }
-                val neighbourNode = nodePool.getNode(neighbourRef)
+                val neighbourNode = nodePool.getOrCreateNode(neighbourRef)
                 if (neighbourNode.flags and Node.CLOSED != 0) {
                     i = bestTile.links[i].indexOfNextLink
                     continue
@@ -639,7 +635,7 @@ open class NavMeshQuery(val nav1: NavMesh) {
         }
         nodePool.clear()
         openList.clear()
-        val startNode = nodePool.getNode(startRef)
+        val startNode = nodePool.getOrCreateNode(startRef)
         startNode.pos.set(startPos)
         startNode.parentIndex = 0
         startNode.cost = 0f
@@ -716,7 +712,7 @@ open class NavMeshQuery(val nav1: NavMesh) {
                 }
 
                 // get the node
-                val neighbourNode = nodePool.getNode(neighbourRef, 0)
+                val neighbourNode = nodePool.getOrCreateNode(neighbourRef, 0)
 
                 // do not expand to nodes that were already visited from the
                 // same parent
@@ -892,7 +888,7 @@ open class NavMeshQuery(val nav1: NavMesh) {
         }
         nodePool.clear()
         openList.clear()
-        val startNode = nodePool.getNode(startRef)
+        val startNode = nodePool.getOrCreateNode(startRef)
         startNode.pos.set(startPos)
         startNode.parentIndex = 0
         startNode.cost = 0f
@@ -1005,7 +1001,7 @@ open class NavMeshQuery(val nav1: NavMesh) {
                 }
 
                 // get the neighbor node
-                val neighbourNode = nodePool.getNode(neighbourRef, 0)
+                val neighbourNode = nodePool.getOrCreateNode(neighbourRef, 0)
 
                 // do not expand to nodes that were already visited from the same parent
                 if (neighbourNode.parentIndex != 0 && neighbourNode.parentIndex == bestNode.parentIndex) {
@@ -1135,11 +1131,12 @@ open class NavMeshQuery(val nav1: NavMesh) {
             path
         } else {
             // Reverse the path.
-            if (queryData.lastBestNode!!.polygonRef != queryData.endRef) {
+            val lastBestNode = queryData.lastBestNode!!
+            if (lastBestNode.polygonRef != queryData.endRef) {
                 queryData.status = Status.PARTIAL_RESULT
             }
             val path = LongArrayList()
-            getPathToNode(queryData.lastBestNode, path)
+            getPathToNode(lastBestNode, path)
             path
         }
         val status = queryData.status
@@ -1182,7 +1179,7 @@ open class NavMeshQuery(val nav1: NavMesh) {
             }
             if (node == null) {
                 queryData.status = Status.PARTIAL_RESULT
-                node = queryData.lastBestNode
+                node = queryData.lastBestNode!!
             }
             val path = LongArrayList()
             getPathToNode(node, path)
@@ -1502,7 +1499,7 @@ open class NavMeshQuery(val nav1: NavMesh) {
         }
 
         tinyNodePool.clear()
-        val startNode = tinyNodePool.getNode(startRef)
+        val startNode = tinyNodePool.getOrCreateNode(startRef)
         startNode.parentIndex = 0
         startNode.cost = 0f
         startNode.totalCost = 0f
@@ -1591,7 +1588,7 @@ open class NavMeshQuery(val nav1: NavMesh) {
                     }
                 } else {
                     for (k in 0 until nneis) {
-                        val neighbourNode = tinyNodePool.getNode(neis[k])
+                        val neighbourNode = tinyNodePool.getOrCreateNode(neis[k])
                         // Skip if already visited.
                         if (neighbourNode.flags and Node.CLOSED != 0) {
                             continue
@@ -1736,9 +1733,9 @@ open class NavMeshQuery(val nav1: NavMesh) {
         to: Long, toPoly: Poly, toTile: MeshTile?,
         tmp: PortalResult
     ): Vector3f? {
-        val ppoints = getPortalPoints(from, fromPoly, fromTile, to, toPoly, toTile, 0, 0, tmp) ?: return null
-        val left = ppoints.left
-        val right = ppoints.right
+        val portal = getPortalPoints(from, fromPoly, fromTile, to, toPoly, toTile, 0, 0, tmp) ?: return null
+        val left = portal.left
+        val right = portal.right
         return left.add(right).mul(0.5f)
     }
 
@@ -1746,9 +1743,9 @@ open class NavMeshQuery(val nav1: NavMesh) {
         fromPos: Vector3f, from: Long, fromPoly: Poly, fromTile: MeshTile?,
         toPos: Vector3f, to: Long, toPoly: Poly, toTile: MeshTile?, tmp: PortalResult
     ): Vector3f? {
-        val ppoints = getPortalPoints(from, fromPoly, fromTile, to, toPoly, toTile, 0, 0, tmp) ?: return null
-        val left = ppoints.left
-        val right = ppoints.right
+        val portal = getPortalPoints(from, fromPoly, fromTile, to, toPoly, toTile, 0, 0, tmp) ?: return null
+        val left = portal.left
+        val right = portal.right
         var t = 0.5f
         val intersect = Vectors.intersectSegSeg2D(fromPos, toPos, left, right)
         if (intersect != null) {
@@ -1823,7 +1820,7 @@ open class NavMeshQuery(val nav1: NavMesh) {
         val vertices = FloatArray(nav1.maxVerticesPerPoly * 3 + 3)
         val curPos = Vector3f(startPos)
         val lastPos = Vector3f()
-        val dir = Vectors.sub(endPos, startPos)
+        val dir = endPos.sub(startPos, Vector3f())
         var prevTile: MeshTile?
         var tile: MeshTile?
         var nextTile: MeshTile?
@@ -2073,7 +2070,7 @@ open class NavMeshQuery(val nav1: NavMesh) {
         val resultCost = FloatArrayList()
         nodePool.clear()
         openList.clear()
-        val startNode = nodePool.getNode(startRef)
+        val startNode = nodePool.getOrCreateNode(startRef)
         startNode.pos.set(centerPos)
         startNode.parentIndex = 0
         startNode.cost = 0f
@@ -2146,7 +2143,7 @@ open class NavMeshQuery(val nav1: NavMesh) {
                     i = bestTile.links[i].indexOfNextLink
                     continue
                 }
-                val neighbourNode = nodePool.getNode(neighbourRef)
+                val neighbourNode = nodePool.getOrCreateNode(neighbourRef)
                 if (neighbourNode.flags and Node.CLOSED != 0) {
                     i = bestTile.links[i].indexOfNextLink
                     continue
@@ -2236,7 +2233,7 @@ open class NavMeshQuery(val nav1: NavMesh) {
             centerPos.z += vertices[i * 3 + 2]
         }
         centerPos.div(nvertices.toFloat())
-        val startNode = nodePool.getNode(startRef)
+        val startNode = nodePool.getOrCreateNode(startRef)
         startNode.pos.set(centerPos)
         startNode.parentIndex = 0
         startNode.cost = 0f
@@ -2312,7 +2309,7 @@ open class NavMeshQuery(val nav1: NavMesh) {
                     i = bestTile.links[i].indexOfNextLink
                     continue
                 }
-                val neighbourNode = nodePool.getNode(neighbourRef)
+                val neighbourNode = nodePool.getOrCreateNode(neighbourRef)
                 if (neighbourNode.flags and Node.CLOSED != 0) {
                     i = bestTile.links[i].indexOfNextLink
                     continue
@@ -2391,7 +2388,7 @@ open class NavMeshQuery(val nav1: NavMesh) {
 
         resultRef.clear()
         tinyNodePool.clear()
-        val startNode = tinyNodePool.getNode(startRef)
+        val startNode = tinyNodePool.getOrCreateNode(startRef)
         startNode.parentIndex = 0
         startNode.polygonRef = startRef
         startNode.flags = Node.CLOSED
@@ -2417,7 +2414,7 @@ open class NavMeshQuery(val nav1: NavMesh) {
                     i = curTile.links[i].indexOfNextLink
                     continue
                 }
-                val neighbourNode = tinyNodePool.getNode(neighbourRef)
+                val neighbourNode = tinyNodePool.getOrCreateNode(neighbourRef)
                 // Skip visited.
                 if (neighbourNode.flags and Node.CLOSED != 0) {
                     i = curTile.links[i].indexOfNextLink
@@ -2687,7 +2684,7 @@ open class NavMeshQuery(val nav1: NavMesh) {
         }
         nodePool.clear()
         openList.clear()
-        val startNode = nodePool.getNode(startRef)
+        val startNode = nodePool.getOrCreateNode(startRef)
         startNode.pos.set(centerPos)
         startNode.parentIndex = 0
         startNode.cost = 0f
@@ -2814,7 +2811,7 @@ open class NavMeshQuery(val nav1: NavMesh) {
                     k = bestTile.links[k].indexOfNextLink
                     continue
                 }
-                val neighbourNode = nodePool.getNode(neighbourRef)
+                val neighbourNode = nodePool.getOrCreateNode(neighbourRef)
                 if (neighbourNode.flags and Node.CLOSED != 0) {
                     k = bestTile.links[k].indexOfNextLink
                     continue
@@ -2902,11 +2899,11 @@ open class NavMeshQuery(val nav1: NavMesh) {
     /**
      * Gets the path leading to the specified end node.
      */
-    fun getPathToNode(endNode: Node?, dst: LongArrayList) {
+    fun getPathToNode(endNode: Node, dst: LongArrayList) {
         // Reverse the path.
         var curNode = endNode
-        do {
-            dst.add(curNode!!.polygonRef)
+        while (true) {
+            dst.add(curNode.polygonRef)
             val nextNode = nodePool.getNodeAtIdx(curNode.parentIndex)
             if (curNode.shortcut != null) {
                 // remove potential duplicates from shortcut path
@@ -2917,8 +2914,8 @@ open class NavMeshQuery(val nav1: NavMesh) {
                     }
                 }
             }
-            curNode = nextNode
-        } while (curNode != null)
+            curNode = nextNode ?: break
+        }
         dst.reverse()
     }
 

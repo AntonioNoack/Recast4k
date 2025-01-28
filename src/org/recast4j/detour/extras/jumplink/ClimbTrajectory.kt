@@ -1,7 +1,7 @@
 package org.recast4j.detour.extras.jumplink
 
 import org.joml.Vector3f
-import org.recast4j.detour.extras.jumplink.Trajectory.Companion.lerp
+import org.recast4j.Vectors.lerp
 
 object ClimbTrajectory : Trajectory {
     override fun apply(start: Vector3f, end: Vector3f, u: Float): Vector3f {

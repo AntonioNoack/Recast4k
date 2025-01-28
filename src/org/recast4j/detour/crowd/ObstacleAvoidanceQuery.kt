@@ -208,21 +208,19 @@ class ObstacleAvoidanceQuery(maxCircles: Int, maxSegments: Int) {
     /**
      * Calculate the collision penalty for a given velocity vector
      *
-     * @param vcand      sampled velocity
-     * @param dvel       desired velocity
      * @param minPenalty threshold penalty for early out
      */
     private fun processSample(
-        vcand: Vector3f, cs: Float, pos: Vector3f, rad: Float, vel: Vector3f, dvel: Vector3f,
+        sampledVelocity: Vector3f, cs: Float, pos: Vector3f, rad: Float, vel: Vector3f, desiredVelocity: Vector3f,
         minPenalty: Float, debug: ObstacleAvoidanceDebugData?
     ): Float {
         // penalty for straying away from the desired and current velocities
-        val vpen = params.weightDesVel * (Vectors.dist2D(vcand, dvel) * invVmax)
-        val vcpen = params.weightCurVel * (Vectors.dist2D(vcand, vel) * invVmax)
+        val desiredVelocityPenalty = params.weightDesVel * (Vectors.dist2D(sampledVelocity, desiredVelocity) * invVmax)
+        val currentVelocityPenalty = params.weightCurVel * (Vectors.dist2D(sampledVelocity, vel) * invVmax)
 
         // find the threshold hit time to bail out based on the early out penalty
         // (see how the penalty is calculated below to understnad)
-        val minPen = minPenalty - vpen - vcpen
+        val minPen = minPenalty - desiredVelocityPenalty - currentVelocityPenalty
         val tThresold = (params.weightToi / minPen - 0.1f) * params.horizTime
         if (tThresold - params.horizTime > -Float.MIN_VALUE) return minPenalty // already too much
 
@@ -230,13 +228,14 @@ class ObstacleAvoidanceQuery(maxCircles: Int, maxSegments: Int) {
         var tmin = params.horizTime
         var side = 0f
         var nside = 0
+
+        val vab = Vector3f()
         for (i in 0 until circleCount) {
             val cir = circles[i]
 
             // RVO
-            var vab = Vector3f(vcand).mul(2f)
-            vab = Vectors.sub(vab, vel)
-            vab = Vectors.sub(vab, cir.vel)
+            sampledVelocity.mul(2f, vab)
+            vab.sub(vel).sub(cir.vel)
 
             // Side
             side += Vectors.clamp(min(Vectors.dot2D(cir.dp, vab) * 0.5f + 0.5f, Vectors.dot2D(cir.np, vab) * 2), 0f, 1f)
@@ -258,23 +257,21 @@ class ObstacleAvoidanceQuery(maxCircles: Int, maxSegments: Int) {
                 }
             }
         }
+        val snorm = Vector3f()
         for (i in 0 until segmentCount) {
             val seg = segments[i]
-            var htmin: Float
-            if (seg.touch) {
+            var htmin = if (seg.touch) {
                 // Special case when the agent is very close to the segment.
-                val sdir = Vectors.sub(seg.q, seg.p)
-                val snorm = Vector3f()
-                snorm.x = -sdir.z
-                snorm.z = sdir.x
+                seg.q.sub(seg.p, snorm)
+                snorm.set(-snorm.z, 0f, snorm.x)
                 // If the velocity is pointing towards the segment, no collision.
-                if (Vectors.dot2D(snorm, vcand) < 0f) continue
+                if (Vectors.dot2D(snorm, sampledVelocity) < 0f) continue
                 // Else immediate collision.
-                htmin = 0f
+                0f
             } else {
-                val ires = intersectRaySeg(pos, vcand, seg.p, seg.q)
+                val ires = intersectRaySeg(pos, sampledVelocity, seg.p, seg.q)
                 if (ires < 0f) continue
-                htmin = ires
+                ires
             }
 
             // Avoid less when facing walls.
@@ -283,17 +280,22 @@ class ObstacleAvoidanceQuery(maxCircles: Int, maxSegments: Int) {
             // The closest obstacle is somewhere ahead of us, keep track of nearest obstacle.
             if (htmin < tmin) {
                 tmin = htmin
-                if (tmin < tThresold) return minPenalty
+                if (tmin < tThresold) {
+                    return minPenalty
+                }
             }
         }
 
         // Normalize side bias, to prevent it dominating too much.
         if (nside != 0) side /= nside.toFloat()
-        val spen = params.weightSide * side
-        val tpen = params.weightToi * (1f / (0.1f + tmin * invHorizTime))
-        val penalty = vpen + vcpen + spen + tpen
+        val preferredSidePenalty = params.weightSide * side
+        val collisionTimePenalty = params.weightToi * (1f / (0.1f + tmin * invHorizTime))
+        val penalty = desiredVelocityPenalty + currentVelocityPenalty + preferredSidePenalty + collisionTimePenalty
         // Store different penalties for debug viewing
-        if (debug != null) debug.addSample(vcand, cs, penalty, vpen, vcpen, spen, tpen)
+        debug?.addSample(sampledVelocity, cs, penalty,
+            desiredVelocityPenalty, currentVelocityPenalty,
+            preferredSidePenalty, collisionTimePenalty
+        )
         return penalty
     }
 

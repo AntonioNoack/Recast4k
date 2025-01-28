@@ -115,22 +115,12 @@ class CrowdAgent(val idx: Int) {
         // Fake dynamic constraint.
         val maxDelta = params.maxAcceleration * dt
         val ds = desiredVelAdjusted.distance(actualVelocity)
-        if (ds > maxDelta) {
-            val scale = maxDelta / ds
-            val dvx = desiredVelAdjusted.x - actualVelocity.x
-            val dvy = desiredVelAdjusted.y - actualVelocity.y
-            val dvz = desiredVelAdjusted.z - actualVelocity.z
-            actualVelocity.add(dvx * scale, dvy * scale, dvz * scale)
-        } else {
-            actualVelocity.add(desiredVelAdjusted).sub(actualVelocity)
-        }
+        actualVelocity.lerp(desiredVelAdjusted, min(maxDelta / ds, 1f))
 
         // Integrate
-        if (actualVelocity.length() > 0.0001f) Vectors.mad2(
-            currentPosition,
-            actualVelocity,
-            dt
-        ) else actualVelocity.set(0f)
+        if (actualVelocity.lengthSquared() > 1e-8f) {
+            actualVelocity.mulAdd(dt, currentPosition, currentPosition)
+        } else actualVelocity.set(0f)
     }
 
     fun overOffmeshConnection(radius: Float): Boolean {

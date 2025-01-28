@@ -21,18 +21,12 @@ package org.recast4j
 import org.joml.Vector3f
 import org.joml.Vector3i
 import org.recast4j.detour.BVNode
-import org.recast4j.detour.VectorPtr
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-@Suppress("DeprecatedCallableAddReplaceWith")
 object Vectors {
 
     fun clamp(x: Float, min: Float, max: Float): Float {
-        return if (x < min) min else if (x < max) x else max
-    }
-
-    fun clamp(x: Double, min: Double, max: Double): Double {
         return if (x < min) min else if (x < max) x else max
     }
 
@@ -41,15 +35,11 @@ object Vectors {
     }
 
     fun min(a: Vector3f, b: FloatArray, i: Int) {
-        a.x = kotlin.math.min(a.x, b[i])
-        a.y = kotlin.math.min(a.y, b[i + 1])
-        a.z = kotlin.math.min(a.z, b[i + 2])
+        a.min(b[i], b[i + 1], b[i + 2])
     }
 
     fun max(a: Vector3f, b: FloatArray, i: Int) {
-        a.x = kotlin.math.max(a.x, b[i])
-        a.y = kotlin.math.max(a.y, b[i + 1])
-        a.z = kotlin.math.max(a.z, b[i + 2])
+        a.max(b[i], b[i + 1], b[i + 2])
     }
 
     fun copy(dst: FloatArray, input: FloatArray, i: Int) {
@@ -79,10 +69,10 @@ object Vectors {
     }
 
     fun normalize(v: FloatArray) {
-        val d = 1f / sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2])
-        v[0] *= d
-        v[1] *= d
-        v[2] *= d
+        val invLength = 1f / sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2])
+        v[0] *= invLength
+        v[1] *= invLength
+        v[2] *= invLength
     }
 
     fun dot(v1: FloatArray, v2: FloatArray): Float {
@@ -98,48 +88,28 @@ object Vectors {
         dst.set(b).mul(f).add(a)
     }
 
-    /**
-     * a += b * s
-     */
-    fun mad2(a: Vector3f, b: Vector3f, f: Float) {
-        b.mulAdd(f, a, a)
-        a.add(b.x * f, b.y * f, b.z * f)
-    }
+    fun lerp(a: Float, b: Float, t: Float): Float = a + (b - a) * t
 
     fun lerp(vertices: FloatArray, v1: Int, v2: Int, t: Float, dst: Vector3f) {
-        dst.x = vertices[v1] + (vertices[v2] - vertices[v1]) * t
-        dst.y = vertices[v1 + 1] + (vertices[v2 + 1] - vertices[v1 + 1]) * t
-        dst.z = vertices[v1 + 2] + (vertices[v2 + 2] - vertices[v1 + 2]) * t
+        dst.set(
+            lerp(vertices[v1], vertices[v2], t),
+            lerp(vertices[v1 + 1], vertices[v2 + 1], t),
+            lerp(vertices[v1 + 2], vertices[v2 + 2], t),
+        )
     }
 
     fun lerp(vertices: FloatArray, v1: Int, v2: Int, t: Float, dst: FloatArray, dstI: Int) {
-        dst[dstI] = vertices[v1] + (vertices[v2] - vertices[v1]) * t
-        dst[dstI + 1] = vertices[v1 + 1] + (vertices[v2 + 1] - vertices[v1 + 1]) * t
-        dst[dstI + 2] = vertices[v1 + 2] + (vertices[v2 + 2] - vertices[v1 + 2]) * t
-    }
-
-    @Deprecated("Don't allocate!")
-    fun lerp(v1: Vector3f, v2: Vector3f, t: Float): Vector3f {
-        return Vector3f(v1).lerp(v2, t)
-    }
-
-    @Deprecated("Don't allocate!")
-    fun sub(v1: VectorPtr, v2: VectorPtr): Vector3f {
-        return Vector3f(v1[0] - v2[0], v1[1] - v2[1], v1[2] - v2[2])
-    }
-
-    @Deprecated("Don't allocate!")
-    fun sub(v1: Vector3f, v2: VectorPtr): Vector3f {
-        return Vector3f(v1[0] - v2[0], v1[1] - v2[1], v1[2] - v2[2])
-    }
-
-    @Deprecated("Don't allocate!")
-    fun sub(v1: Vector3f, v2: Vector3f): Vector3f {
-        return v1.sub(v2, Vector3f())
+        dst[dstI] = lerp(vertices[v1], vertices[v2], t)
+        dst[dstI + 1] = lerp(vertices[v1 + 1], vertices[v2 + 1], t)
+        dst[dstI + 2] = lerp(vertices[v1 + 2], vertices[v2 + 2], t)
     }
 
     fun copy(dst: Vector3f, src: IntArray, srcI: Int) {
-        dst.set(src[srcI].toFloat(), src[srcI + 1].toFloat(), src[srcI + 2].toFloat())
+        dst.set(
+            src[srcI].toFloat(),
+            src[srcI + 1].toFloat(),
+            src[srcI + 2].toFloat()
+        )
     }
 
     fun sq(a: Float): Float {
@@ -602,11 +572,6 @@ object Vectors {
 
     fun oppositeTile(side: Int): Int {
         return side + 4 and 0x7
-    }
-
-    @Deprecated("Can be replaced", replaceWith = ReplaceWith("a.x*b.z-a.z*b.x"))
-    fun crossXZ(a: Vector3f, b: Vector3f): Float {
-        return a.x * b.z - a.z * b.x
     }
 
     fun intersectSegSeg2D(a0: Vector3f, a1: Vector3f, b0: Vector3f, b1: Vector3f): FloatPair? {

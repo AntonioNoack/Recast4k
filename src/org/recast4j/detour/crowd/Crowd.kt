@@ -914,16 +914,14 @@ class Crowd @JvmOverloads constructor(
                     obstacleAvoidanceQuery.addSegment(s.start, s.end)
                 }
 
-                var vod: ObstacleAvoidanceDebugData? = null
-                if (debugAgent === ag) {
-                    vod = debug.vod
-                }
+                var debugData: ObstacleAvoidanceDebugData? =
+                    if (debugAgent === ag) debug.debugData else null
 
                 // Sample new safe velocity.
                 val params = obstacleQueryParams[ag.params.obstacleAvoidanceType]
                 val (first, second) = obstacleAvoidanceQuery.sampleVelocityAdaptive(
                     ag.currentPosition, ag.params.radius, ag.desiredSpeed, ag.actualVelocity, ag.desiredVelocity,
-                    params, vod
+                    params, debugData
                 )
                 ag.desiredVelAdjusted.set(second)
                 velocitySampleCount += first

@@ -1,7 +1,7 @@
 package org.recast4j.detour.extras.jumplink
 
 import org.joml.Vector3f
-import org.recast4j.detour.extras.jumplink.Trajectory.Companion.lerp
+import org.recast4j.Vectors.lerp
 import kotlin.math.sqrt
 
 class JumpTrajectory(private val jumpHeight: Float) : Trajectory {

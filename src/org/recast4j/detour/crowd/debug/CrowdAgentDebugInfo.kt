@@ -25,5 +25,5 @@ class CrowdAgentDebugInfo {
     var agent: CrowdAgent? = null
     var optStart = Vector3f()
     var optEnd = Vector3f()
-    var vod: ObstacleAvoidanceDebugData? = null
+    var debugData: ObstacleAvoidanceDebugData? = null
 }
